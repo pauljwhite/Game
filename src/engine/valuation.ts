@@ -1,5 +1,24 @@
 import type { Airline, Aircraft, Route } from '@/types';
+import type { AircraftType } from '@/types/aircraft';
 import { AIRCRAFT_TYPES } from '@/data/aircraftTypes';
+
+/**
+ * Current resale value of an owned aircraft.
+ * Depreciates with age, condition, and flight hours.
+ */
+export function computeAircraftValue(ac: Aircraft, type: AircraftType, currentGameDay: number): number {
+  const ageDays  = Math.max(0, currentGameDay - ac.purchasedGameDay);
+  const ageYears = ageDays / 365;
+
+  // Age: linear depreciation to 20% floor over 20 years
+  const ageFactor  = Math.max(0.20, 1 - ageYears / 20);
+  // Condition: 20% floor at 0%, 100% at perfect condition
+  const condFactor = 0.20 + 0.80 * (ac.condition / 100);
+  // Hours: small penalty for high-cycle aircraft, 80% floor
+  const hoursFactor = Math.max(0.80, 1 - ac.totalFlightHours / 100_000);
+
+  return Math.round(type.purchasePrice * 0.75 * ageFactor * condFactor * hoursFactor);
+}
 
 const typeMap = Object.fromEntries(AIRCRAFT_TYPES.map(t => [t.id, t]));
 
