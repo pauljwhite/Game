@@ -3,6 +3,7 @@ import { useGameStore } from '@/store';
 import { AIRCRAFT_TYPES } from '@/data/aircraftTypes';
 import { AircraftProfile } from '@/assets/profiles/AircraftProfile';
 import { gameDayFromMs } from '@/engine/economicsEngine';
+import { manufacturerFlag } from '@/utils/manufacturerFlags';
 
 const EPOCH_YEAR = 1960;
 
@@ -88,7 +89,7 @@ export const BuyAircraftModal: React.FC = () => {
                     : 'text-gray-400 hover:text-gray-200 hover:bg-white/[0.07]'
                 }`}
               >
-                {mfr}
+                <span className="mr-1.5">{manufacturerFlag(mfr)}</span>{mfr}
               </button>
             ))}
           </div>

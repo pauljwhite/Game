@@ -6,6 +6,7 @@ import { AircraftProfile } from '@/assets/profiles/AircraftProfile';
 import { formatCurrency, formatDuration } from '@/utils/format';
 import { computeMaintenanceCost, MAINTENANCE_TIERS } from '@/utils/constants';
 import { computeAircraftValue } from '@/engine/valuation';
+import { manufacturerFlag } from '@/utils/manufacturerFlags';
 import type { MaintenanceTier } from '@/types/aircraft';
 import type { Aircraft } from '@/types';
 
@@ -91,7 +92,7 @@ function AircraftCard({ ac, gameDay }: { ac: Aircraft; gameDay: number }) {
               <AircraftProfile type={type} color={playerAirline?.color ?? '#60a5fa'} className="w-full h-full" />
             </div>
             <div className="flex-1 text-xs text-gray-400 space-y-0.5">
-              <div>{type.manufacturer} {type.model} · {type.seatsEconomy}Y/{type.seatsBusiness}J seats</div>
+              <div>{manufacturerFlag(type.manufacturer)} {type.manufacturer} {type.model} · {type.seatsEconomy}Y/{type.seatsBusiness}J seats</div>
               <div>{formatDuration(ac.totalFlightHours)} total hrs · Crash risk: {(ac.crashRisk * 100).toFixed(2)}%</div>
               <div className="text-gray-500">{type.rangeKm.toLocaleString()} km range · {type.cruiseSpeedKmh} km/h</div>
             </div>
