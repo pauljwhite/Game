@@ -2,7 +2,16 @@ import type { StateCreator } from 'zustand';
 import type { GameStore } from './index';
 
 export type PanelId = 'fleet' | 'routes' | 'finance' | 'airlines' | 'hubs';
-export type ModalId = 'buyAircraft' | 'newRoute' | 'routeDetail' | 'takeover' | 'gameOver' | 'newGame' | 'aiRouteDetail' | 'rebrand' | 'sharesPurchase';
+export type ModalId = 'buyAircraft' | 'newRoute' | 'routeDetail' | 'takeover' | 'gameOver' | 'newGame' | 'aiRouteDetail' | 'rebrand' | 'sharesPurchase' | 'newspaper';
+
+export interface NewsArticle {
+  id: string;
+  headline: string;
+  subheadline: string;
+  paragraphs: string[];
+  severity: 'incident' | 'grounding' | 'crash';
+  gameDay: number;
+}
 
 export interface UISlice {
   selectedAirportIata: string | null;
@@ -10,6 +19,7 @@ export interface UISlice {
   openPanel: PanelId | null;
   openModal: ModalId | null;
   modalPayload: unknown;
+  newspaperQueue: NewsArticle[];
 
   selectAirport: (iata: string | null) => void;
   selectRoute: (routeId: string | null) => void;
@@ -17,6 +27,8 @@ export interface UISlice {
   closePanel: () => void;
   openModalById: (id: ModalId, payload?: unknown) => void;
   closeModal: () => void;
+  pushNewspaper: (article: NewsArticle) => void;
+  popNewspaper: () => void;
 }
 
 export const createUISlice: StateCreator<GameStore, [['zustand/immer', never]], [], UISlice> = (set) => ({
@@ -25,6 +37,7 @@ export const createUISlice: StateCreator<GameStore, [['zustand/immer', never]], 
   openPanel: null,
   openModal: null,
   modalPayload: null,
+  newspaperQueue: [],
 
   selectAirport: (iata) => set((state) => { state.selectedAirportIata = iata; }),
   selectRoute: (routeId) => set((state) => { state.selectedRouteId = routeId; }),
@@ -32,4 +45,8 @@ export const createUISlice: StateCreator<GameStore, [['zustand/immer', never]], 
   closePanel: () => set((state) => { state.openPanel = null; }),
   openModalById: (id, payload) => set((state) => { state.openModal = id; state.modalPayload = payload ?? null; }),
   closeModal: () => set((state) => { state.openModal = null; state.modalPayload = null; }),
+  pushNewspaper: (article) => set((state) => {
+    if (state.newspaperQueue.length < 5) state.newspaperQueue.push(article);
+  }),
+  popNewspaper: () => set((state) => { state.newspaperQueue.shift(); }),
 });

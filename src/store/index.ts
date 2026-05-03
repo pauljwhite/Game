@@ -120,7 +120,7 @@ export const useGameStore = create<GameStore>()(
       migrate: migratePersistedState,
       partialize: (state) => {
         // Exclude transient UI state from persistence
-        const { selectedAirportIata: _s, selectedRouteId: _r, openPanel: _p, openModal: _m, modalPayload: _mp, airports: _a, ...rest } = state;
+        const { selectedAirportIata: _s, selectedRouteId: _r, openPanel: _p, openModal: _m, modalPayload: _mp, airports: _a, newspaperQueue: _nq, ...rest } = state;
         return sanitizePersistedState(rest);
       },
     },

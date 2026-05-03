@@ -169,7 +169,20 @@ export function runDailyTick(store: ReturnType<typeof import('@/store/index')['u
       // Crash check
       if (ac.crashRisk > 0.001 && Math.random() < ac.crashRisk * flightsPerDay * 0.0008) {
         store.triggerCrash(ac.id);
+        const crashRoute = `${route.originIata}–${route.destinationIata}`;
         store.pushNewsItem(`BREAKING: ${playerAirline.name} ${aircraftType.model} crashes on ${route.originIata}->${route.destinationIata} route!`);
+        store.pushNewspaper({
+          id: `crash_${store.gameDay}_${ac.id}`,
+          headline: `${playerAirline.name} ${aircraftType.model} lost`,
+          subheadline: `Aviation authorities launch emergency investigation into accident on the ${crashRoute} corridor`,
+          paragraphs: [
+            `An aircraft operated by ${playerAirline.name} has been lost while operating on the ${crashRoute} route. The ${aircraftType.model}, registered as ${ac.name}, suffered a catastrophic failure under circumstances that remain under investigation by aviation authorities. The airline has confirmed the loss of the aircraft.`,
+            `${playerAirline.name} has immediately suspended all services on the ${crashRoute} route and convened an emergency board session. The national air accident investigation branch has dispatched a team to the scene. Regulatory authorities have opened a formal inquiry and the airline's entire fleet faces a precautionary safety review.`,
+            `"We are devastated by this tragic loss and our thoughts are with everyone affected," said a spokesperson for ${playerAirline.name}. The airline has been issued an immediate financial penalty and faces severe reputational damage. Passenger load factors across the network are expected to fall sharply in the coming weeks as confidence in the carrier wavers.`,
+          ],
+          severity: 'crash',
+          gameDay: store.gameDay,
+        });
       }
 
       // Reputation drain for flying poorly maintained aircraft (condition < 40)

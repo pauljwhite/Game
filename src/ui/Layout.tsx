@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useGameStore, useHydrated } from '@/store';
 import { TopBar } from './TopBar';
 import { BottomBar } from './BottomBar';
@@ -18,6 +18,7 @@ import { GameOverModal } from './modals/GameOverModal';
 import { CompetitorRouteModal } from './modals/CompetitorRouteModal';
 import { RebrandModal } from './modals/RebrandModal';
 import { SharePurchaseModal } from './modals/SharePurchaseModal';
+import { NewspaperModal } from './modals/NewspaperModal';
 
 const PANELS = {
   fleet: FleetPanel,
@@ -28,10 +29,19 @@ const PANELS = {
 };
 
 export const Layout: React.FC = () => {
-  const openPanel = useGameStore(s => s.openPanel);
-  const openModal = useGameStore(s => s.openModal);
-  const isInitialized = useGameStore(s => s.isInitialized);
-  const hydrated = useHydrated();
+  const openPanel        = useGameStore(s => s.openPanel);
+  const openModal        = useGameStore(s => s.openModal);
+  const isInitialized    = useGameStore(s => s.isInitialized);
+  const hydrated         = useHydrated();
+  const newspaperQueue   = useGameStore(s => s.newspaperQueue);
+  const openModalById    = useGameStore(s => s.openModalById);
+
+  // Auto-open newspaper modal when queue has items and no other modal is showing
+  useEffect(() => {
+    if (openModal === null && newspaperQueue.length > 0) {
+      openModalById('newspaper');
+    }
+  }, [openModal, newspaperQueue.length, openModalById]);
 
 
   if (!hydrated || !isInitialized) {
@@ -71,6 +81,7 @@ export const Layout: React.FC = () => {
       {openModal === 'aiRouteDetail' && <CompetitorRouteModal />}
       {openModal === 'rebrand' && <RebrandModal />}
       {openModal === 'sharesPurchase' && <SharePurchaseModal />}
+      {openModal === 'newspaper' && <NewspaperModal />}
     </div>
   );
 };

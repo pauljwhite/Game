@@ -1,3 +1,32 @@
+import type { NewsArticle } from '@/store/uiSlice';
+
+function buildGroundingArticle(
+  evt: { id: string; newsTemplate: string },
+  airlineName: string,
+  acName: string,
+  airportCity: string,
+  routeLabel: string,
+  gameDay: number,
+): NewsArticle {
+  const newsText = evt.newsTemplate
+    .replace('{airline}', airlineName)
+    .replace('{aircraft}', acName)
+    .replace('{airport}', airportCity);
+
+  return {
+    id: `${evt.id}_${gameDay}_${Math.random().toString(36).slice(2, 6)}`,
+    headline: `${airlineName} aircraft grounded`,
+    subheadline: newsText,
+    paragraphs: [
+      newsText,
+      `The aircraft has been withdrawn from scheduled services pending a full technical inspection by engineering crews. Passengers booked on ${routeLabel} services have been informed and the airline is working to find alternative capacity. The affected route will face disruption until the aircraft is cleared to return to service.`,
+      `A spokesperson for ${airlineName} confirmed they are cooperating fully with the relevant airworthiness authorities. "The safety of our passengers and crew is our absolute priority," the spokesperson said. No injuries have been reported in connection with the incident.`,
+    ],
+    severity: 'grounding',
+    gameDay,
+  };
+}
+
 interface AircraftEventDef {
   id: string;
   newsTemplate: string; // placeholders: {airline}, {aircraft}, {airport}
@@ -453,6 +482,8 @@ export function runRandomEventsTick(
         if (evt.ground) {
           const reason = evt.groundReason ?? evt.id.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
           store.groundAircraft(ac.id, reason);
+          const routeLabel = route ? `${route.originIata}–${route.destinationIata}` : 'operated';
+          store.pushNewspaper(buildGroundingArticle(evt, playerAirline.name, ac.name, airportCity, routeLabel, store.gameDay));
         }
         if (evt.reputationDelta !== 0) {
           store.applyReputationHit('player', evt.reputationDelta);
