@@ -55,10 +55,6 @@ function AircraftCard({ ac, gameDay }: { ac: Aircraft; gameDay: number }) {
         {/* Model */}
         <span className="text-white text-sm font-medium w-16 sm:w-20 shrink-0 truncate">{type.model}</span>
 
-        {/* Status badges — MAINT / IN MAINT only */}
-        {needsMaint && <span className="soft-tag border-red-300/20 bg-red-500/15 text-red-200 shrink-0">MAINT</span>}
-        {inMaint    && <span className="soft-tag border-yellow-300/20 bg-yellow-500/15 text-yellow-200 shrink-0">IN MAINT</span>}
-
         {/* Route — never truncated */}
         <span className="shrink-0 text-gray-400 text-xs">{routeLabel}</span>
 
@@ -70,7 +66,9 @@ function AircraftCard({ ac, gameDay }: { ac: Aircraft; gameDay: number }) {
           {Math.round(ac.totalFlightHours).toLocaleString()}h
         </span>
 
-        {/* AUTO chip — lives beside the condition % */}
+        {/* Status chips — all on the right beside condition */}
+        {needsMaint && <span className="soft-tag border-red-300/20 bg-red-500/15 text-red-200 shrink-0">MAINT</span>}
+        {inMaint    && <span className="soft-tag border-yellow-300/20 bg-yellow-500/15 text-yellow-200 shrink-0">IN MAINT</span>}
         {ac.autoMaintenanceEnabled && !inMaint && (
           <span className="soft-tag border-sky-300/20 bg-sky-500/15 text-sky-200 shrink-0">AUTO</span>
         )}
