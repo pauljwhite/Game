@@ -11,9 +11,11 @@ export const BottomBar: React.FC = () => {
     ...Object.values(aiAirlines),
   ];
 
-  const totalPax = allAirlines.reduce((s, a) => s + a.totalPassengersAllTime, 0);
+  const getDailyPax = (a: (typeof allAirlines)[number]) => a.dailyStats.at(-1)?.passengers ?? 0;
 
-  const sorted = [...allAirlines].sort((a, b) => b.totalPassengersAllTime - a.totalPassengersAllTime);
+  const totalPax = allAirlines.reduce((s, a) => s + getDailyPax(a), 0);
+
+  const sorted = [...allAirlines].sort((a, b) => getDailyPax(b) - getDailyPax(a));
 
   const latestNews = newsTicker[0] ?? 'Welcome to Mighty Airline Empire!';
 
@@ -24,7 +26,7 @@ export const BottomBar: React.FC = () => {
         <span className="soft-tag">Share</span>
         <div className="flex items-center gap-1 h-4">
           {sorted.slice(0, 6).map(a => {
-            const share = totalPax > 0 ? (a.totalPassengersAllTime / totalPax) * 100 : 0;
+            const share = totalPax > 0 ? (getDailyPax(a) / totalPax) * 100 : 0;
             return (
               <div key={a.id} className="flex items-center gap-0.5">
                 <div

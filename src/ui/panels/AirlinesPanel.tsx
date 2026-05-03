@@ -24,11 +24,12 @@ export const AirlinesPanel: React.FC = () => {
   const [insolventOpen, setInsolventOpen] = useState(false);
 
   const playerAirline = airlines['player'];
-  const totalPax = (playerAirline?.totalPassengersAllTime ?? 0) +
-    Object.values(aiAirlines).reduce((s, a) => s + (a.totalPassengersAllTime ?? 0), 0);
+  const getDailyPax = (a: { dailyStats: { passengers: number }[] }) => a.dailyStats.at(-1)?.passengers ?? 0;
+  const totalPax = getDailyPax(playerAirline ?? { dailyStats: [] }) +
+    Object.values(aiAirlines).reduce((s, a) => s + getDailyPax(a), 0);
 
   const allAI = Object.values(aiAirlines).map(a => ({ ...a, isPlayer: false }));
-  const activeAI   = allAI.filter(a => !a.isInsolvent).sort((a, b) => b.totalPassengersAllTime - a.totalPassengersAllTime);
+  const activeAI   = allAI.filter(a => !a.isInsolvent).sort((a, b) => getDailyPax(b) - getDailyPax(a));
   const insolventAI = allAI.filter(a => a.isInsolvent);
 
   return (
@@ -40,7 +41,7 @@ export const AirlinesPanel: React.FC = () => {
 
       {/* Player row — pinned above the scroll area */}
       {playerAirline && (() => {
-        const share = totalPax > 0 ? (playerAirline.totalPassengersAllTime / totalPax) * 100 : 0;
+        const share = totalPax > 0 ? (getDailyPax(playerAirline) / totalPax) * 100 : 0;
         return (
           <div className="border-b border-sky-300/20 bg-sky-400/[0.055] shrink-0">
             <div className="p-3">
@@ -73,7 +74,7 @@ export const AirlinesPanel: React.FC = () => {
       {/* AI airlines — scrollable */}
       <div className="flex-1 overflow-y-auto">
         {activeAI.map(airline => {
-          const share = totalPax > 0 ? (airline.totalPassengersAllTime / totalPax) * 100 : 0;
+          const share = totalPax > 0 ? (getDailyPax(airline) / totalPax) * 100 : 0;
           const playerStake = (airline.shareholders ?? {})['player'] ?? 0;
           const hasMajority = playerStake >= 50;
           const isExpanded = expandedId === airline.id;
