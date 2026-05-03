@@ -8,14 +8,6 @@ function App() {
   const airlines = useGameStore(s => s.airlines);
   const openModalById = useGameStore(s => s.openModalById);
 
-  // On first mount, open new-game modal only if no saved game exists
-  useEffect(() => {
-    const state = useGameStore.getState();
-    if (!state.isInitialized) {
-      state.openModalById('newGame');
-    }
-  }, []);
-
   // Start/stop game loop based on initialization
   useEffect(() => {
     if (isInitialized) {

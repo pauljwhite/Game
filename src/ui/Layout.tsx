@@ -53,7 +53,7 @@ export const Layout: React.FC = () => {
       {isInitialized && <BottomBar />}
 
       {/* Modals */}
-      {openModal === 'newGame' && <NewGameModal />}
+      {!isInitialized && <NewGameModal />}
       {openModal === 'buyAircraft' && <BuyAircraftModal />}
       {openModal === 'newRoute' && <NewRouteModal />}
       {openModal === 'routeDetail' && <RouteDetailModal />}

@@ -18,7 +18,7 @@ export const useGameStore = create<GameStore>()(
     })),
     {
       name: 'airline-empire-save',
-      version: 1,
+      version: 2,
       partialize: (state) => {
         // Exclude transient UI state from persistence
         const { selectedAirportIata: _s, selectedRouteId: _r, openPanel: _p, openModal: _m, modalPayload: _mp, ...rest } = state;
