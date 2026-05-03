@@ -43,6 +43,7 @@ export const RouteLayer: React.FC<RouteLayerProps> = ({ map, mapVersion }) => {
       const airline = isPlayer
         ? airlines[route.airlineId]
         : aiAirlines[route.airlineId];
+      if (!isPlayer && airline?.isInsolvent) return;
       const color = airline?.color ?? '#888';
 
       const segments = computeArcSegments(origin.lat, origin.lon, dest.lat, dest.lon, ARC_POINT_COUNT);
@@ -68,10 +69,9 @@ export const RouteLayer: React.FC<RouteLayerProps> = ({ map, mapVersion }) => {
       {arcs.map(arc =>
         arc.paths.map((d, i) => {
           const routeKey = `${arc.routeId}-${i}`;
-          const clickHandler = arc.isPlayer ? () => {
-            selectRoute(arc.routeId);
-            openModalById('routeDetail', arc.routeId);
-          } : undefined;
+          const clickHandler = arc.isPlayer
+            ? () => { selectRoute(arc.routeId); openModalById('routeDetail', arc.routeId); }
+            : () => { openModalById('aiRouteDetail', arc.routeId); };
 
           return (
             <g key={routeKey} className="route-arc">
@@ -92,8 +92,8 @@ export const RouteLayer: React.FC<RouteLayerProps> = ({ map, mapVersion }) => {
                 strokeDasharray={arc.isPlayer ? '10 9' : '5 10'}
                 fill="none"
                 className={arc.isPlayer ? 'route-arc-line route-arc-line--animated' : 'route-arc-line'}
-                style={{ cursor: arc.isPlayer ? 'pointer' : 'default' }}
-                pointerEvents={arc.isPlayer ? 'stroke' : 'none'}
+                style={{ cursor: 'pointer' }}
+                pointerEvents="stroke"
                 onClick={clickHandler}
               />
             </g>

@@ -15,6 +15,7 @@ import { NewRouteModal } from './modals/NewRouteModal';
 import { RouteDetailModal } from './modals/RouteDetailModal';
 import { TakeoverModal } from './modals/TakeoverModal';
 import { GameOverModal } from './modals/GameOverModal';
+import { CompetitorRouteModal } from './modals/CompetitorRouteModal';
 
 const PANELS = {
   fleet: FleetPanel,
@@ -65,6 +66,7 @@ export const Layout: React.FC = () => {
       {openModal === 'routeDetail' && <RouteDetailModal />}
       {openModal === 'takeover' && <TakeoverModal />}
       {openModal === 'gameOver' && <GameOverModal />}
+      {openModal === 'aiRouteDetail' && <CompetitorRouteModal />}
     </div>
   );
 };

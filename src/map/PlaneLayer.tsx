@@ -63,6 +63,7 @@ export function PlaneLayer({ map, svgOverlay }: PlaneLayerProps) {
       if (!origin || !dest) return;
 
       const airline = allAirlines[ac.airlineId];
+      if (airline?.isInsolvent) return;
       const color = airline?.color ?? '#ffffff';
       const aircraftType = AIRCRAFT_TYPES.find(t => t.id === ac.typeId);
       const speedKmh = aircraftType?.cruiseSpeedKmh ?? 850;
