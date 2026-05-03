@@ -42,6 +42,7 @@ export interface Aircraft {
   condition: number;
   maintenanceHoursOwed: number;
   isGrounded: boolean;
+  groundedReason?: string;
   lastMaintenanceGameDay: number;
   crashRisk: number;
   assignedRouteId: string | null;

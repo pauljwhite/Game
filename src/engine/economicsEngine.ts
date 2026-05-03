@@ -56,15 +56,19 @@ export function runDailyTick(store: ReturnType<typeof import('@/store/index')['u
       // Auto-maintenance trigger — cooldown: don't re-trigger until after the last maintenance duration
       const autoTier = ac.autoMaintenanceTier ?? 'standard';
       const maintCooldownElapsed = gameDay > ac.lastMaintenanceGameDay + MAINTENANCE_TIERS[autoTier].durationDays;
+      const belowThreshold = ac.condition <= ac.autoMaintenanceThreshold;
+      const groundedNeedsFix = ac.isGrounded && ac.status !== 'maintenance';
       if (
         ac.airlineId === 'player' &&
         ac.status !== 'maintenance' && ac.status !== 'crashed' &&
         ac.autoMaintenanceEnabled &&
-        ac.condition <= ac.autoMaintenanceThreshold &&
+        (belowThreshold || groundedNeedsFix) &&
         maintCooldownElapsed
       ) {
         store.startMaintenance(ac.id, gameDay, ac.autoMaintenanceTier ?? 'standard');
-        const reason = ac.isGrounded ? 'grounded — auto-maintenance triggered' : `condition ${ac.condition.toFixed(0)}%`;
+        const reason = groundedNeedsFix
+          ? `grounded (${ac.groundedReason ?? 'incident'})`
+          : `condition ${ac.condition.toFixed(0)}%`;
         store.pushNewsItem(`Auto-maintenance triggered for ${ac.name} (${reason}).`);
       }
     });

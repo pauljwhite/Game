@@ -100,6 +100,19 @@ function AircraftCard({ ac, gameDay }: { ac: Aircraft; gameDay: number }) {
             </div>
           </div>
 
+          {/* Grounded reason banner */}
+          {ac.isGrounded && !inMaint && (
+            <div className="mb-2 px-3 py-2 bg-red-900/40 border border-red-500/40 rounded-lg">
+              <div className="flex items-start gap-2">
+                <span className="text-red-400 font-bold text-xs shrink-0">GROUNDED</span>
+                <span className="text-red-300 text-xs">{ac.groundedReason ?? 'Aircraft grounded — maintenance required'}</span>
+              </div>
+              {ac.autoMaintenanceEnabled && (
+                <div className="mt-1 text-xs text-blue-300">Auto-maintenance will begin on the next daily tick.</div>
+              )}
+            </div>
+          )}
+
           {inMaint && (
             <div className="mb-2 text-xs text-yellow-300 text-center">
               {MAINTENANCE_TIERS[ac.activeMaintTier ?? 'standard'].label} — {Math.max(0, MAINTENANCE_TIERS[ac.activeMaintTier ?? 'standard'].durationDays - (gameDay - ac.lastMaintenanceGameDay))} day(s) remaining

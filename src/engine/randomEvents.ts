@@ -3,6 +3,7 @@ interface AircraftEventDef {
   newsTemplate: string; // placeholders: {airline}, {aircraft}, {airport}
   conditionDelta: number;
   ground: boolean;
+  groundReason?: string; // short label shown in fleet panel
   reputationDelta: number;
   probability: number; // per active aircraft per day
 }
@@ -450,7 +451,8 @@ export function runRandomEventsTick(
         store.updateAircraftCondition(ac.id, evt.conditionDelta, 0);
 
         if (evt.ground) {
-          store.groundAircraft(ac.id);
+          const reason = evt.groundReason ?? evt.id.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+          store.groundAircraft(ac.id, reason);
         }
         if (evt.reputationDelta !== 0) {
           store.applyReputationHit('player', evt.reputationDelta);

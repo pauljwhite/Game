@@ -36,7 +36,7 @@ export interface PlayerSlice {
   takeoverAirline: (targetAirlineId: string, aiAirlines: Record<string, Airline>, aiRoutes: Record<string, Route>, aiAircraft: Record<string, Aircraft>) => void;
   updateRouteStats: (routeId: string, stats: Partial<Route>) => void;
   updateAircraftCondition: (aircraftId: string, conditionDelta: number, hoursOwed: number) => void;
-  groundAircraft: (aircraftId: string) => void;
+  groundAircraft: (aircraftId: string, reason?: string) => void;
   startMaintenance: (aircraftId: string, gameDay: number, tier: MaintenanceTier) => void;
   completeMaintenance: (aircraftId: string) => void;
   setAutoMaintenance: (aircraftId: string, enabled: boolean, threshold: number, tier: MaintenanceTier) => void;
@@ -281,17 +281,19 @@ export const createPlayerSlice: StateCreator<GameStore, [['zustand/immer', never
       ac.crashRisk = Math.min(0.95, baseCrashRisk + agePenalty);
       if (ac.condition < 20 && !ac.isGrounded) {
         ac.isGrounded = true;
+        ac.groundedReason = `Critical condition (${ac.condition.toFixed(0)}%) — requires maintenance`;
         if (ac.assignedRouteId && state.routes[ac.assignedRouteId]) {
           state.routes[ac.assignedRouteId].isActive = false;
         }
       }
     }),
 
-  groundAircraft: (aircraftId) =>
+  groundAircraft: (aircraftId, reason) =>
     set((state) => {
       const ac = state.aircraft[aircraftId];
       if (!ac) return;
       ac.isGrounded = true;
+      if (reason) ac.groundedReason = reason;
       if (ac.assignedRouteId && state.routes[ac.assignedRouteId]) {
         state.routes[ac.assignedRouteId].isActive = false;
       }
@@ -324,6 +326,7 @@ export const createPlayerSlice: StateCreator<GameStore, [['zustand/immer', never
       ac.condition = gain >= 999 ? 100 : Math.min(100, ac.condition + gain);
       ac.maintenanceHoursOwed = 0;
       ac.isGrounded = false;
+      ac.groundedReason = undefined;
       ac.activeMaintTier = null;
       ac.status = ac.assignedRouteId ? 'flying' : 'idle';
       ac.crashRisk = 0;
