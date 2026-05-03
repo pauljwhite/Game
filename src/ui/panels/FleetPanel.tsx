@@ -46,21 +46,18 @@ function AircraftCard({ ac, gameDay }: { ac: Aircraft; gameDay: number }) {
     <div className={`border-b border-white/10 ${ac.isGrounded && !inMaint ? 'opacity-60' : ''}`}>
       {/* Compact single-line row */}
       <button
-        className="w-full flex items-center gap-2 px-3 py-2 hover:bg-white/[0.055] transition-colors text-left"
+        className="w-full flex items-center gap-1.5 px-2 py-2 hover:bg-white/[0.055] transition-colors text-left"
         onClick={() => { setExpanded(v => !v); setSellConfirm(false); }}
       >
         {/* Condition dot */}
         <span className={`w-2 h-2 rounded-full shrink-0 ${condBg}`} />
 
         {/* Model */}
-        <span className="text-white text-sm font-medium w-20 sm:w-24 shrink-0 truncate">{type.model}</span>
+        <span className="text-white text-sm font-medium w-16 sm:w-20 shrink-0 truncate">{type.model}</span>
 
-        {/* Badges */}
-        <span className="flex gap-1 shrink-0">
-          {needsMaint && <span className="soft-tag border-red-300/20 bg-red-500/15 text-red-200">MAINT</span>}
-          {inMaint    && <span className="soft-tag border-yellow-300/20 bg-yellow-500/15 text-yellow-200">IN MAINT</span>}
-          {ac.autoMaintenanceEnabled && !inMaint && <span className="soft-tag border-sky-300/20 bg-sky-500/15 text-sky-200">AUTO</span>}
-        </span>
+        {/* Status badges — MAINT / IN MAINT only */}
+        {needsMaint && <span className="soft-tag border-red-300/20 bg-red-500/15 text-red-200 shrink-0">MAINT</span>}
+        {inMaint    && <span className="soft-tag border-yellow-300/20 bg-yellow-500/15 text-yellow-200 shrink-0">IN MAINT</span>}
 
         {/* Route — never truncated */}
         <span className="shrink-0 text-gray-400 text-xs">{routeLabel}</span>
@@ -68,17 +65,22 @@ function AircraftCard({ ac, gameDay }: { ac: Aircraft; gameDay: number }) {
         {/* Spacer */}
         <span className="flex-1" />
 
-        {/* Flight hours — hidden on mobile, shown on sm+ */}
-        <span className="hidden sm:block text-[10px] text-gray-500 shrink-0 w-12 text-right">
+        {/* Flight hours — hidden on mobile */}
+        <span className="hidden sm:block text-[10px] text-gray-500 shrink-0 w-10 text-right">
           {Math.round(ac.totalFlightHours).toLocaleString()}h
         </span>
 
-        {/* Condition bar */}
-        <div className="w-16 shrink-0 flex items-center gap-1.5">
-          <div className="flex-1 h-1.5 bg-white/10 rounded-full overflow-hidden">
+        {/* AUTO chip — lives beside the condition % */}
+        {ac.autoMaintenanceEnabled && !inMaint && (
+          <span className="soft-tag border-sky-300/20 bg-sky-500/15 text-sky-200 shrink-0">AUTO</span>
+        )}
+
+        {/* Condition bar + % */}
+        <div className="shrink-0 flex items-center gap-1">
+          <div className="w-10 h-1.5 bg-white/10 rounded-full overflow-hidden">
             <div className={`h-full ${condBg}`} style={{ width: `${conditionPct}%` }} />
           </div>
-          <span className={`text-[10px] w-7 text-right ${condText}`}>{conditionPct.toFixed(0)}%</span>
+          <span className={`text-[10px] w-6 text-right tabular-nums ${condText}`}>{conditionPct.toFixed(0)}%</span>
         </div>
 
         {/* Chevron */}
