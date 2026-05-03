@@ -11,6 +11,53 @@ export const CRASH_FINE_USD = 50_000_000;
 export const CRASH_DEMAND_PENALTY_DAYS = 30;
 export const CRASH_DEMAND_PENALTY_PCT = 0.15;
 export const MAINTENANCE_RESTORE_PARTIAL = 40;
+
+import type { MaintenanceTier } from '@/types/aircraft';
+export type { MaintenanceTier };
+
+export const MAINTENANCE_TIERS: Record<MaintenanceTier, {
+  label: string;
+  conditionGain: number;  // 999 = restore to 100
+  minHoursBase: number;
+  hoursOwedFactor: number;
+  costMultiplier: number;
+  durationDays: number;
+  desc: string;
+}> = {
+  light: {
+    label: 'Light',
+    conditionGain: 20,
+    minHoursBase: 3,
+    hoursOwedFactor: 0.5,
+    costMultiplier: 2.0,
+    durationDays: 1,
+    desc: '+20 condition, 1 day. Cheap but poor value per point.',
+  },
+  standard: {
+    label: 'Standard',
+    conditionGain: 50,
+    minHoursBase: 6,
+    hoursOwedFactor: 1.0,
+    costMultiplier: 1.5,
+    durationDays: 2,
+    desc: '+50 condition, 2 days. Best cost-per-point balance.',
+  },
+  full: {
+    label: 'Full Overhaul',
+    conditionGain: 999,
+    minHoursBase: 10,
+    hoursOwedFactor: 1.0,
+    costMultiplier: 2.2,
+    durationDays: 4,
+    desc: 'Restore to 100%, 4 days. Most efficient when badly degraded.',
+  },
+};
+
+export function computeMaintenanceCost(tier: MaintenanceTier, hoursOwed: number, ratePerHour: number): number {
+  const cfg = MAINTENANCE_TIERS[tier];
+  const hoursBilled = Math.max(cfg.minHoursBase, hoursOwed * cfg.hoursOwedFactor);
+  return Math.round(hoursBilled * ratePerHour * cfg.costMultiplier);
+}
 export const CONDITION_GROUNDING_THRESHOLD = 20;
 export const CONDITION_WARNING_THRESHOLD = 35;
 export const REPUTATION_RECOVERY_PER_DAY = 0.1;
