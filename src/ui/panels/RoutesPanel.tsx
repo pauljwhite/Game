@@ -9,6 +9,7 @@ export const RoutesPanel: React.FC = () => {
   const openModalById = useGameStore(s => s.openModalById);
   const selectRoute = useGameStore(s => s.selectRoute);
   const deleteRoute = useGameStore(s => s.deleteRoute);
+  const closePanel  = useGameStore(s => s.closePanel);
 
   const playerRoutes = Object.values(routes).filter(r => r.airlineId === 'player');
 
@@ -18,12 +19,15 @@ export const RoutesPanel: React.FC = () => {
     <div className="flex flex-col h-full">
       <div className="flex items-center justify-between p-3 border-b border-gray-700">
         <h2 className="text-white font-bold">Routes ({playerRoutes.length})</h2>
-        <button
-          onClick={() => openModalById('newRoute')}
-          className="px-3 py-1 bg-blue-600 hover:bg-blue-500 text-white text-xs rounded"
-        >
-          + New Route
-        </button>
+        <div className="flex items-center gap-1">
+          <button
+            onClick={() => openModalById('newRoute')}
+            className="px-3 py-1 bg-blue-600 hover:bg-blue-500 text-white text-xs rounded"
+          >
+            + New Route
+          </button>
+          <button onClick={closePanel} aria-label="Close" className="w-7 h-7 flex items-center justify-center text-gray-400 hover:text-white hover:bg-gray-700 rounded transition-colors text-lg leading-none">×</button>
+        </div>
       </div>
 
       <div className="flex-1 overflow-y-auto">

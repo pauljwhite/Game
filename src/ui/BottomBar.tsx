@@ -15,7 +15,7 @@ export const BottomBar: React.FC = () => {
 
   const sorted = [...allAirlines].sort((a, b) => b.totalPassengersAllTime - a.totalPassengersAllTime);
 
-  const latestNews = newsTicker[0] ?? 'Welcome to Airline Empire!';
+  const latestNews = newsTicker[0] ?? 'Welcome to Mighty Airline Empire!';
 
   return (
     <footer className="h-10 bg-gray-950 border-t border-gray-800 flex items-center px-4 gap-4 shrink-0 z-40 overflow-hidden">

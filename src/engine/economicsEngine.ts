@@ -5,7 +5,7 @@ import {
   REPUTATION_DEMAND_FACTOR, CRASH_DEMAND_PENALTY_PCT, DAY_MS,
   MAINTENANCE_TIERS,
 } from '@/utils/constants';
-import { getBaselineDailyPax, getPlayerMarketShare } from './demandModel';
+import { getBaselineDailyPax, getPlayerMarketShare, conditionDemandMod } from './demandModel';
 import { AIRCRAFT_TYPES } from '@/data/aircraftTypes';
 
 export function computeFlightCost(
@@ -95,8 +95,9 @@ export function runDailyTick(store: ReturnType<typeof import('@/store/index')['u
       const baselinePax = getBaselineDailyPax(origin, dest) * (origin.isHub || dest.isHub ? HUB_DEMAND_BONUS : 1);
       const repMod = 1 + (playerAirline.reputationScore - 50) * REPUTATION_DEMAND_FACTOR;
       const crashPenalty = playerAirline.crashPenaltyDaysLeft > 0 ? (1 - CRASH_DEMAND_PENALTY_PCT) : 1;
+      const condMod = conditionDemandMod(ac.condition);
       const marketShare = getPlayerMarketShare(route.originIata, route.destinationIata, route.priceEconomy, allAirlines, allRoutes, referencePrice);
-      const dailyPax = Math.floor(baselinePax * marketShare * repMod * crashPenalty);
+      const dailyPax = Math.floor(baselinePax * marketShare * repMod * crashPenalty * condMod);
 
       const ecoCapacity = aircraftType.seatsEconomy * flightsPerDay;
       const bizCapacity = aircraftType.seatsBusiness * flightsPerDay;
@@ -144,7 +145,7 @@ export function runDailyTick(store: ReturnType<typeof import('@/store/index')['u
     store.recoverReputation('player');
   }
 
-  // AI economics (simplified)
+  // AI economics (same model as player, capped by seat capacity)
   Object.values(aiAirlines).forEach(aiAirline => {
     if (aiAirline.isInsolvent) return;
     let aiRevenue = 0;
@@ -165,18 +166,57 @@ export function runDailyTick(store: ReturnType<typeof import('@/store/index')['u
 
       const flightCosts = computeFlightCost(route, ac, aircraftType, origin, dest, globalFuelPrice);
       const flightsPerDay = route.flightsPerWeek / 7;
-      const baselinePax = getBaselineDailyPax(origin, dest);
-      const marketShare = getPlayerMarketShare(route.originIata, route.destinationIata, route.priceEconomy, allAirlines, allRoutes);
-      const dailyPax = Math.floor(baselinePax * marketShare);
 
-      aiRevenue += dailyPax * route.priceEconomy * flightsPerDay;
-      aiCost += flightCosts.totalCost * flightsPerDay;
+      // Reference price for solo-route elasticity (same formula as player)
+      const totalSeats = aircraftType.seatsEconomy + aircraftType.seatsBusiness;
+      const referencePrice = totalSeats > 0 ? Math.round(flightCosts.totalCost / totalSeats * 1.4) : 200;
+
+      const baselinePax = getBaselineDailyPax(origin, dest);
+      const aiRepMod = 1 + (aiAirline.reputationScore - 50) * REPUTATION_DEMAND_FACTOR;
+      const aiCondMod = conditionDemandMod(ac.condition);
+      const marketShare = getPlayerMarketShare(
+        route.originIata, route.destinationIata,
+        route.priceEconomy, allAirlines, allRoutes, referencePrice,
+      );
+      const demandPax = Math.floor(baselinePax * marketShare * aiRepMod * aiCondMod);
+
+      // Cap to actual seat capacity
+      const ecoCapacity = Math.floor(aircraftType.seatsEconomy * flightsPerDay);
+      const dailyPax = Math.min(demandPax, ecoCapacity);
+      const loadFactor = ecoCapacity > 0 ? dailyPax / ecoCapacity : 0;
+
+      const dailyRevenue = dailyPax * route.priceEconomy;
+      const dailyCost = flightCosts.totalCost * flightsPerDay;
+      const dailyProfit = dailyRevenue - dailyCost;
+
+      aiRevenue += dailyRevenue;
+      aiCost += dailyCost;
       aiPax += dailyPax;
 
-      store.updateAIAircraftCondition(ac.id, -flightsPerDay * 0.05, flightsPerDay * flightCosts.flightDurationHours);
+      store.updateAIRoute(routeId, {
+        dailyRevenue, dailyCost, dailyProfit,
+        loadFactorEconomy: loadFactor,
+        dailyPassengers: dailyPax,
+      });
+
+      store.updateAIAircraftCondition(
+        ac.id,
+        -(flightsPerDay * flightCosts.flightDurationHours * 0.08),
+        flightsPerDay * flightCosts.flightDurationHours,
+      );
     });
 
-    store.updateAIAirlineStats(aiAirline.id, aiRevenue - aiCost, aiPax);
+    const netProfit = aiRevenue - aiCost;
+    const willBeInsolvent = (aiAirline.cashUSD + netProfit) < -50_000_000;
+    const wasInsolvent = aiAirline.isInsolvent;
+
+    store.updateAIAirlineStats(aiAirline.id, netProfit, aiPax);
+
+    // First tick crossing into insolvency: ground the airline
+    if (!wasInsolvent && willBeInsolvent) {
+      store.pushNewsItem(`BANKRUPTCY: ${aiAirline.name} has declared bankruptcy and ceased operations.`);
+      aiAirline.routeIds.forEach(rid => store.updateAIRoute(rid, { isActive: false }));
+    }
   });
 
   // Recalculate market shares

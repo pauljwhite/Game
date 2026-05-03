@@ -1,145 +1,170 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useGameStore } from '@/store';
 import { formatCurrency } from '@/utils/format';
+import { AIRCRAFT_TYPES } from '@/data/aircraftTypes';
+import { calculateBuyoutPrice } from '@/engine/valuation';
+
+const typeMap = Object.fromEntries(AIRCRAFT_TYPES.map(t => [t.id, t]));
 
 export const TakeoverModal: React.FC = () => {
-  const modalPayload = useGameStore(s => s.modalPayload);
-  const airlines = useGameStore(s => s.airlines);
-  const aiAirlines = useGameStore(s => s.aiAirlines);
-  const aiAircraft = useGameStore(s => s.aiAircraft);
-  const aiRoutes = useGameStore(s => s.aiRoutes);
-  const closeModal = useGameStore(s => s.closeModal);
+  const modalPayload    = useGameStore(s => s.modalPayload);
+  const airlines        = useGameStore(s => s.airlines);
+  const aiAirlines      = useGameStore(s => s.aiAirlines);
+  const aiAircraft      = useGameStore(s => s.aiAircraft);
+  const aiRoutes        = useGameStore(s => s.aiRoutes);
+  const airports        = useGameStore(s => s.airports);
+  const closeModal      = useGameStore(s => s.closeModal);
   const takeoverAirline = useGameStore(s => s.takeoverAirline);
   const removeAIAirline = useGameStore(s => s.removeAIAirline);
+  const pushNewsItem    = useGameStore(s => s.pushNewsItem);
   const playerAirlineId = useGameStore(s => s.playerAirlineId);
 
-  const targetId = modalPayload as string | null;
-  const target = targetId ? aiAirlines[targetId] : null;
+  const [confirmed, setConfirmed] = useState(false);
+
+  const targetId     = modalPayload as string | null;
+  const target       = targetId ? aiAirlines[targetId] : null;
   const playerAirline = airlines[playerAirlineId];
 
   if (!target || !playerAirline) return null;
 
-  const debt = Math.min(0, target.cashUSD);
-  const fleetCount = target.fleetIds.length;
-  const acquisitionCost = Math.max(1, fleetCount * 10_000_000 - Math.abs(debt));
-  const canAfford = playerAirline.cashUSD >= acquisitionCost;
+  const val        = calculateBuyoutPrice(target, aiAircraft, aiRoutes);
+  const canAfford  = playerAirline.cashUSD >= val.totalPrice;
 
-  // Deduplicate type ids for a concise list
-  const fleetTypeMap: Record<string, number> = {};
+  // Fleet summary grouped by type
+  const fleetSummary: Record<string, { count: number; model: string }> = {};
   target.fleetIds.forEach(id => {
     const ac = aiAircraft[id];
-    if (ac) {
-      fleetTypeMap[ac.typeId] = (fleetTypeMap[ac.typeId] ?? 0) + 1;
-    }
+    if (!ac) return;
+    const t = typeMap[ac.typeId];
+    const label = t ? `${t.manufacturer} ${t.model}` : ac.typeId;
+    if (!fleetSummary[ac.typeId]) fleetSummary[ac.typeId] = { count: 0, model: label };
+    fleetSummary[ac.typeId].count++;
   });
 
   const routeCount = target.routeIds.length;
 
   function handleConfirm() {
     if (!targetId || !canAfford) return;
+    if (!confirmed) { setConfirmed(true); return; }
     takeoverAirline(targetId, aiAirlines, aiRoutes, aiAircraft);
     removeAIAirline(targetId);
+    pushNewsItem(`${playerAirline.name} has acquired ${target!.name} for ${formatCurrency(val.totalPrice)}.`);
     closeModal();
   }
 
+  const routeDetails = target.routeIds.slice(0, 5).map(id => {
+    const r = aiRoutes[id];
+    if (!r) return null;
+    const orig = airports[r.originIata]?.city ?? r.originIata;
+    const dest = airports[r.destinationIata]?.city ?? r.destinationIata;
+    return { label: `${orig} → ${dest}`, profit: r.dailyProfit };
+  }).filter(Boolean) as { label: string; profit: number }[];
+
   return (
-    <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-[9999]">
-      <div className="bg-gray-900 border border-gray-700 rounded-xl p-6 shadow-2xl w-full max-w-md relative">
-        {/* Close button */}
-        <button
-          onClick={closeModal}
-          className="absolute top-4 right-4 text-gray-400 hover:text-white transition-colors text-xl leading-none"
-          aria-label="Close"
-        >
-          x
-        </button>
+    <div className="fixed inset-0 bg-black/80 flex items-end sm:items-center justify-center z-[9999]">
+      <div className="bg-gray-900 border border-gray-700 rounded-t-2xl sm:rounded-xl px-4 sm:px-6 py-4 shadow-2xl w-full max-w-lg relative max-h-[92svh] overflow-y-auto">
+        <button onClick={closeModal} className="absolute top-4 right-4 text-gray-400 hover:text-white text-xl leading-none">×</button>
 
-        <h2 className="text-xl font-bold text-white mb-1">Acquisition Opportunity</h2>
-        <p className="text-gray-400 text-sm mb-5">
-          {target.name} is in financial distress and available for acquisition.
-        </p>
-
-        {/* Target airline info */}
-        <div className="bg-gray-800 rounded-lg p-4 mb-4 space-y-2">
-          <div className="flex items-center gap-2 mb-3">
-            <span className="text-2xl">{target.logoEmoji}</span>
-            <div>
-              <div className="text-white font-bold">{target.name}</div>
-              <div className="text-gray-400 text-xs">Hub: {target.hubIatas[0] ?? '-'}</div>
-            </div>
+        {/* Header */}
+        <div className="flex items-center gap-3 mb-4">
+          <span className="text-3xl">{target.logoEmoji}</span>
+          <div>
+            <h2 className="text-xl font-bold text-white">Buy Out {target.name}</h2>
+            <p className="text-gray-400 text-sm">
+              {target.isInsolvent ? 'Distressed acquisition' : `${target.personality} airline · Hub: ${target.hubIatas.join(', ')}`}
+            </p>
           </div>
+        </div>
 
-          <div className="grid grid-cols-2 gap-y-2 text-sm">
-            <span className="text-gray-400">Fleet size</span>
-            <span className="text-white font-medium">{fleetCount} aircraft</span>
+        {/* Valuation breakdown */}
+        <div className="bg-gray-800 rounded-lg p-4 mb-4 space-y-2 text-sm">
+          <div className="text-gray-400 text-xs font-semibold uppercase tracking-wider mb-2">Valuation</div>
 
-            <span className="text-gray-400">Routes</span>
-            <span className="text-white font-medium">{routeCount}</span>
-
-            <span className="text-gray-400">Cash / Debt</span>
-            <span className={target.cashUSD < 0 ? 'text-red-400 font-medium' : 'text-green-400 font-medium'}>
-              {formatCurrency(target.cashUSD)}
-            </span>
-
-            <span className="text-gray-400">Reputation</span>
-            <span className="text-white font-medium">{Math.round(target.reputationScore)}/100</span>
+          <div className="flex justify-between">
+            <span className="text-gray-400">Fleet ({target.fleetIds.length} aircraft)</span>
+            <span className="text-white">{formatCurrency(val.fleetValue)}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-gray-400">Route network ({routeCount} routes)</span>
+            <span className="text-white">{formatCurrency(val.routeValue)}</span>
+          </div>
+          {val.cashValue > 0 && (
+            <div className="flex justify-between">
+              <span className="text-gray-400">Cash on hand</span>
+              <span className="text-green-400">{formatCurrency(val.cashValue)}</span>
+            </div>
+          )}
+          {val.debtValue > 0 && (
+            <div className="flex justify-between">
+              <span className="text-gray-400">Debt assumed</span>
+              <span className="text-red-400">−{formatCurrency(val.debtValue)}</span>
+            </div>
+          )}
+          <div className="flex justify-between">
+            <span className="text-gray-400">Control premium (20%)</span>
+            <span className="text-white">{formatCurrency(val.controlPremium)}</span>
+          </div>
+          <div className="border-t border-gray-700 pt-2 flex justify-between font-bold">
+            <span className="text-gray-200">Acquisition price</span>
+            <span className="text-white text-base">{formatCurrency(val.totalPrice)}</span>
           </div>
         </div>
 
         {/* What you gain */}
         <div className="bg-gray-800 rounded-lg p-4 mb-4">
-          <div className="text-gray-300 text-sm font-semibold mb-2">You will gain:</div>
-          <ul className="space-y-1 text-sm">
-            {Object.entries(fleetTypeMap).length > 0 ? (
-              Object.entries(fleetTypeMap).map(([typeId, count]) => (
-                <li key={typeId} className="flex items-center gap-2 text-gray-300">
-                  <span className="w-1.5 h-1.5 rounded-full bg-blue-400 flex-shrink-0" />
-                  {count}x {typeId.toUpperCase()}
-                </li>
-              ))
-            ) : (
-              <li className="text-gray-500 italic">No aircraft</li>
+          <div className="text-gray-300 text-sm font-semibold mb-2">You gain</div>
+          <div className="space-y-1 text-sm">
+            {Object.values(fleetSummary).map(({ count, model }) => (
+              <div key={model} className="flex items-center gap-2 text-gray-300">
+                <span className="w-1.5 h-1.5 rounded-full bg-blue-400 shrink-0" />
+                {count}× {model}
+              </div>
+            ))}
+            {Object.keys(fleetSummary).length === 0 && (
+              <div className="text-gray-500 italic text-xs">No aircraft</div>
             )}
-            {routeCount > 0 && (
-              <li className="flex items-center gap-2 text-gray-300">
-                <span className="w-1.5 h-1.5 rounded-full bg-green-400 flex-shrink-0" />
-                {routeCount} active route{routeCount !== 1 ? 's' : ''}
-              </li>
+            {routeDetails.map(rd => (
+              <div key={rd.label} className="flex items-center justify-between text-gray-300">
+                <span className="flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-green-400 shrink-0" />
+                  {rd.label}
+                </span>
+                <span className={rd.profit >= 0 ? 'text-green-400 text-xs' : 'text-red-400 text-xs'}>
+                  {formatCurrency(rd.profit)}/d
+                </span>
+              </div>
+            ))}
+            {routeCount > routeDetails.length && (
+              <div className="text-gray-500 text-xs">+{routeCount - routeDetails.length} more routes</div>
             )}
-          </ul>
+          </div>
         </div>
 
-        {/* Acquisition cost */}
-        <div className="bg-gray-800 rounded-lg p-4 mb-5">
-          <div className="flex justify-between items-center">
-            <span className="text-gray-400 text-sm">Acquisition Cost</span>
-            <span className="text-white font-bold text-lg">{formatCurrency(acquisitionCost)}</span>
-          </div>
-          <div className="flex justify-between items-center mt-1">
-            <span className="text-gray-400 text-sm">Your Cash</span>
-            <span className={`font-medium text-sm ${canAfford ? 'text-green-400' : 'text-red-400'}`}>
-              {formatCurrency(playerAirline.cashUSD)}
-            </span>
-          </div>
-          {!canAfford && (
-            <div className="text-red-400 text-xs mt-2">Insufficient funds for this acquisition.</div>
-          )}
+        {/* Affordability */}
+        <div className="bg-gray-800 rounded-lg px-4 py-3 mb-5 flex justify-between items-center text-sm">
+          <span className="text-gray-400">Your cash after</span>
+          <span className={canAfford ? 'text-green-400 font-semibold' : 'text-red-400 font-semibold'}>
+            {formatCurrency(playerAirline.cashUSD - val.totalPrice)}
+          </span>
         </div>
 
-        {/* Action buttons */}
+        {!canAfford && (
+          <p className="text-red-400 text-xs mb-3 text-center">Insufficient funds — need {formatCurrency(val.totalPrice - playerAirline.cashUSD)} more.</p>
+        )}
+
         <div className="flex gap-3">
-          <button
-            onClick={closeModal}
-            className="flex-1 py-2.5 bg-gray-700 hover:bg-gray-600 text-gray-200 font-semibold rounded-lg transition-colors text-sm"
-          >
+          <button onClick={closeModal} className="flex-1 py-2.5 bg-gray-700 hover:bg-gray-600 text-gray-200 font-semibold rounded-lg transition-colors text-sm">
             Cancel
           </button>
           <button
             onClick={handleConfirm}
             disabled={!canAfford}
-            className="flex-1 py-2.5 bg-green-700 hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold rounded-lg transition-colors text-sm"
+            onMouseLeave={() => setConfirmed(false)}
+            className={`flex-1 py-2.5 font-semibold rounded-lg transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed ${
+              confirmed ? 'bg-red-600 hover:bg-red-500 text-white' : 'bg-green-700 hover:bg-green-600 text-white'
+            }`}
           >
-            Acquire {target.name}
+            {confirmed ? 'Confirm — no going back' : `Buy Out for ${formatCurrency(val.totalPrice)}`}
           </button>
         </div>
       </div>

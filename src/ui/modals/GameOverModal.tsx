@@ -5,8 +5,9 @@ import { GAME_EPOCH_YEAR } from '@/utils/constants';
 
 export const GameOverModal: React.FC = () => {
   const modalPayload = useGameStore(s => s.modalPayload);
-  const airlines = useGameStore(s => s.airlines);
-  const routes = useGameStore(s => s.routes);
+  const airlines   = useGameStore(s => s.airlines);
+  const aiAirlines = useGameStore(s => s.aiAirlines);
+  const routes     = useGameStore(s => s.routes);
   const gameTimeMs = useGameStore(s => s.gameTimeMs);
   const openModalById = useGameStore(s => s.openModalById);
   const playerAirlineId = useGameStore(s => s.playerAirlineId);
@@ -28,8 +29,8 @@ export const GameOverModal: React.FC = () => {
   const currentDate = formatGameDate(gameTimeMs);
 
   return (
-    <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-[9999]">
-      <div className="bg-gray-900 border border-gray-700 rounded-xl p-6 shadow-2xl w-full max-w-md relative">
+    <div className="fixed inset-0 bg-black/80 flex items-end sm:items-center justify-center z-[9999]">
+      <div className="bg-gray-900 border border-gray-700 rounded-t-2xl sm:rounded-xl px-4 sm:px-6 py-4 shadow-2xl w-full max-w-md relative max-h-[92svh] overflow-y-auto">
         {/* Result header */}
         <div className={`text-center mb-6 ${isWin ? 'text-yellow-400' : 'text-red-400'}`}>
           <div className="text-5xl mb-3">{isWin ? '🏆' : '💸'}</div>
@@ -89,7 +90,13 @@ export const GameOverModal: React.FC = () => {
           <div className="flex justify-between items-center text-sm">
             <span className="text-gray-400">Market Share</span>
             <span className="text-white font-semibold">
-              {playerAirline.marketSharePercent.toFixed(1)}%
+              {(() => {
+                const totalPax = playerAirline.totalPassengersAllTime +
+                  Object.values(aiAirlines).reduce((s, a) => s + a.totalPassengersAllTime, 0);
+                return totalPax > 0
+                  ? ((playerAirline.totalPassengersAllTime / totalPax) * 100).toFixed(1)
+                  : '0.0';
+              })()}%
             </span>
           </div>
 

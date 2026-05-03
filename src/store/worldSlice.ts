@@ -24,6 +24,10 @@ export interface WorldSlice {
   updateAIAircraftCondition: (aircraftId: string, conditionDelta: number, hoursOwed: number) => void;
   updateAIAirlineStats: (id: string, netProfit: number, passengers: number) => void;
   removeAIAirline: (id: string) => void;
+  addAIAirline: (airline: Airline) => void;
+  addAIAircraft: (aircraft: Aircraft) => void;
+  updateAIRoute: (routeId: string, changes: Partial<Route>) => void;
+  aiAcquireAirline: (buyerId: string, targetId: string, cost: number) => void;
 }
 
 function createAirportMap(): Record<string, Airport> {
@@ -38,7 +42,7 @@ export const createWorldSlice: StateCreator<GameStore, [['zustand/immer', never]
   aiAircraft: {},
   aiRoutes: {},
   globalFuelPrice: 0.82,
-  newsTicker: ['Welcome to Airline Empire! Build your airline from the ground up.'],
+  newsTicker: ['Welcome to Mighty Airline Empire! Build your airline from the ground up.'],
   totalMarketPAX: 0,
 
   initWorld: () =>
@@ -132,5 +136,37 @@ export const createWorldSlice: StateCreator<GameStore, [['zustand/immer', never]
       airline.routeIds.forEach(rid => { delete state.aiRoutes[rid]; });
       airline.fleetIds.forEach(aid => { delete state.aiAircraft[aid]; });
       delete state.aiAirlines[id];
+    }),
+
+  addAIAirline: (airline) =>
+    set((state) => {
+      state.aiAirlines[airline.id] = airline;
+    }),
+
+  addAIAircraft: (aircraft) =>
+    set((state) => {
+      state.aiAircraft[aircraft.id] = aircraft;
+    }),
+
+  updateAIRoute: (routeId, changes) =>
+    set((state) => {
+      if (state.aiRoutes[routeId]) Object.assign(state.aiRoutes[routeId], changes);
+    }),
+
+  aiAcquireAirline: (buyerId, targetId, cost) =>
+    set((state) => {
+      const buyer  = state.aiAirlines[buyerId];
+      const target = state.aiAirlines[targetId];
+      if (!buyer || !target) return;
+      buyer.cashUSD -= cost;
+      target.fleetIds.forEach(id => {
+        const ac = state.aiAircraft[id];
+        if (ac) { ac.airlineId = buyerId; buyer.fleetIds.push(id); }
+      });
+      target.routeIds.forEach(id => {
+        const route = state.aiRoutes[id];
+        if (route) { route.airlineId = buyerId; buyer.routeIds.push(id); }
+      });
+      delete state.aiAirlines[targetId];
     }),
 });

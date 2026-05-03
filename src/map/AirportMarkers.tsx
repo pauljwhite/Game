@@ -5,22 +5,24 @@ import { useGameStore } from '@/store';
 import type { Airport } from '@/types';
 
 const BASE_RADIUS: Record<string, number> = {
-  small: 3, medium: 4, large: 6, major: 8,
+  small: 3, medium: 5, large: 7, major: 9,
 };
 
 const MIN_ZOOM: Record<string, number> = {
   small: 5, medium: 4, large: 2, major: 2,
 };
 
-// Visual radius scales with zoom; hit area is always at least 4px so clicking works
-function getRadius(size: string, zoom: number): number {
+const HIT_RADIUS = 14; // invisible hit-area radius in px (makes small dots easy to tap)
+
+function getVisualRadius(size: string, zoom: number): number {
   const base = BASE_RADIUS[size] ?? 4;
-  const scale = Math.max(0.4, zoom / 5);
-  return Math.max(4, base * scale);
+  const scale = Math.max(0.5, zoom / 5);
+  return Math.max(3, base * scale);
 }
 
 interface MarkerEntry {
-  marker: L.CircleMarker;
+  visual: L.CircleMarker;
+  hit: L.CircleMarker;
   airport: Airport;
 }
 
@@ -36,7 +38,7 @@ export function AirportMarkers({ map }: AirportMarkersProps) {
   const hubIatas = playerAirline?.hubIatas ?? [];
 
   useEffect(() => {
-    entriesRef.current.forEach(e => e.marker.remove());
+    entriesRef.current.forEach(e => { e.visual.remove(); e.hit.remove(); });
     entriesRef.current = [];
 
     const zoom = map.getZoom();
@@ -45,24 +47,38 @@ export function AirportMarkers({ map }: AirportMarkersProps) {
       const isHub = airport.isHub || hubIatas.includes(airport.iata);
       const color = isHub ? '#f59e0b' : '#60a5fa';
       const visible = zoom >= (MIN_ZOOM[airport.size] ?? 3);
+      const latlng: [number, number] = [airport.lat, airport.lon];
 
-      const marker = L.circleMarker([airport.lat, airport.lon], {
-        radius: getRadius(airport.size, zoom),
+      // Visible dot (non-interactive, purely cosmetic)
+      const visual = L.circleMarker(latlng, {
+        radius: getVisualRadius(airport.size, zoom),
         color,
         fillColor: color,
         fillOpacity: visible ? 0.9 : 0,
         opacity: visible ? 1 : 0,
         weight: 1,
+        interactive: false,
       }).addTo(map);
 
-      marker.on('click', () => { if (zoom >= (MIN_ZOOM[airport.size] ?? 3)) selectAirport(airport.iata); });
-      marker.bindTooltip(airport.name, { direction: 'top', offset: [0, -4] });
+      // Invisible hit area — always large enough to tap
+      const hit = L.circleMarker(latlng, {
+        radius: HIT_RADIUS,
+        color: 'transparent',
+        fillColor: 'transparent',
+        fillOpacity: 0,
+        opacity: 0,
+        weight: 0,
+        interactive: true,
+      }).addTo(map);
 
-      entriesRef.current.push({ marker, airport });
+      hit.on('click', () => { if (zoom >= (MIN_ZOOM[airport.size] ?? 3)) selectAirport(airport.iata); });
+      hit.bindTooltip(airport.iata, { direction: 'top', offset: [0, -4], className: 'leaflet-tooltip-airport' });
+
+      entriesRef.current.push({ visual, hit, airport });
     });
 
     return () => {
-      entriesRef.current.forEach(e => e.marker.remove());
+      entriesRef.current.forEach(e => { e.visual.remove(); e.hit.remove(); });
       entriesRef.current = [];
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -71,10 +87,10 @@ export function AirportMarkers({ map }: AirportMarkersProps) {
   useEffect(() => {
     function onZoom() {
       const zoom = map.getZoom();
-      entriesRef.current.forEach(({ marker, airport }) => {
+      entriesRef.current.forEach(({ visual, airport }) => {
         const visible = zoom >= (MIN_ZOOM[airport.size] ?? 3);
-        marker.setRadius(getRadius(airport.size, zoom));
-        marker.setStyle({
+        visual.setRadius(getVisualRadius(airport.size, zoom));
+        visual.setStyle({
           fillOpacity: visible ? 0.9 : 0,
           opacity: visible ? 1 : 0,
         });

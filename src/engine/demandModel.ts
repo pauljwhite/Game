@@ -59,3 +59,14 @@ export function getSuggestedEconomyPrice(totalCostPerFlight: number, totalSeats:
   if (totalSeats === 0) return 200;
   return Math.round((totalCostPerFlight / totalSeats) * 1.4);
 }
+
+/**
+ * Demand multiplier from aircraft condition.
+ * Full penalty kicks in below 70%; at condition 0 demand is 65% of normal.
+ * Above 70%: no effect (passengers can't tell the difference).
+ */
+export function conditionDemandMod(condition: number): number {
+  const threshold = 70;
+  if (condition >= threshold) return 1.0;
+  return 0.65 + 0.35 * (condition / threshold);
+}

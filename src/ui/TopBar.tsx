@@ -20,10 +20,11 @@ function reputationColor(score: number): string {
 }
 
 const AirlineMenu: React.FC<{ onClose: () => void }> = ({ onClose }) => {
-  const airlines = useGameStore(s => s.airlines);
-  const aircraft = useGameStore(s => s.aircraft);
-  const routes = useGameStore(s => s.routes);
-  const gameTimeMs = useGameStore(s => s.gameTimeMs);
+  const airlines    = useGameStore(s => s.airlines);
+  const aiAirlines  = useGameStore(s => s.aiAirlines);
+  const aircraft    = useGameStore(s => s.aircraft);
+  const routes      = useGameStore(s => s.routes);
+  const gameTimeMs  = useGameStore(s => s.gameTimeMs);
   const [confirming, setConfirming] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -61,7 +62,7 @@ const AirlineMenu: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   return (
     <div
       ref={ref}
-      className="absolute top-full left-0 mt-1 w-72 bg-gray-900 border border-gray-700 rounded-xl shadow-2xl z-[9999] overflow-hidden"
+      className="absolute top-full left-0 mt-1 w-72 max-w-[calc(100vw-0.5rem)] bg-gray-900 border border-gray-700 rounded-xl shadow-2xl z-[9999] overflow-hidden"
     >
       {/* Header */}
       <div className="px-4 py-3 border-b border-gray-800" style={{ borderLeftColor: player.color, borderLeftWidth: 3 }}>
@@ -106,7 +107,12 @@ const AirlineMenu: React.FC<{ onClose: () => void }> = ({ onClose }) => {
         </div>
         <div>
           <div className="text-gray-500">Market Share</div>
-          <div className="text-white font-semibold">{player.marketSharePercent.toFixed(1)}%</div>
+          <div className="text-white font-semibold">{(() => {
+            const totalPax = player.totalPassengersAllTime +
+              Object.values(aiAirlines).reduce((s, a) => s + a.totalPassengersAllTime, 0);
+            const share = totalPax > 0 ? (player.totalPassengersAllTime / totalPax) * 100 : 0;
+            return share.toFixed(1);
+          })()}%</div>
         </div>
         <div>
           <div className="text-gray-500">Pax All-Time</div>
@@ -181,7 +187,7 @@ export const TopBar: React.FC = () => {
             <span className="text-lg">{playerAirline?.logoEmoji ?? '✈'}</span>
             <div className="leading-none min-w-0 text-left">
               <div className="text-white font-bold text-xs truncate max-w-[120px] sm:max-w-[160px]">
-                {playerAirline?.name ?? 'Airline Empire'}
+                {playerAirline?.name ?? 'Mighty Airline Empire'}
               </div>
               <div className={`text-xs font-mono ${(playerAirline?.cashUSD ?? 0) >= 0 ? 'text-green-400' : 'text-red-400'}`}>
                 {playerAirline ? formatCurrency(playerAirline.cashUSD) : '-'}

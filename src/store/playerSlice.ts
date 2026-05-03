@@ -5,6 +5,7 @@ import { v4 as uuid } from 'uuid';
 import { haversineKm } from '@/utils/geo';
 import { AIRCRAFT_TYPES } from '@/data/aircraftTypes';
 import { computeMaintenanceCost, MAINTENANCE_TIERS } from '@/utils/constants';
+import { calculateBuyoutPrice } from '@/engine/valuation';
 import type { GameStore } from './index';
 
 export interface RouteConfig {
@@ -220,22 +221,49 @@ export const createPlayerSlice: StateCreator<GameStore, [['zustand/immer', never
     set((state) => {
       const target = aiAirlines[targetAirlineId];
       if (!target) return;
-      const cost = Math.max(1, target.fleetIds.length * 10_000_000 - Math.abs(Math.min(0, target.cashUSD)));
-      state.airlines[PLAYER_ID].cashUSD -= cost;
-      // Transfer fleet and routes
+      const { totalPrice } = calculateBuyoutPrice(target, aiAircraft, aiRoutes);
+      state.airlines[PLAYER_ID].cashUSD -= totalPrice;
+
+      // Transfer fleet — reset grounding and initialise player-only fields
       target.fleetIds.forEach(id => {
         const ac = aiAircraft[id];
-        if (ac) {
-          state.aircraft[id] = { ...ac, airlineId: PLAYER_ID };
-          state.airlines[PLAYER_ID].fleetIds.push(id);
-        }
+        if (!ac) return;
+        const hasRoute = !!ac.assignedRouteId;
+        state.aircraft[id] = {
+          ...ac,
+          airlineId: PLAYER_ID,
+          isGrounded: false,
+          status: hasRoute ? 'flying' : 'idle',
+          // Initialise fields that AI aircraft never set
+          currentLat: ac.currentLat ?? 0,
+          currentLon: ac.currentLon ?? 0,
+          flightProgress: ac.flightProgress ?? 0,
+          activeMaintTier: ac.activeMaintTier ?? null,
+          autoMaintenanceEnabled: false,
+          autoMaintenanceThreshold: 40,
+          autoMaintenanceTier: (ac.autoMaintenanceTier as MaintenanceTier) ?? 'standard',
+        };
+        state.airlines[PLAYER_ID].fleetIds.push(id);
       });
+
+      // Transfer routes — force active so economics runs on next tick
       target.routeIds.forEach(id => {
         const route = aiRoutes[id];
-        if (route) {
-          state.routes[id] = { ...route, airlineId: PLAYER_ID };
-          state.airlines[PLAYER_ID].routeIds.push(id);
-        }
+        if (!route) return;
+        const hasAircraft = !!route.aircraftId && !!aiAircraft[route.aircraftId];
+        state.routes[id] = {
+          ...route,
+          airlineId: PLAYER_ID,
+          isActive: hasAircraft,
+          // Reset stale stats so first player tick sets fresh values
+          dailyRevenue: 0,
+          dailyCost: 0,
+          dailyProfit: 0,
+          loadFactorEconomy: 0,
+          loadFactorBusiness: 0,
+          dailyPassengers: 0,
+        };
+        state.airlines[PLAYER_ID].routeIds.push(id);
       });
     }),
 

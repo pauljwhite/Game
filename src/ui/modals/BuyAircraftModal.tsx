@@ -54,10 +54,10 @@ export const BuyAircraftModal: React.FC = () => {
   }
 
   return (
-    <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-[9999]">
-      <div className="bg-gray-900 border border-gray-700 rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col">
+    <div className="fixed inset-0 bg-black/80 flex items-end sm:items-center justify-center z-[9999]">
+      <div className="bg-gray-900 border border-gray-700 rounded-t-2xl sm:rounded-xl shadow-2xl w-full max-w-4xl max-h-[92svh] sm:max-h-[90vh] flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-700 flex-shrink-0">
+        <div className="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-700 flex-shrink-0">
           <div>
             <h2 className="text-xl font-bold text-white">Buy Aircraft</h2>
             <p className="text-sm text-gray-400 mt-0.5">
@@ -92,7 +92,7 @@ export const BuyAircraftModal: React.FC = () => {
         </div>
 
         {/* Aircraft list */}
-        <div className="overflow-y-auto flex-1 px-6 py-4">
+        <div className="overflow-y-auto flex-1 px-4 sm:px-6 py-4">
           {purchaseError && (
             <div className="mb-3 px-3 py-2 bg-red-900/40 border border-red-700 rounded text-red-300 text-sm">
               {purchaseError}

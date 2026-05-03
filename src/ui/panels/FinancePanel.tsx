@@ -7,6 +7,7 @@ export const FinancePanel: React.FC = () => {
   const airlines = useGameStore(s => s.airlines);
   const routes = useGameStore(s => s.routes);
 
+  const closePanel = useGameStore(s => s.closePanel);
   const playerAirline = airlines['player'];
   if (!playerAirline) return null;
 
@@ -16,8 +17,12 @@ export const FinancePanel: React.FC = () => {
   const totalDailyProfit = totalDailyRevenue - totalDailyCost;
 
   return (
-    <div className="flex flex-col h-full p-3 gap-4">
-      <h2 className="text-white font-bold">Finance</h2>
+    <div className="flex flex-col h-full">
+      <div className="flex items-center justify-between p-3 border-b border-gray-700">
+        <h2 className="text-white font-bold">Finance</h2>
+        <button onClick={closePanel} aria-label="Close" className="w-7 h-7 flex items-center justify-center text-gray-400 hover:text-white hover:bg-gray-700 rounded transition-colors text-lg leading-none">×</button>
+      </div>
+      <div className="flex-1 overflow-y-auto p-3 flex flex-col gap-4">
 
       <div className="grid grid-cols-2 gap-2">
         <div className="bg-gray-800 rounded p-2">
@@ -73,6 +78,7 @@ export const FinancePanel: React.FC = () => {
             </span>
           </div>
         </div>
+      </div>
       </div>
     </div>
   );
