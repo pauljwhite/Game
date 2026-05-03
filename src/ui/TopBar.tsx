@@ -63,7 +63,7 @@ const AirlineMenu: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   return (
     <div
       ref={ref}
-      className="absolute top-full left-0 mt-2 w-72 max-w-[calc(100vw-0.5rem)] glass-panel rounded-xl z-[9999] overflow-hidden"
+      className="absolute top-full left-0 mt-2 w-72 max-w-[calc(100vw-0.5rem)] rounded-xl z-[9999] overflow-hidden border border-white/10 bg-gray-950/95 shadow-2xl backdrop-blur-xl"
     >
       {/* Header */}
       <div className="px-4 py-3 border-b border-white/10 bg-white/[0.035]" style={{ borderLeftColor: player.color, borderLeftWidth: 3 }}>
