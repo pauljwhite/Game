@@ -30,28 +30,27 @@ export const Layout: React.FC = () => {
   const isInitialized = useGameStore(s => s.isInitialized);
   const hydrated = useHydrated();
 
-  if (!hydrated) {
-    return <div className="w-screen h-screen bg-gray-950" />;
+
+  if (!hydrated || !isInitialized) {
+    return (
+      <div className="w-screen h-screen bg-gray-950 flex items-center justify-center">
+        {hydrated && <NewGameModal />}
+      </div>
+    );
   }
 
   const PanelComponent = openPanel ? PANELS[openPanel] : null;
 
   return (
     <div className="flex flex-col h-screen bg-gray-950 text-white overflow-hidden">
-      {/* DEBUG — remove after fix */}
-      <div style={{position:'fixed',bottom:4,left:4,background:'rgba(0,0,0,0.85)',color:'#0f0',fontFamily:'monospace',fontSize:11,padding:'4px 8px',zIndex:9999,pointerEvents:'none'}}>
-        hydrated:{String(hydrated)} init:{String(isInitialized)} modal:{String(openModal)}
-      </div>
-      {isInitialized && <TopBar />}
+      <TopBar />
 
       <div className="flex-1 flex relative overflow-hidden">
-        {/* Map */}
         <div className="flex-1 relative">
           <GameMap />
           <AirportPopup />
         </div>
 
-        {/* Side panel slide-in */}
         {PanelComponent && (
           <div className="w-96 bg-gray-900 border-l border-gray-800 flex flex-col overflow-hidden shrink-0">
             <PanelComponent />
@@ -59,10 +58,8 @@ export const Layout: React.FC = () => {
         )}
       </div>
 
-      {isInitialized && <BottomBar />}
+      <BottomBar />
 
-      {/* Modals */}
-      {!isInitialized && <NewGameModal />}
       {openModal === 'buyAircraft' && <BuyAircraftModal />}
       {openModal === 'newRoute' && <NewRouteModal />}
       {openModal === 'routeDetail' && <RouteDetailModal />}
