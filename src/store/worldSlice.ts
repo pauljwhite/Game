@@ -25,6 +25,7 @@ export interface WorldSlice {
   updateAIAirlineStats: (id: string, netProfit: number, passengers: number) => void;
   removeAIAirline: (id: string) => void;
   addAIAirline: (airline: Airline) => void;
+  addAIAircraft: (aircraft: Aircraft) => void;
 }
 
 function createAirportMap(): Record<string, Airport> {
@@ -138,5 +139,10 @@ export const createWorldSlice: StateCreator<GameStore, [['zustand/immer', never]
   addAIAirline: (airline) =>
     set((state) => {
       state.aiAirlines[airline.id] = airline;
+    }),
+
+  addAIAircraft: (aircraft) =>
+    set((state) => {
+      state.aiAircraft[aircraft.id] = aircraft;
     }),
 });

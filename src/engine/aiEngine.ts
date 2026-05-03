@@ -293,17 +293,12 @@ function tryExpand(
 
   newAircraft.assignedRouteId = newRouteId;
 
-  // Deduct cash and add to store
+  // Deduct cash, register aircraft, create route
   store.updateAIAirline(airline.id, {
     cashUSD: airline.cashUSD - chosenType.purchasePrice,
     fleetIds: [...airline.fleetIds, newAircraftId],
   });
-
-  store.setAIAirlines(
-    store.aiAirlines,
-    { ...store.aiAircraft, [newAircraftId]: newAircraft },
-    store.aiRoutes,
-  );
+  store.addAIAircraft(newAircraft);
   store.addAIRoute(newRoute);
 
   void allAirlines;
