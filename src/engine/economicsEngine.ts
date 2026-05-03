@@ -160,6 +160,7 @@ export function runDailyTick(store: ReturnType<typeof import('@/store/index')['u
   }
 
   // AI economics (same model as player, capped by seat capacity)
+  const aiNetProfits: Record<string, number> = {};
   Object.values(aiAirlines).forEach(aiAirline => {
     if (aiAirline.isInsolvent) return;
     let aiRevenue = 0;
@@ -221,6 +222,7 @@ export function runDailyTick(store: ReturnType<typeof import('@/store/index')['u
     });
 
     const netProfit = aiRevenue - aiCost;
+    aiNetProfits[aiAirline.id] = netProfit;
     const willBeInsolvent = (aiAirline.cashUSD + netProfit) < -50_000_000;
     const wasInsolvent = aiAirline.isInsolvent;
 
@@ -233,11 +235,12 @@ export function runDailyTick(store: ReturnType<typeof import('@/store/index')['u
     }
   });
 
-  // Distribute dividends from profitable AI airlines to their shareholders
-  Object.values(aiAirlines).forEach(aiAirline => {
-    const profit = aiAirline.lastDailyProfit ?? 0;
-    if (profit <= 0 || !aiAirline.shareholders) return;
-    Object.entries(aiAirline.shareholders).forEach(([ownerId, pct]) => {
+  // Distribute dividends using this tick's computed profits (not stale lastDailyProfit)
+  Object.entries(aiNetProfits).forEach(([id, profit]) => {
+    if (profit <= 0) return;
+    const shareholders = aiAirlines[id]?.shareholders;
+    if (!shareholders) return;
+    Object.entries(shareholders).forEach(([ownerId, pct]) => {
       const div = (pct / 100) * profit;
       if (ownerId === 'player') {
         store.applyDividend(div);

@@ -17,17 +17,19 @@ export const FinancePanel: React.FC = () => {
   const totalDailyCost = playerRoutes.reduce((s, r) => s + r.dailyCost, 0);
   const totalDailyProfit = totalDailyRevenue - totalDailyCost;
 
-  const dailyDividends = Object.values(aiAirlines).reduce((sum, ai) => {
-    const stake = (ai.shareholders ?? {})['player'] ?? 0;
-    return sum + (stake > 0 ? (stake / 100) * Math.max(0, ai.lastDailyProfit ?? 0) : 0);
-  }, 0);
+  const aiHoldings = Object.values(aiAirlines)
+    .map(ai => ({ ai, stake: (ai.shareholders ?? {})['player'] ?? 0 }))
+    .filter(({ stake }) => stake > 0);
 
-  const dividendSources = Object.values(aiAirlines)
-    .filter(ai => ((ai.shareholders ?? {})['player'] ?? 0) > 0 && (ai.lastDailyProfit ?? 0) > 0)
-    .map(ai => ({
+  const dailyDividends = aiHoldings.reduce((sum, { ai, stake }) =>
+    sum + (stake / 100) * Math.max(0, ai.lastDailyProfit ?? 0), 0);
+
+  const dividendSources = aiHoldings
+    .map(({ ai, stake }) => ({
       name: ai.name,
-      stake: (ai.shareholders ?? {})['player'] ?? 0,
-      dividend: ((ai.shareholders ?? {})['player'] ?? 0) / 100 * Math.max(0, ai.lastDailyProfit ?? 0),
+      stake,
+      dividend: (stake / 100) * Math.max(0, ai.lastDailyProfit ?? 0),
+      profit: ai.lastDailyProfit ?? 0,
     }))
     .sort((a, b) => b.dividend - a.dividend);
 
@@ -64,10 +66,12 @@ export const FinancePanel: React.FC = () => {
             {playerAirline.reputationScore.toFixed(0)}/100
           </div>
         </div>
-        {dailyDividends > 0 && (
+        {aiHoldings.length > 0 && (
           <div className="col-span-2 glass-card p-2 border border-teal-500/20">
             <div className="text-teal-400 text-xs">Daily Dividend Income</div>
-            <div className="text-teal-300 text-lg font-bold">+{formatCurrency(dailyDividends)}</div>
+            <div className={`text-lg font-bold ${dailyDividends > 0 ? 'text-teal-300' : 'text-gray-500'}`}>
+              {dailyDividends > 0 ? `+${formatCurrency(dailyDividends)}` : '—'}
+            </div>
           </div>
         )}
       </div>
@@ -92,10 +96,12 @@ export const FinancePanel: React.FC = () => {
               <span className={color}>{formatCurrency(value)}</span>
             </div>
           ))}
-          {dailyDividends > 0 && (
+          {aiHoldings.length > 0 && (
             <div className="flex justify-between">
               <span className="text-teal-400">Dividends</span>
-              <span className="text-teal-300">+{formatCurrency(dailyDividends)}</span>
+              <span className={dailyDividends > 0 ? 'text-teal-300' : 'text-gray-500'}>
+                {dailyDividends > 0 ? `+${formatCurrency(dailyDividends)}` : '—'}
+              </span>
             </div>
           )}
           <div className="border-t border-gray-700 pt-1 flex justify-between font-bold">
@@ -109,12 +115,16 @@ export const FinancePanel: React.FC = () => {
 
       {dividendSources.length > 0 && (
         <div className="glass-card p-2">
-          <div className="text-gray-400 text-xs mb-2">Dividend Sources</div>
+          <div className="text-gray-400 text-xs mb-2">Investment Holdings</div>
           <div className="space-y-1 text-xs">
             {dividendSources.map(s => (
               <div key={s.name} className="flex justify-between items-center">
-                <span className="text-gray-300 truncate">{s.name} <span className="text-gray-500">({s.stake.toFixed(0)}%)</span></span>
-                <span className="text-teal-300 shrink-0 ml-2">+{formatCurrency(s.dividend)}/d</span>
+                <span className="text-gray-300 truncate">
+                  {s.name} <span className="text-gray-500">({s.stake.toFixed(0)}%)</span>
+                </span>
+                <span className={`shrink-0 ml-2 ${s.dividend > 0 ? 'text-teal-300' : s.profit < 0 ? 'text-red-400' : 'text-gray-500'}`}>
+                  {s.dividend > 0 ? `+${formatCurrency(s.dividend)}/d` : s.profit < 0 ? 'losing' : '—'}
+                </span>
               </div>
             ))}
           </div>
