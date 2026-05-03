@@ -5,6 +5,7 @@ import { AIRCRAFT_TYPES } from '@/data/aircraftTypes';
 import { PROFILE_MAP } from '@/assets/profiles';
 import { formatCurrency, formatDuration } from '@/utils/format';
 import { computeMaintenanceCost, MAINTENANCE_TIERS } from '@/utils/constants';
+import { computeAircraftValue } from '@/engine/valuation';
 import type { MaintenanceTier } from '@/types/aircraft';
 import type { Aircraft } from '@/types';
 
@@ -13,11 +14,13 @@ const TIER_ORDER: MaintenanceTier[] = ['light', 'standard', 'full'];
 function AircraftCard({ ac, gameDay }: { ac: Aircraft; gameDay: number }) {
   const startMaintenance   = useGameStore(s => s.startMaintenance);
   const setAutoMaintenance = useGameStore(s => s.setAutoMaintenance);
+  const sellAircraft       = useGameStore(s => s.sellAircraft);
   const airlines           = useGameStore(s => s.airlines);
   const routes             = useGameStore(s => s.routes);
 
   const [expanded, setExpanded] = useState(false);
   const [openSection, setOpenSection] = useState<'oneoff' | 'auto' | null>(null);
+  const [sellConfirm, setSellConfirm] = useState(false);
 
   const toggleSection = (s: 'oneoff' | 'auto') =>
     setOpenSection(prev => (prev === s ? null : s));
@@ -45,7 +48,7 @@ function AircraftCard({ ac, gameDay }: { ac: Aircraft; gameDay: number }) {
       {/* Compact single-line row */}
       <button
         className="w-full flex items-center gap-2 px-3 py-2 hover:bg-gray-800/50 transition-colors text-left"
-        onClick={() => setExpanded(v => !v)}
+        onClick={() => { setExpanded(v => !v); setSellConfirm(false); }}
       >
         {/* Condition dot */}
         <span className={`w-2 h-2 rounded-full shrink-0 ${condBg}`} />
@@ -62,6 +65,11 @@ function AircraftCard({ ac, gameDay }: { ac: Aircraft; gameDay: number }) {
 
         {/* Route — flexible */}
         <span className="flex-1 text-gray-400 text-xs truncate min-w-0">{routeLabel}</span>
+
+        {/* Flight hours */}
+        <span className="text-[10px] text-gray-500 shrink-0 w-12 text-right">
+          {Math.round(ac.totalFlightHours).toLocaleString()}h
+        </span>
 
         {/* Condition bar */}
         <div className="w-16 shrink-0 flex items-center gap-1.5">
@@ -95,6 +103,42 @@ function AircraftCard({ ac, gameDay }: { ac: Aircraft; gameDay: number }) {
               {MAINTENANCE_TIERS[ac.activeMaintTier ?? 'standard'].label} — {Math.max(0, MAINTENANCE_TIERS[ac.activeMaintTier ?? 'standard'].durationDays - (gameDay - ac.lastMaintenanceGameDay))} day(s) remaining
             </div>
           )}
+
+          {/* Value + Sell */}
+          <div className="flex items-center justify-between py-1.5 px-1 mb-1">
+            <div className="text-xs text-gray-400">
+              Est. value:{' '}
+              <span className="text-white font-semibold">
+                {formatCurrency(computeAircraftValue(ac, type, gameDay))}
+              </span>
+            </div>
+            {!inMaint && (
+              sellConfirm ? (
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[10px] text-gray-400">Confirm sale?</span>
+                  <button
+                    onClick={() => sellAircraft(ac.id)}
+                    className="px-2 py-1 bg-red-600 hover:bg-red-500 text-white text-xs rounded font-semibold transition-colors"
+                  >
+                    Sell
+                  </button>
+                  <button
+                    onClick={() => setSellConfirm(false)}
+                    className="px-2 py-1 bg-gray-700 hover:bg-gray-600 text-gray-300 text-xs rounded transition-colors"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setSellConfirm(true)}
+                  className="px-2 py-1 bg-gray-700 hover:bg-gray-600 text-gray-300 text-xs rounded transition-colors"
+                >
+                  Sell Aircraft
+                </button>
+              )
+            )}
+          </div>
 
           {/* Maintenance accordion */}
           {canStartMaint && (

@@ -5,7 +5,7 @@ import { v4 as uuid } from 'uuid';
 import { haversineKm } from '@/utils/geo';
 import { AIRCRAFT_TYPES } from '@/data/aircraftTypes';
 import { computeMaintenanceCost, MAINTENANCE_TIERS } from '@/utils/constants';
-import { calculateBuyoutPrice } from '@/engine/valuation';
+import { computeAircraftValue, calculateBuyoutPrice } from '@/engine/valuation';
 import type { GameStore } from './index';
 
 export interface RouteConfig {
@@ -116,10 +116,7 @@ export const createPlayerSlice: StateCreator<GameStore, [['zustand/immer', never
         state.routes[ac.assignedRouteId].isActive = false;
       }
       const aircraftType = AIRCRAFT_TYPES.find(type => type.id === ac.typeId);
-      const ageDays = Math.max(0, state.gameDay - ac.purchasedGameDay);
-      const ageDepreciation = Math.max(0.2, 1 - ageDays / (365 * 25));
-      const conditionFactor = Math.max(0.2, ac.condition / 100);
-      const salePrice = aircraftType ? aircraftType.purchasePrice * 0.5 * ageDepreciation * conditionFactor : 0;
+      const salePrice = aircraftType ? computeAircraftValue(ac, aircraftType, state.gameDay) : 0;
       state.airlines[PLAYER_ID].cashUSD += salePrice;
       state.airlines[PLAYER_ID].fleetIds = state.airlines[PLAYER_ID].fleetIds.filter(id => id !== aircraftId);
       delete state.aircraft[aircraftId];
