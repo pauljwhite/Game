@@ -7,6 +7,7 @@ function App() {
   const isInitialized = useGameStore(s => s.isInitialized);
   const airlines     = useGameStore(s => s.airlines);
   const aiAirlines   = useGameStore(s => s.aiAirlines);
+  const gameDay      = useGameStore(s => s.gameDay);
   const hasWon       = useGameStore(s => s.hasWon);
   const setHasWon    = useGameStore(s => s.setHasWon);
   const openModalById = useGameStore(s => s.openModalById);
@@ -30,15 +31,15 @@ function App() {
       return;
     }
 
-    // Win: all AI airlines are insolvent or dissolved (and at least one existed)
-    if (!hasWon && Object.keys(aiAirlines).length > 0) {
+    // Win: all AI airlines are insolvent or fully dissolved, and game has been running
+    if (!hasWon && gameDay > 1) {
       const activeAI = Object.values(aiAirlines).filter(a => !a.isInsolvent).length;
       if (activeAI === 0) {
         openModalById('gameOver', 'win');
         setHasWon();
       }
     }
-  }, [airlines, aiAirlines, isInitialized, hasWon, openModalById, setHasWon]);
+  }, [airlines, aiAirlines, gameDay, isInitialized, hasWon, openModalById, setHasWon]);
 
   return <Layout />;
 }
