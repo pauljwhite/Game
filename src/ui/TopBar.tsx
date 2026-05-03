@@ -20,10 +20,11 @@ function reputationColor(score: number): string {
 }
 
 const AirlineMenu: React.FC<{ onClose: () => void }> = ({ onClose }) => {
-  const airlines = useGameStore(s => s.airlines);
-  const aircraft = useGameStore(s => s.aircraft);
-  const routes = useGameStore(s => s.routes);
-  const gameTimeMs = useGameStore(s => s.gameTimeMs);
+  const airlines    = useGameStore(s => s.airlines);
+  const aiAirlines  = useGameStore(s => s.aiAirlines);
+  const aircraft    = useGameStore(s => s.aircraft);
+  const routes      = useGameStore(s => s.routes);
+  const gameTimeMs  = useGameStore(s => s.gameTimeMs);
   const [confirming, setConfirming] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -106,7 +107,12 @@ const AirlineMenu: React.FC<{ onClose: () => void }> = ({ onClose }) => {
         </div>
         <div>
           <div className="text-gray-500">Market Share</div>
-          <div className="text-white font-semibold">{player.marketSharePercent.toFixed(1)}%</div>
+          <div className="text-white font-semibold">{(() => {
+            const totalPax = player.totalPassengersAllTime +
+              Object.values(aiAirlines).reduce((s, a) => s + a.totalPassengersAllTime, 0);
+            const share = totalPax > 0 ? (player.totalPassengersAllTime / totalPax) * 100 : 0;
+            return share.toFixed(1);
+          })()}%</div>
         </div>
         <div>
           <div className="text-gray-500">Pax All-Time</div>

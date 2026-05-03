@@ -5,8 +5,9 @@ import { GAME_EPOCH_YEAR } from '@/utils/constants';
 
 export const GameOverModal: React.FC = () => {
   const modalPayload = useGameStore(s => s.modalPayload);
-  const airlines = useGameStore(s => s.airlines);
-  const routes = useGameStore(s => s.routes);
+  const airlines   = useGameStore(s => s.airlines);
+  const aiAirlines = useGameStore(s => s.aiAirlines);
+  const routes     = useGameStore(s => s.routes);
   const gameTimeMs = useGameStore(s => s.gameTimeMs);
   const openModalById = useGameStore(s => s.openModalById);
   const playerAirlineId = useGameStore(s => s.playerAirlineId);
@@ -89,7 +90,13 @@ export const GameOverModal: React.FC = () => {
           <div className="flex justify-between items-center text-sm">
             <span className="text-gray-400">Market Share</span>
             <span className="text-white font-semibold">
-              {playerAirline.marketSharePercent.toFixed(1)}%
+              {(() => {
+                const totalPax = playerAirline.totalPassengersAllTime +
+                  Object.values(aiAirlines).reduce((s, a) => s + a.totalPassengersAllTime, 0);
+                return totalPax > 0
+                  ? ((playerAirline.totalPassengersAllTime / totalPax) * 100).toFixed(1)
+                  : '0.0';
+              })()}%
             </span>
           </div>
 
