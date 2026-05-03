@@ -206,7 +206,17 @@ export function runDailyTick(store: ReturnType<typeof import('@/store/index')['u
       );
     });
 
-    store.updateAIAirlineStats(aiAirline.id, aiRevenue - aiCost, aiPax);
+    const netProfit = aiRevenue - aiCost;
+    const willBeInsolvent = (aiAirline.cashUSD + netProfit) < -50_000_000;
+    const wasInsolvent = aiAirline.isInsolvent;
+
+    store.updateAIAirlineStats(aiAirline.id, netProfit, aiPax);
+
+    // First tick crossing into insolvency: ground the airline
+    if (!wasInsolvent && willBeInsolvent) {
+      store.pushNewsItem(`BANKRUPTCY: ${aiAirline.name} has declared bankruptcy and ceased operations.`);
+      aiAirline.routeIds.forEach(rid => store.updateAIRoute(rid, { isActive: false }));
+    }
   });
 
   // Recalculate market shares

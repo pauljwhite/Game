@@ -130,8 +130,56 @@ const AI_LOAD_TARGET: Record<string, number> = {
   conservative: 0.65,
 };
 
+const AI_BUYOUT_INTERVAL = 90;   // days between AI-to-AI acquisition checks
+const AI_BUYOUT_PROBABILITY = 0.08;
+const AI_DISSOLVE_INTERVAL = 30;  // days between dissolution checks
+const AI_DISSOLVE_PROBABILITY = 0.40;
+const AI_DISSOLVE_THRESHOLD = -100_000_000;
+
+function tryAIBuyout(store: StoreState, gameDay: number): void {
+  if (gameDay % AI_BUYOUT_INTERVAL !== 0) return;
+  if (Math.random() > AI_BUYOUT_PROBABILITY) return;
+
+  const { aiAirlines } = store;
+
+  const targets = Object.values(aiAirlines).filter(a => a.canBeTakenOver || a.isInsolvent);
+  if (targets.length === 0) return;
+
+  const buyers = Object.values(aiAirlines).filter(a =>
+    !a.isInsolvent &&
+    a.cashUSD > 30_000_000 &&
+    (a.personality === 'aggressive' || a.personality === 'balanced'),
+  );
+  if (buyers.length === 0) return;
+
+  const target = targets[Math.floor(Math.random() * targets.length)];
+  const buyer  = buyers[Math.floor(Math.random() * buyers.length)];
+  if (buyer.id === target.id) return;
+
+  // Discounted distress price: fleet residual minus debt
+  const cost = Math.max(0, target.fleetIds.length * 5_000_000 - Math.abs(Math.min(0, target.cashUSD)));
+  if (buyer.cashUSD < cost) return;
+
+  store.aiAcquireAirline(buyer.id, target.id, cost);
+  store.pushNewsItem(`ACQUISITION: ${buyer.name} has acquired ${target.name}.`);
+}
+
+function tryDissolveInsolvent(store: StoreState, gameDay: number): void {
+  if (gameDay % AI_DISSOLVE_INTERVAL !== 0) return;
+  Object.values(store.aiAirlines).forEach(airline => {
+    if (!airline.isInsolvent) return;
+    if (airline.cashUSD > AI_DISSOLVE_THRESHOLD) return;
+    if (Math.random() < AI_DISSOLVE_PROBABILITY) {
+      store.pushNewsItem(`${airline.name} has been dissolved after prolonged insolvency.`);
+      store.removeAIAirline(airline.id);
+    }
+  });
+}
+
 export function runAITick(store: StoreState, gameDay: number): void {
   trySpawnNewAirline(store, gameDay);
+  tryAIBuyout(store, gameDay);
+  tryDissolveInsolvent(store, gameDay);
 
   const { aiAirlines, aiAircraft, aiRoutes, airports } = store;
   const allRoutes = [...Object.values(store.routes), ...Object.values(aiRoutes)];

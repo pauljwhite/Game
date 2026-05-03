@@ -89,7 +89,7 @@ export const NewGameModal: React.FC = () => {
         isPlayer:               false,
         color:                  config.color,
         logoEmoji:              config.logoEmoji,
-        cashUSD:                config.startCash,
+        cashUSD:                startingCash,
         totalDebt:              0,
         hubIatas:               [config.startHub, config.secondHub],
         fleetIds:               [],

@@ -21,14 +21,15 @@ export const AirlinesPanel: React.FC = () => {
   const closePanel    = useGameStore(s => s.closePanel);
 
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [insolventOpen, setInsolventOpen] = useState(false);
 
   const playerAirline = airlines['player'];
   const totalPax = (playerAirline?.totalPassengersAllTime ?? 0) +
     Object.values(aiAirlines).reduce((s, a) => s + a.totalPassengersAllTime, 0);
 
-  const sortedAI = Object.values(aiAirlines)
-    .map(a => ({ ...a, isPlayer: false }))
-    .sort((a, b) => b.totalPassengersAllTime - a.totalPassengersAllTime);
+  const allAI = Object.values(aiAirlines).map(a => ({ ...a, isPlayer: false }));
+  const activeAI   = allAI.filter(a => !a.isInsolvent).sort((a, b) => b.totalPassengersAllTime - a.totalPassengersAllTime);
+  const insolventAI = allAI.filter(a => a.isInsolvent);
 
   return (
     <div className="flex flex-col h-full">
@@ -71,7 +72,7 @@ export const AirlinesPanel: React.FC = () => {
 
       {/* AI airlines — scrollable */}
       <div className="flex-1 overflow-y-auto">
-        {sortedAI.map(airline => {
+        {activeAI.map(airline => {
           const share = totalPax > 0 ? (airline.totalPassengersAllTime / totalPax) * 100 : 0;
 
           const isExpanded = expandedId === airline.id;
@@ -212,6 +213,43 @@ export const AirlinesPanel: React.FC = () => {
           );
         })}
       </div>
+
+      {/* Insolvent airlines accordion */}
+      {insolventAI.length > 0 && (
+        <div className="shrink-0 border-t border-gray-700">
+          <button
+            onClick={() => setInsolventOpen(v => !v)}
+            className="w-full flex items-center justify-between px-3 py-2 text-xs text-gray-500 hover:text-gray-300 hover:bg-gray-800/50 transition-colors"
+          >
+            <span className="font-semibold uppercase tracking-wider">Bankrupt ({insolventAI.length})</span>
+            <span>{insolventOpen ? '▲' : '▼'}</span>
+          </button>
+          {insolventOpen && (
+            <div className="max-h-48 overflow-y-auto">
+              {insolventAI.map(airline => (
+                <div key={airline.id} className="px-3 py-2 border-b border-gray-800 opacity-50">
+                  <div className="flex items-center justify-between text-xs">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: airline.color }} />
+                      <span className="text-gray-400 truncate">{airline.name}</span>
+                    </div>
+                    <span className="text-red-400 shrink-0 ml-2">{formatCurrency(airline.cashUSD)}</span>
+                  </div>
+                  <div className="text-gray-600 text-[10px] mt-0.5">
+                    {airline.fleetIds.length} aircraft · {airline.routeIds.length} routes · Hub: {airline.hubIatas[0]}
+                  </div>
+                  <button
+                    onClick={() => openModalById('takeover', airline.id)}
+                    className="mt-1.5 w-full py-0.5 bg-indigo-900/60 hover:bg-indigo-800 text-indigo-300 text-xs rounded transition-colors opacity-100"
+                  >
+                    Buy Out (distressed)
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 };

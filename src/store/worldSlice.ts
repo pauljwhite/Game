@@ -27,6 +27,7 @@ export interface WorldSlice {
   addAIAirline: (airline: Airline) => void;
   addAIAircraft: (aircraft: Aircraft) => void;
   updateAIRoute: (routeId: string, changes: Partial<Route>) => void;
+  aiAcquireAirline: (buyerId: string, targetId: string, cost: number) => void;
 }
 
 function createAirportMap(): Record<string, Airport> {
@@ -150,5 +151,22 @@ export const createWorldSlice: StateCreator<GameStore, [['zustand/immer', never]
   updateAIRoute: (routeId, changes) =>
     set((state) => {
       if (state.aiRoutes[routeId]) Object.assign(state.aiRoutes[routeId], changes);
+    }),
+
+  aiAcquireAirline: (buyerId, targetId, cost) =>
+    set((state) => {
+      const buyer  = state.aiAirlines[buyerId];
+      const target = state.aiAirlines[targetId];
+      if (!buyer || !target) return;
+      buyer.cashUSD -= cost;
+      target.fleetIds.forEach(id => {
+        const ac = state.aiAircraft[id];
+        if (ac) { ac.airlineId = buyerId; buyer.fleetIds.push(id); }
+      });
+      target.routeIds.forEach(id => {
+        const route = state.aiRoutes[id];
+        if (route) { route.airlineId = buyerId; buyer.routeIds.push(id); }
+      });
+      delete state.aiAirlines[targetId];
     }),
 });
