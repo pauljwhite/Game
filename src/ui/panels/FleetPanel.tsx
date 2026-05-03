@@ -36,7 +36,7 @@ function AircraftCard({ ac, gameDay }: { ac: Aircraft; gameDay: number }) {
   const condText       = conditionPct >= 60 ? 'text-green-400' : conditionPct >= 30 ? 'text-yellow-400' : 'text-red-400';
   const needsMaint     = ac.condition < 30;
   const inMaint        = ac.status === 'maintenance';
-  const canStartMaint  = !inMaint && !ac.isGrounded;
+  const canStartMaint  = !inMaint && ac.status !== 'crashed';
 
   const routeLabel = assignedRoute
     ? `${assignedRoute.originIata} → ${assignedRoute.destinationIata}`
