@@ -55,7 +55,7 @@ export const BuyAircraftModal: React.FC = () => {
 
   return (
     <div className="fixed inset-0 bg-black/80 flex items-end sm:items-center justify-center z-[9999]">
-      <div className="bg-gray-900 border border-gray-700 rounded-t-2xl sm:rounded-xl shadow-2xl w-full max-w-4xl max-h-[92svh] sm:max-h-[90vh] flex flex-col">
+      <div className="bg-gray-900 border border-gray-700 rounded-t-2xl sm:rounded-xl shadow-2xl w-full max-w-4xl h-[92svh] sm:h-[85vh] flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-700 flex-shrink-0">
           <div>
