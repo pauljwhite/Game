@@ -11,6 +11,7 @@ export const AirportPopup: React.FC = () => {
   const openModalById = useGameStore(s => s.openModalById);
   const designateHub = useGameStore(s => s.designateHub);
   const removeHub = useGameStore(s => s.removeHub);
+  const gameDay = useGameStore(s => s.gameDay);
 
   if (!selectedIata) return null;
   const airport = airports[selectedIata];
@@ -19,7 +20,6 @@ export const AirportPopup: React.FC = () => {
   const playerAirline = airlines['player'];
   const isHub = airport.isHub;
   const playerHasHub = playerAirline?.hubIatas.includes(selectedIata);
-  const gameDay = useGameStore(s => s.gameDay);
   const isClosed = airport.closedUntilGameDay !== undefined && airport.closedUntilGameDay >= gameDay;
 
   return (
