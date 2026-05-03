@@ -87,7 +87,7 @@ function AircraftCard({ ac, gameDay }: { ac: Aircraft; gameDay: number }) {
         <div className="px-3 pb-3 bg-gray-900/60 border-t border-gray-800/60">
           {/* SVG + stats row */}
           <div className="flex items-center gap-3 pt-2 pb-2">
-            <div className="w-20 h-10 shrink-0 flex items-center justify-center">
+            <div className="w-32 h-14 shrink-0 flex items-center justify-center">
               <AircraftProfile type={type} color={playerAirline?.color ?? '#60a5fa'} className="w-full h-full" />
             </div>
             <div className="flex-1 text-xs text-gray-400 space-y-0.5">

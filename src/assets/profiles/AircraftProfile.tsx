@@ -272,8 +272,10 @@ function enginePods(layout: EngineLayout, x: number, y: number, length: number, 
   const pods: ReactElement[] = [];
   const pod = (key: string, cx: number, cy: number, w: number, h: number) => (
     <g key={key}>
-      <ellipse cx={cx} cy={cy} rx={w / 2} ry={h / 2} fill="currentColor" opacity="0.68" />
-      <ellipse cx={cx + w * 0.18} cy={cy} rx={w / 5} ry={h / 3.1} fill="#0f172a" opacity="0.55" />
+      <ellipse cx={cx + 1.2} cy={cy + 1.5} rx={w / 2} ry={h / 2} fill="#94a3b8" opacity="0.25" />
+      <ellipse cx={cx} cy={cy} rx={w / 2} ry={h / 2} fill="#f8fafc" stroke="#94a3b8" strokeWidth={0.9} />
+      <ellipse cx={cx + w * 0.22} cy={cy} rx={w / 5.4} ry={h / 3.5} fill="#334155" opacity="0.42" />
+      <path d={`M ${cx - w * 0.38} ${cy + h * 0.2} C ${cx - w * 0.18} ${cy + h * 0.35}, ${cx + w * 0.22} ${cy + h * 0.35}, ${cx + w * 0.4} ${cy + h * 0.1}`} stroke="#cbd5e1" strokeWidth={0.7} strokeLinecap="round" />
     </g>
   );
 
@@ -299,39 +301,64 @@ function enginePods(layout: EngineLayout, x: number, y: number, length: number, 
     [0.09, 0.15, 0.21, 0.27].forEach((p, i) => pods.push(pod(`rq${i}`, x + length * p, y + height * 0.48, 13, 8)));
   }
   if (layout === 'supersonic') {
-    pods.push(<rect key="ss-a" x={x + length * 0.36} y={y + height + 4} width={length * 0.16} height={8} rx={2} fill="currentColor" opacity="0.72" />);
-    pods.push(<rect key="ss-b" x={x + length * 0.56} y={y + height + 4} width={length * 0.16} height={8} rx={2} fill="currentColor" opacity="0.72" />);
+    pods.push(<rect key="ss-a" x={x + length * 0.36} y={y + height + 4} width={length * 0.16} height={8} rx={2} fill="#f8fafc" stroke="#94a3b8" strokeWidth={0.9} />);
+    pods.push(<rect key="ss-b" x={x + length * 0.56} y={y + height + 4} width={length * 0.16} height={8} rx={2} fill="#f8fafc" stroke="#94a3b8" strokeWidth={0.9} />);
   }
   return pods;
 }
 
-function tailPaths(spec: ProfileSpec, x: number, y: number, height: number) {
+function tailPaths(spec: ProfileSpec, x: number, y: number, height: number, accent: string) {
   const tallT = spec.signature === '727' || spec.signature === 'tu154' || spec.signature === 'il62' || spec.signature === 'crj';
   if (spec.tail === 't-tail') {
     const tailTop = y - (tallT ? 28 : 23);
     const finBack = spec.signature === 'il62' ? 44 : 38;
     return (
       <>
-        <path d={`M ${x + 12} ${y + 6} L ${x + finBack} ${tailTop} L ${x + 42} ${y + 7} Z`} fill="currentColor" opacity="0.88" />
-        <path d={`M ${x + 18} ${tailTop + 2} L ${x + 58} ${tailTop - 1} L ${x + 46} ${tailTop + 8} L ${x + 17} ${tailTop + 8} Z`} fill="currentColor" opacity="0.7" />
+        <path d={`M ${x + 12} ${y + 6} L ${x + finBack} ${tailTop} L ${x + 42} ${y + 7} Z`} fill="#f8fafc" stroke="#94a3b8" strokeWidth={1} />
+        <path d={`M ${x + 18} ${tailTop + 2} L ${x + 58} ${tailTop - 1} L ${x + 46} ${tailTop + 8} L ${x + 17} ${tailTop + 8} Z`} fill="#f1f5f9" stroke="#94a3b8" strokeWidth={0.8} />
+        <path d={`M ${x + 18} ${y + 2} L ${x + 34} ${tailTop + 7} L ${x + 38} ${y + 5} Z`} fill={accent} opacity="0.28" />
       </>
     );
   }
   if (spec.tail === 'supersonic') {
-    return <path d={`M ${x + 10} ${y + 4} L ${x + 40} ${y - 13} L ${x + 31} ${y + height} Z`} fill="currentColor" opacity="0.88" />;
+    return <path d={`M ${x + 10} ${y + 4} L ${x + 40} ${y - 13} L ${x + 31} ${y + height} Z`} fill="#f8fafc" stroke="#94a3b8" strokeWidth={1} />;
   }
   const sweptTop = spec.signature === '747-classic' || spec.signature === '747-8' || spec.signature === 'a380' ? y - 28 : y - 20;
-  return <path d={`M ${x + 11} ${y + 6} L ${x + 40} ${sweptTop} L ${x + 42} ${y + height + 2} L ${x + 20} ${y + height} Z`} fill="currentColor" opacity="0.88" />;
+  return (
+    <>
+      <path d={`M ${x + 11} ${y + 6} L ${x + 40} ${sweptTop} L ${x + 42} ${y + height + 2} L ${x + 20} ${y + height} Z`} fill="#f8fafc" stroke="#94a3b8" strokeWidth={1} />
+      <path d={`M ${x + 18} ${y + 3} L ${x + 34} ${sweptTop + 8} L ${x + 38} ${y + 8} Z`} fill={accent} opacity="0.26" />
+    </>
+  );
 }
 
 function propellers(x: number, y: number, length: number, height: number) {
   const points = [x + length * 0.36, x + length * 0.64];
   return points.map((cx, i) => (
     <g key={i} opacity="0.9">
-      <circle cx={cx} cy={y + height * 0.42} r={9} fill="none" stroke="currentColor" strokeWidth={1.3} opacity="0.45" />
-      <path d={`M ${cx} ${y + height * 0.42 - 9} L ${cx} ${y + height * 0.42 + 9} M ${cx - 8} ${y + height * 0.42} L ${cx + 8} ${y + height * 0.42}`} stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" opacity="0.7" />
+      <circle cx={cx} cy={y + height * 0.42} r={9} fill="none" stroke="#64748b" strokeWidth={1.2} opacity="0.48" />
+      <path d={`M ${cx} ${y + height * 0.42 - 9} L ${cx} ${y + height * 0.42 + 9} M ${cx - 8} ${y + height * 0.42} L ${cx + 8} ${y + height * 0.42}`} stroke="#475569" strokeWidth={1.4} strokeLinecap="round" opacity="0.7" />
     </g>
   ));
+}
+
+function landingGear(x: number, y: number, length: number, height: number, signature?: ProfileSpec['signature']) {
+  const mainX = signature === 'tu154' || signature === '727' || signature === 'dc9' ? x + length * 0.36 : x + length * 0.48;
+  const noseX = x + length * 0.86;
+  const gearY = y + height + 14;
+  const wheel = (key: string, cx: number, cy: number, r = 2.8) => (
+    <circle key={key} cx={cx} cy={cy} r={r} fill="#1f2937" stroke="#e5e7eb" strokeWidth={0.8} />
+  );
+
+  return (
+    <g opacity="0.86">
+      <path d={`M ${mainX - 2} ${y + height - 1} L ${mainX - 5} ${gearY - 3} M ${mainX + 5} ${y + height - 1} L ${mainX + 3} ${gearY - 3} M ${noseX} ${y + height - 1} L ${noseX} ${gearY - 3}`} stroke="#64748b" strokeWidth={1.1} strokeLinecap="round" />
+      {wheel('m1', mainX - 7, gearY)}
+      {wheel('m2', mainX, gearY)}
+      {wheel('m3', mainX + 7, gearY)}
+      {wheel('n1', noseX, gearY, 2.4)}
+    </g>
+  );
 }
 
 export function AircraftProfile({ type, color = '#60a5fa', className }: AircraftProfileProps) {
@@ -350,56 +377,77 @@ export function AircraftProfile({ type, color = '#60a5fa', className }: Aircraft
 
   return (
     <svg viewBox="0 0 220 90" className={className} style={{ color }} role="img" aria-label={`${type.manufacturer} ${type.model} side profile`}>
+      <defs>
+        <linearGradient id={`body-${type.id}`} x1="0" x2="0" y1="0" y2="1">
+          <stop offset="0" stopColor="#ffffff" />
+          <stop offset="0.56" stopColor="#f8fafc" />
+          <stop offset="1" stopColor="#cbd5e1" />
+        </linearGradient>
+        <linearGradient id={`metal-${type.id}`} x1="0" x2="0" y1="0" y2="1">
+          <stop offset="0" stopColor="#f8fafc" />
+          <stop offset="1" stopColor="#94a3b8" />
+        </linearGradient>
+      </defs>
       <g fill="none" stroke="none">
-        <path d={spec.wing === 'delta' ? deltaWing : spec.wing === 'high' ? highWing : lowWing} fill="currentColor" opacity="0.24" />
+        <path d={spec.wing === 'delta' ? deltaWing : spec.wing === 'high' ? highWing : lowWing} fill={`url(#metal-${type.id})`} stroke="#94a3b8" strokeWidth={0.8} opacity="0.74" />
         {spec.engines === 'turboprop-two' && propellers(x, y, spec.length, height)}
-        <path d={fuselagePath(x, y, spec.length, height, spec.nose, spec.signature)} fill="currentColor" opacity="0.9" />
+        <path d={fuselagePath(x, y, spec.length, height, spec.nose, spec.signature)} fill={`url(#body-${type.id})`} stroke="#94a3b8" strokeWidth={1.1} />
+
+        <path d={`M ${x + 18} ${y + height - 4} C ${x + 56} ${y + height - 1}, ${x + spec.length - 42} ${y + height - 2}, ${x + spec.length - 10} ${y + height - 6}`} stroke="#94a3b8" strokeWidth={0.65} strokeLinecap="round" opacity="0.42" />
+        <path d={`M ${x + 36} ${y + height * 0.58} C ${x + 74} ${y + height * 0.5}, ${x + spec.length - 42} ${y + height * 0.48}, ${x + spec.length - 18} ${y + height * 0.52}`} stroke={color} strokeWidth={1.2} strokeLinecap="round" opacity="0.3" />
 
         {spec.deck === 'hump' && (
-          <path d={`M ${x + spec.length - 96} ${y + 5} C ${x + spec.length - 80} ${y - 11}, ${x + spec.length - 38} ${y - 12}, ${x + spec.length - 10} ${y + 3} L ${x + spec.length - 9} ${y + 14} C ${x + spec.length - 42} ${y + 9}, ${x + spec.length - 72} ${y + 9}, ${x + spec.length - 100} ${y + 14} Z`} fill="currentColor" opacity="0.92" />
+          <path d={`M ${x + spec.length - 96} ${y + 5} C ${x + spec.length - 80} ${y - 11}, ${x + spec.length - 38} ${y - 12}, ${x + spec.length - 10} ${y + 3} L ${x + spec.length - 9} ${y + 14} C ${x + spec.length - 42} ${y + 9}, ${x + spec.length - 72} ${y + 9}, ${x + spec.length - 100} ${y + 14} Z`} fill={`url(#body-${type.id})`} stroke="#94a3b8" strokeWidth={1} />
         )}
 
-        {tailPaths(spec, x, y, height)}
+        {tailPaths(spec, x, y, height, color)}
 
         {enginePods(spec.engines, x, y, spec.length, height, spec.signature)}
 
         {windowPositions(x, y, spec.length, windowRows, windowCount).map((pt, i) => (
-          <rect key={i} x={pt.x - 1.1} y={pt.y - 1.1} width={2.2} height={2.2} rx={0.8} fill="#e0f2fe" opacity="0.88" />
+          <circle key={i} cx={pt.x} cy={pt.y} r={1.15} fill="#64748b" opacity="0.88" />
         ))}
 
         {spec.deck === 'hump' && windowPositions(x + spec.length - 104, y - 1, 76, 1, 9).map((pt, i) => (
-          <rect key={`hump-${i}`} x={pt.x - 1.1} y={pt.y - 1.1} width={2.2} height={2.2} rx={0.8} fill="#e0f2fe" opacity="0.9" />
+          <circle key={`hump-${i}`} cx={pt.x} cy={pt.y} r={1.08} fill="#64748b" opacity="0.88" />
         ))}
 
         {spec.signature === 'a380' && (
-          <path d={`M ${x + 28} ${y + 10} C ${x + 70} ${y + 7}, ${x + spec.length - 28} ${y + 7}, ${x + spec.length - 8} ${y + 12}`} stroke="#e0f2fe" strokeWidth={1.2} strokeLinecap="round" opacity="0.38" />
+          <path d={`M ${x + 28} ${y + 10} C ${x + 70} ${y + 7}, ${x + spec.length - 28} ${y + 7}, ${x + spec.length - 8} ${y + 12}`} stroke="#64748b" strokeWidth={1.1} strokeLinecap="round" opacity="0.42" />
         )}
 
-        <path d={`M ${x + spec.length - 17} ${y + 5} C ${x + spec.length - 10} ${y + 6}, ${x + spec.length - 6} ${y + 8}, ${x + spec.length - 3} ${y + 11}`} stroke="#e0f2fe" strokeWidth={1.3} strokeLinecap="round" opacity="0.95" />
+        <path d={`M ${x + spec.length - 17} ${y + 5} C ${x + spec.length - 10} ${y + 6}, ${x + spec.length - 6} ${y + 8}, ${x + spec.length - 3} ${y + 11}`} stroke="#334155" strokeWidth={1.1} strokeLinecap="round" opacity="0.82" />
+
+        {Array.from({ length: Math.max(4, Math.min(11, Math.round(spec.length / 16))) }).map((_, i) => {
+          const px = x + 26 + i * ((spec.length - 56) / Math.max(1, Math.min(10, Math.round(spec.length / 16)) - 1));
+          return <path key={`panel-${i}`} d={`M ${px} ${y + 5} L ${px + 1} ${y + height - 4}`} stroke="#94a3b8" strokeWidth={0.45} opacity="0.22" />;
+        })}
 
         {(spec.signature === '787' || spec.signature === 'a350') && (
-          <path d={`M ${x + spec.length * 0.48} ${wingY + 10} C ${x + spec.length * 0.7} ${wingY + 18}, ${x + spec.length * 0.82} ${wingY + 19}, ${x + spec.length * 0.9} ${wingY + 13}`} stroke="currentColor" strokeWidth={2} strokeLinecap="round" opacity="0.28" />
+          <path d={`M ${x + spec.length * 0.48} ${wingY + 10} C ${x + spec.length * 0.7} ${wingY + 18}, ${x + spec.length * 0.82} ${wingY + 19}, ${x + spec.length * 0.9} ${wingY + 13}`} stroke="#64748b" strokeWidth={1.6} strokeLinecap="round" opacity="0.42" />
         )}
 
         {spec.signature === '777x' && (
-          <path d={`M ${x + spec.length * 0.84} ${wingY + 19} L ${x + spec.length * 0.9} ${wingY + 10}`} stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" opacity="0.65" />
+          <path d={`M ${x + spec.length * 0.84} ${wingY + 19} L ${x + spec.length * 0.9} ${wingY + 10}`} stroke="#64748b" strokeWidth={2.2} strokeLinecap="round" opacity="0.72" />
         )}
 
         {(spec.signature === 'concorde' || spec.signature === 'tu144') && (
-          <path d={`M ${x + spec.length * 0.18} ${y + height + 3} L ${x + spec.length * 0.29} ${y + height + 8} L ${x + spec.length * 0.19} ${y + height + 11} Z`} fill="currentColor" opacity="0.5" />
+          <path d={`M ${x + spec.length * 0.18} ${y + height + 3} L ${x + spec.length * 0.29} ${y + height + 8} L ${x + spec.length * 0.19} ${y + height + 11} Z`} fill="#cbd5e1" stroke="#94a3b8" strokeWidth={0.7} />
         )}
 
         {spec.signature === 'tu144' && (
-          <path d={`M ${x + spec.length * 0.73} ${y + height - 1} L ${x + spec.length * 0.83} ${y + height + 6} L ${x + spec.length * 0.75} ${y + height + 4} Z`} fill="currentColor" opacity="0.62" />
+          <path d={`M ${x + spec.length * 0.73} ${y + height - 1} L ${x + spec.length * 0.83} ${y + height + 6} L ${x + spec.length * 0.75} ${y + height + 4} Z`} fill="#cbd5e1" stroke="#94a3b8" strokeWidth={0.7} />
         )}
 
         {(spec.signature === 'dc10' || spec.signature === 'md11') && (
-          <path d={`M ${x + 20} ${y - 2} C ${x + 31} ${y - 10}, ${x + 43} ${y - 7}, ${x + 48} ${y + 1}`} stroke="currentColor" strokeWidth={2} strokeLinecap="round" opacity="0.55" />
+          <path d={`M ${x + 20} ${y - 2} C ${x + 31} ${y - 10}, ${x + 43} ${y - 7}, ${x + 48} ${y + 1}`} stroke="#94a3b8" strokeWidth={1.6} strokeLinecap="round" opacity="0.64" />
         )}
 
         {spec.signature === 'l1011' && (
-          <path d={`M ${x + 17} ${y - 1} C ${x + 34} ${y - 16}, ${x + 46} ${y - 9}, ${x + 50} ${y + 2}`} stroke="currentColor" strokeWidth={2} strokeLinecap="round" opacity="0.55" />
+          <path d={`M ${x + 17} ${y - 1} C ${x + 34} ${y - 16}, ${x + 46} ${y - 9}, ${x + 50} ${y + 2}`} stroke="#94a3b8" strokeWidth={1.6} strokeLinecap="round" opacity="0.64" />
         )}
+
+        {landingGear(x, y, spec.length, height, spec.signature)}
       </g>
     </svg>
   );

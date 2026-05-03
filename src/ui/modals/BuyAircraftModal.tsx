@@ -116,11 +116,11 @@ export const BuyAircraftModal: React.FC = () => {
                   }`}
                 >
                   {/* Profile SVG */}
-                  <div className="flex-shrink-0 w-24 flex items-center justify-center">
+                  <div className="flex-shrink-0 w-36 sm:w-44 flex items-center justify-center">
                     <AircraftProfile
                       type={type}
                       color={unavailable ? '#6b7280' : '#60a5fa'}
-                      className="w-24 h-10"
+                      className="w-36 h-14 sm:w-44 sm:h-16"
                     />
                   </div>
 
