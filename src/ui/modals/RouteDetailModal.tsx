@@ -157,7 +157,8 @@ export const RouteDetailModal: React.FC = () => {
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center z-[9999]">
-      <div className="glass-panel rounded-t-2xl sm:rounded-xl px-4 sm:px-6 py-4 w-full max-w-lg relative max-h-[92svh] sm:max-h-[90vh] overflow-y-auto">
+      <div className="glass-panel rounded-t-2xl sm:rounded-xl w-full max-w-lg relative max-h-[92svh] sm:max-h-[90vh] overflow-hidden flex flex-col">
+        <div className="shrink-0 px-4 sm:px-6 pt-4 pb-3 border-b border-white/10 bg-slate-950/45 backdrop-blur-xl">
         <button
           onClick={handleClose}
           className="absolute top-4 right-4 text-gray-400 hover:text-white transition-colors text-xl leading-none"
@@ -165,9 +166,9 @@ export const RouteDetailModal: React.FC = () => {
           ×
         </button>
 
-        <h2 className="text-xl font-bold text-white mb-1">Route Detail</h2>
+        <h2 className="text-xl font-bold text-white mb-1 pr-8">Route Detail</h2>
 
-        <div className="flex items-center gap-2 mb-4">
+        <div className="flex items-center gap-2 pr-8">
           <span className="text-blue-400 font-mono font-bold text-lg">{route.originIata}</span>
           <span className="text-gray-400">→</span>
           <span className="text-blue-400 font-mono font-bold text-lg">{route.destinationIata}</span>
@@ -176,6 +177,9 @@ export const RouteDetailModal: React.FC = () => {
           )}
         </div>
 
+        </div>
+
+        <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4 overscroll-contain">
         {/* Stats */}
         <div className="grid grid-cols-2 gap-3 mb-4">
           <div className="glass-card p-3">
@@ -369,6 +373,7 @@ export const RouteDetailModal: React.FC = () => {
           >
             {confirmDelete ? 'Confirm' : 'Delete'}
           </button>
+        </div>
         </div>
       </div>
     </div>
