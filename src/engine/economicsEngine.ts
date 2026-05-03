@@ -253,6 +253,13 @@ export function runDailyTick(store: ReturnType<typeof import('@/store/index')['u
 
     store.updateAIAirlineStats(aiAirline.id, netProfit, aiPax);
 
+    // Reputation recovery for AI airlines (same natural drift as player)
+    if (!aiAirline.isInsolvent && aiAirline.reputationScore < 100) {
+      store.updateAIAirline(aiAirline.id, {
+        reputationScore: Math.min(100, aiAirline.reputationScore + 0.3),
+      });
+    }
+
     // First tick crossing into insolvency: ground the airline
     if (!wasInsolvent && willBeInsolvent) {
       store.pushNewsItem(`BANKRUPTCY: ${aiAirline.name} has declared bankruptcy and ceased operations.`);

@@ -383,7 +383,7 @@ export const createPlayerSlice: StateCreator<GameStore, [['zustand/immer', never
     set((state) => {
       const airline = state.airlines[airlineId];
       if (!airline) return;
-      if (airline.reputationScore < 100) airline.reputationScore = Math.min(100, airline.reputationScore + 0.3);
+      if (airline.reputationScore < 100) airline.reputationScore = Math.min(100, airline.reputationScore + 0.5);
       if (airline.crashPenaltyDaysLeft > 0) airline.crashPenaltyDaysLeft--;
     }),
 
