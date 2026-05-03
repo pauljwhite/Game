@@ -2,12 +2,13 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useGameStore } from '@/store';
 import { haversineKm } from '@/utils/geo';
 import { computeFlightCost, gameDayFromMs } from '@/engine/economicsEngine';
-import { getSuggestedEconomyPrice } from '@/engine/demandModel';
+import { getSuggestedEconomyPrice, getBaselineDailyPax } from '@/engine/demandModel';
 import { AIRCRAFT_TYPES } from '@/data/aircraftTypes';
 import type { Route } from '@/types';
-import { FUEL_PRICE_USD_PER_LITER } from '@/utils/constants';
+import { FUEL_PRICE_USD_PER_LITER, PRICE_ELASTICITY } from '@/utils/constants';
 import { AirportSearchInput } from '@/ui/components/AirportSearchInput';
 import { findAirportByQuery } from '@/utils/airportSearch';
+import { LoadFactorBar } from '@/ui/components/LoadFactorBar';
 
 function formatUSD(n: number): string {
   if (Math.abs(n) >= 1_000_000) return `$${(n / 1_000_000).toFixed(2)}M`;
@@ -82,44 +83,51 @@ export const NewRouteModal: React.FC = () => {
     distanceKm !== null &&
     !outOfRange;
 
-  // P&L preview
+  // P&L preview — uses real demand model with price elasticity
   const pnlPreview = useMemo(() => {
     if (!selectedAc || !selectedType || !originAirport || !destAirport || !distanceKm) return null;
 
     const mockRoute: Route = {
-      id: 'preview',
-      airlineId: 'player',
-      originIata: originAirport?.iata ?? originIata.toUpperCase(),
-      destinationIata: destAirport?.iata ?? destIata.toUpperCase(),
-      aircraftId: selectedAc.id,
-      flightsPerWeek,
-      priceEconomy,
-      priceBusiness,
-      isActive: true,
-      createdGameDay: gameDay,
-      distanceKm,
-      flightDurationHours: 0,
-      dailyPassengers: 0,
-      dailyRevenue: 0,
-      dailyCost: 0,
-      dailyProfit: 0,
-      loadFactorEconomy: 0,
-      loadFactorBusiness: 0,
+      id: 'preview', airlineId: 'player',
+      originIata: originAirport.iata, destinationIata: destAirport.iata,
+      aircraftId: selectedAc.id, flightsPerWeek, priceEconomy, priceBusiness,
+      isActive: true, createdGameDay: gameDay, distanceKm, flightDurationHours: 0,
+      dailyPassengers: 0, dailyRevenue: 0, dailyCost: 0, dailyProfit: 0,
+      loadFactorEconomy: 0, loadFactorBusiness: 0,
     };
 
     const costs = computeFlightCost(mockRoute, selectedAc, selectedType, originAirport, destAirport, FUEL_PRICE_USD_PER_LITER);
     const flightsPerDay = flightsPerWeek / 7;
     const dailyCost = costs.totalCost * flightsPerDay;
 
+    // Reference price: cost-per-seat * 1.4 (the suggested break-even price)
     const totalSeats = selectedType.seatsEconomy + selectedType.seatsBusiness;
-    const assumedLoadFactor = 0.75;
-    const ecoPax = Math.floor(selectedType.seatsEconomy * flightsPerDay * assumedLoadFactor);
-    const bizPax = Math.floor(selectedType.seatsBusiness * flightsPerDay * assumedLoadFactor);
+    const referencePrice = totalSeats > 0 ? Math.round(costs.totalCost / totalSeats * 1.4) : 200;
+    const referencePriceBiz = referencePrice * 4;
+
+    // Price elasticity vs reference → demand factor
+    const ecoFactor = Math.min(5, Math.pow(priceEconomy / referencePrice, PRICE_ELASTICITY));
+    const bizFactor = Math.min(5, Math.pow(priceBusiness / referencePriceBiz, PRICE_ELASTICITY));
+
+    const baselinePax = getBaselineDailyPax(originAirport, destAirport);
+    const ecoCapacity = selectedType.seatsEconomy * flightsPerDay;
+    const bizCapacity = selectedType.seatsBusiness * flightsPerDay;
+    const bizSplit = Math.min(0.25, Math.max(0.05, 0.10 * Math.sqrt(priceBusiness / (priceEconomy * 6 + 1))));
+
+    const ecoPax = Math.min(ecoCapacity, baselinePax * ecoFactor * (1 - bizSplit));
+    const bizPax = Math.min(bizCapacity, baselinePax * bizFactor * bizSplit);
+    const loadFactorEco = ecoCapacity > 0 ? ecoPax / ecoCapacity : 0;
+    const loadFactorBiz = bizCapacity > 0 ? bizPax / bizCapacity : 0;
+
     const dailyRevenue = ecoPax * priceEconomy + bizPax * priceBusiness;
     const dailyProfit = dailyRevenue - dailyCost;
 
-    return { dailyRevenue, dailyCost, dailyProfit, totalSeats, flightDurationHours: costs.flightDurationHours };
-  }, [selectedAc, selectedType, originAirport, destAirport, distanceKm, flightsPerWeek, priceEconomy, priceBusiness, gameDay, originIata, destIata]);
+    return {
+      dailyRevenue, dailyCost, dailyProfit,
+      loadFactorEco, loadFactorBiz,
+      referencePrice, flightDurationHours: costs.flightDurationHours,
+    };
+  }, [selectedAc, selectedType, originAirport, destAirport, distanceKm, flightsPerWeek, priceEconomy, priceBusiness, gameDay]);
 
   function handleSubmit() {
     if (!canSubmit) return;
@@ -301,8 +309,21 @@ export const NewRouteModal: React.FC = () => {
 
           {/* P&L Preview */}
           {pnlPreview && (
-            <div className="bg-gray-800 border border-gray-700 rounded-lg px-4 py-3">
-              <p className="text-xs text-gray-400 mb-2 uppercase tracking-wider">Estimated Daily P&L (75% load factor)</p>
+            <div className="bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 space-y-3">
+              <p className="text-xs text-gray-400 uppercase tracking-wider">Estimated Daily P&L</p>
+
+              {/* Load factors */}
+              <div className="space-y-1.5">
+                <LoadFactorBar value={pnlPreview.loadFactorEco} label="Eco LF" />
+                <LoadFactorBar value={pnlPreview.loadFactorBiz} label="Biz LF" />
+              </div>
+
+              <p className="text-[10px] text-gray-500">
+                Suggested price: <span className="text-gray-400">{formatUSD(pnlPreview.referencePrice)}</span>
+                {' · '}higher price = lower load factor · lower price = fuller plane
+              </p>
+
+              {/* Revenue / cost / profit */}
               <div className="grid grid-cols-3 gap-3 text-sm">
                 <div>
                   <p className="text-gray-400 text-xs">Revenue</p>
@@ -319,8 +340,9 @@ export const NewRouteModal: React.FC = () => {
                   </p>
                 </div>
               </div>
-              <p className="text-xs text-gray-500 mt-2">
-                Flight time: {pnlPreview.flightDurationHours.toFixed(1)}h - {flightsPerWeek} flights/week
+
+              <p className="text-xs text-gray-500">
+                {pnlPreview.flightDurationHours.toFixed(1)}h flight · {flightsPerWeek} flights/week
               </p>
             </div>
           )}

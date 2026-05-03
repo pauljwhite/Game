@@ -73,11 +73,13 @@ export function runDailyTick(store: ReturnType<typeof import('@/store/index')['u
       const flightCosts = computeFlightCost(route, ac, aircraftType, origin, dest, globalFuelPrice);
       const flightsPerDay = route.flightsPerWeek / 7;
 
-      // Demand calculation
+      // Demand calculation — reference price drives solo-route elasticity
+      const totalSeats = aircraftType.seatsEconomy + aircraftType.seatsBusiness;
+      const referencePrice = totalSeats > 0 ? Math.round(flightCosts.totalCost / totalSeats * 1.4) : 200;
       const baselinePax = getBaselineDailyPax(origin, dest) * (origin.isHub || dest.isHub ? HUB_DEMAND_BONUS : 1);
       const repMod = 1 + (playerAirline.reputationScore - 50) * REPUTATION_DEMAND_FACTOR;
       const crashPenalty = playerAirline.crashPenaltyDaysLeft > 0 ? (1 - CRASH_DEMAND_PENALTY_PCT) : 1;
-      const marketShare = getPlayerMarketShare(route.originIata, route.destinationIata, route.priceEconomy, allAirlines, allRoutes);
+      const marketShare = getPlayerMarketShare(route.originIata, route.destinationIata, route.priceEconomy, allAirlines, allRoutes, referencePrice);
       const dailyPax = Math.floor(baselinePax * marketShare * repMod * crashPenalty);
 
       const ecoCapacity = aircraftType.seatsEconomy * flightsPerDay;

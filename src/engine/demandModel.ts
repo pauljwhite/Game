@@ -16,12 +16,19 @@ export function getCompetitivenessScore(price: number, avgCompetitorPrice: numbe
   return Math.pow(price / avgCompetitorPrice, PRICE_ELASTICITY);
 }
 
+/**
+ * Returns the fraction of baseline daily demand the player captures.
+ * With competitors: competitive market share via price elasticity.
+ * Without competitors: demand is price-elastic vs referencePrice (cost-based
+ * fair price). Charging above reference reduces demand; below fills the plane.
+ */
 export function getPlayerMarketShare(
   routeOrigin: string,
   routeDest: string,
   playerPrice: number,
   allAirlines: Airline[],
   allRoutes: Route[],
+  referencePrice?: number,
 ): number {
   const routesOnPair = allRoutes.filter(
     r => r.isActive &&
@@ -29,7 +36,13 @@ export function getPlayerMarketShare(
        (r.originIata === routeDest && r.destinationIata === routeOrigin)),
   );
 
-  if (routesOnPair.length === 0) return 1;
+  if (routesOnPair.length === 0) {
+    if (referencePrice && referencePrice > 0) {
+      // Solo route: price vs fair-market reference drives demand
+      return Math.min(5, Math.pow(playerPrice / referencePrice, PRICE_ELASTICITY));
+    }
+    return 1;
+  }
 
   const avgPrice = routesOnPair.reduce((sum, r) => sum + r.priceEconomy, 0) / routesOnPair.length;
   const playerScore = getCompetitivenessScore(playerPrice, avgPrice);
