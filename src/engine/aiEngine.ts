@@ -125,7 +125,7 @@ const AI_PRICE_MULTIPLIER: Record<string, number> = {
   aggressive: 0.90,
   balanced: 1.00,
   budget: 0.75,
-  premium: 1.40,
+  premium: 1.20,
   conservative: 1.05,
 };
 
@@ -133,7 +133,7 @@ const AI_LOAD_TARGET: Record<string, number> = {
   aggressive: 0.75,
   balanced: 0.70,
   budget: 0.85,
-  premium: 0.55,
+  premium: 0.65,
   conservative: 0.65,
 };
 
@@ -307,7 +307,10 @@ function tryExpand(
   if (airline.personality === 'budget') {
     chosenType = affordableTypes[affordableTypes.length - 1]; // cheapest
   } else if (airline.personality === 'premium') {
-    chosenType = affordableTypes.find(t => t.category === 'widebody') ?? affordableTypes[0];
+    const widebodies = affordableTypes.filter(t => t.category === 'widebody');
+    chosenType = widebodies.length > 0
+      ? widebodies[Math.floor(widebodies.length / 2)]
+      : affordableTypes[Math.floor(affordableTypes.length / 3)];
   } else {
     chosenType = affordableTypes[Math.floor(affordableTypes.length / 2)]; // mid-range
   }
@@ -340,7 +343,8 @@ function tryExpand(
 
   if (candidateAirports.length === 0) return;
 
-  const destAirport = candidateAirports[0];
+  const topN = Math.min(3, candidateAirports.length);
+  const destAirport = candidateAirports[Math.floor(Math.random() * topN)];
   const dist = haversineKm(hubAirport.lat, hubAirport.lon, destAirport.lat, destAirport.lon);
 
   // Create aircraft

@@ -64,7 +64,7 @@ export const AI_AIRLINES_INIT: AIAirlineInit[] = [
     startHub: 'DXB',
     secondHub: 'DOH',
     startingAircraftTypeId: 'dc8-50',
-    startCash: 90_000_000,
+    startCash: 70_000_000,
   },
   {
     name: 'Dragon Air',
