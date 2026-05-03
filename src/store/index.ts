@@ -34,25 +34,35 @@ function sanitizePersistedState(state: Partial<GameStore>): Partial<GameStore> {
   const aircraft = state.aircraft ?? {};
 
   const aiAirlines = Object.fromEntries(
-    Object.entries(state.aiAirlines ?? {}).map(([id, airline]) => [
-      id,
-      {
-        ...airline,
-        routeIds: uniqueExistingIds(airline.routeIds, routeId => aiRoutes[routeId]?.airlineId === id),
-        fleetIds: uniqueExistingIds(airline.fleetIds, aircraftId => aiAircraft[aircraftId]?.airlineId === id),
-      },
-    ]),
+    Object.entries(state.aiAirlines ?? {}).map(([id, airline]) => {
+      const raw = airline as unknown as Record<string, unknown>;
+      return [
+        id,
+        {
+          ...airline,
+          totalPassengersAllTime: typeof raw.totalPassengersAllTime === 'number' ? raw.totalPassengersAllTime : 0,
+          crashPenaltyDaysLeft: typeof raw.crashPenaltyDaysLeft === 'number' ? raw.crashPenaltyDaysLeft : 0,
+          routeIds: uniqueExistingIds(airline.routeIds, routeId => aiRoutes[routeId]?.airlineId === id),
+          fleetIds: uniqueExistingIds(airline.fleetIds, aircraftId => aiAircraft[aircraftId]?.airlineId === id),
+        },
+      ];
+    }),
   );
 
   const airlines = Object.fromEntries(
-    Object.entries(state.airlines ?? {}).map(([id, airline]) => [
-      id,
-      {
-        ...airline,
-        routeIds: uniqueExistingIds(airline.routeIds, routeId => routes[routeId]?.airlineId === id),
-        fleetIds: uniqueExistingIds(airline.fleetIds, aircraftId => aircraft[aircraftId]?.airlineId === id),
-      },
-    ]),
+    Object.entries(state.airlines ?? {}).map(([id, airline]) => {
+      const raw = airline as unknown as Record<string, unknown>;
+      return [
+        id,
+        {
+          ...airline,
+          totalPassengersAllTime: typeof raw.totalPassengersAllTime === 'number' ? raw.totalPassengersAllTime : 0,
+          crashPenaltyDaysLeft: typeof raw.crashPenaltyDaysLeft === 'number' ? raw.crashPenaltyDaysLeft : 0,
+          routeIds: uniqueExistingIds(airline.routeIds, routeId => routes[routeId]?.airlineId === id),
+          fleetIds: uniqueExistingIds(airline.fleetIds, aircraftId => aircraft[aircraftId]?.airlineId === id),
+        },
+      ];
+    }),
   );
 
   // Backfill missing maintenance fields on aircraft from older saves

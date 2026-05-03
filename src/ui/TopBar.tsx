@@ -108,10 +108,10 @@ const AirlineMenu: React.FC<{ onClose: () => void }> = ({ onClose }) => {
         <div>
           <div className="text-gray-500">Market Share</div>
           <div className="text-white font-semibold">{(() => {
-            const totalPax = player.totalPassengersAllTime +
-              Object.values(aiAirlines).reduce((s, a) => s + a.totalPassengersAllTime, 0);
-            const share = totalPax > 0 ? (player.totalPassengersAllTime / totalPax) * 100 : 0;
-            return share.toFixed(1);
+            const playerPax = player.totalPassengersAllTime ?? 0;
+            const aiPax = Object.values(aiAirlines).reduce((s, a) => s + (a.totalPassengersAllTime ?? 0), 0);
+            const totalPax = playerPax + aiPax;
+            return totalPax > 0 ? ((playerPax / totalPax) * 100).toFixed(1) : '0.0';
           })()}%</div>
         </div>
         <div>

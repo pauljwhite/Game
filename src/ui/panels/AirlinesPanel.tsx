@@ -25,7 +25,7 @@ export const AirlinesPanel: React.FC = () => {
 
   const playerAirline = airlines['player'];
   const totalPax = (playerAirline?.totalPassengersAllTime ?? 0) +
-    Object.values(aiAirlines).reduce((s, a) => s + a.totalPassengersAllTime, 0);
+    Object.values(aiAirlines).reduce((s, a) => s + (a.totalPassengersAllTime ?? 0), 0);
 
   const allAI = Object.values(aiAirlines).map(a => ({ ...a, isPlayer: false }));
   const activeAI   = allAI.filter(a => !a.isInsolvent).sort((a, b) => b.totalPassengersAllTime - a.totalPassengersAllTime);
