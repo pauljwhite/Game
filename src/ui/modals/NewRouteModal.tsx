@@ -78,7 +78,7 @@ export const NewRouteModal: React.FC = () => {
       lastMaintenanceGameDay: gameDay, crashRisk: 0, knownFaultRiskMod: 1,
       assignedRouteId: null, status: 'idle', currentLat: 0, currentLon: 0,
       flightProgress: 0, activeMaintTier: null, autoMaintenanceEnabled: false,
-      autoMaintenanceThreshold: 40, autoMaintenanceTier: 'standard',
+      autoMaintenanceThreshold: 40, autoMaintenanceTier: 'standard', excludedFromPolicy: false,
     };
   }, [pendingType, gameDay]);
 
