@@ -293,7 +293,7 @@ export function runDailyTick(store: ReturnType<typeof import('@/store/index')['u
     const willBeInsolvent = (aiAirline.cashUSD + netProfit) < -50_000_000;
     const wasInsolvent = aiAirline.isInsolvent;
 
-    store.updateAIAirlineStats(aiAirline.id, netProfit, aiPax);
+    store.updateAIAirlineStats(aiAirline.id, netProfit, aiPax, aiRevenue, aiCost, gameDay);
 
     // Reputation recovery for AI airlines (same natural drift as player)
     if (!aiAirline.isInsolvent && aiAirline.reputationScore < 100) {

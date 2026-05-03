@@ -30,7 +30,7 @@ export interface WorldSlice {
   updateAIAircraftCondition: (aircraftId: string, conditionDelta: number, hoursOwed: number) => void;
   startAIMaintenance: (aircraftId: string, gameDay: number, tier: MaintenanceTier) => void;
   completeAIMaintenance: (aircraftId: string) => void;
-  updateAIAirlineStats: (id: string, netProfit: number, passengers: number) => void;
+  updateAIAirlineStats: (id: string, netProfit: number, passengers: number, revenue: number, costs: number, gameDay: number) => void;
   removeAIAirline: (id: string) => void;
   addAIAirline: (airline: Airline) => void;
   addAIAircraft: (aircraft: Aircraft) => void;
@@ -210,7 +210,7 @@ export const createWorldSlice: StateCreator<GameStore, [['zustand/immer', never]
       }
     }),
 
-  updateAIAirlineStats: (id, netProfit, passengers) =>
+  updateAIAirlineStats: (id, netProfit, passengers, revenue, costs, gameDay) =>
     set((state) => {
       const airline = state.aiAirlines[id];
       if (!airline) return;
@@ -219,6 +219,8 @@ export const createWorldSlice: StateCreator<GameStore, [['zustand/immer', never]
       airline.lastDailyProfit = netProfit;
       airline.isInsolvent = airline.cashUSD < -50_000_000;
       airline.canBeTakenOver = airline.cashUSD < 0 && Math.abs(airline.cashUSD) > 20_000_000;
+      airline.dailyStats.push({ gameDay, revenue, costs, profit: netProfit, passengers, cashEnd: airline.cashUSD });
+      if (airline.dailyStats.length > 365) airline.dailyStats.shift();
     }),
 
   removeAIAirline: (id) =>
