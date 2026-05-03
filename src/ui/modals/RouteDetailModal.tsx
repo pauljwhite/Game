@@ -73,11 +73,11 @@ export const RouteDetailModal: React.FC = () => {
         {/* Origin -> Destination */}
         <div className="flex items-center gap-2 mb-4">
           <span className="text-blue-400 font-mono font-bold text-lg">{route.originIata}</span>
-          <span className="text-gray-400">-></span>
+          <span className="text-gray-400">{'->'}</span>
           <span className="text-blue-400 font-mono font-bold text-lg">{route.destinationIata}</span>
           {origin && destination && (
             <span className="text-gray-500 text-sm ml-1">
-              {origin.name} -> {destination.name}
+              {origin.name} {'->'} {destination.name}
             </span>
           )}
         </div>
