@@ -77,12 +77,12 @@ export const BuyAircraftModal: React.FC = () => {
         {/* Two-column body */}
         <div className="flex flex-1 min-h-0">
           {/* Manufacturer sidebar */}
-          <div className="w-36 sm:w-44 shrink-0 border-r border-white/10 overflow-y-auto py-2 bg-white/[0.025]">
+          <div className="w-[4.5rem] sm:w-44 shrink-0 border-r border-white/10 overflow-y-auto py-2 bg-white/[0.025]">
             {manufacturers.map(mfr => (
               <button
                 key={mfr}
                 onClick={() => { setActiveTab(mfr); setPurchaseError(null); }}
-                className={`w-full text-left px-3 py-2 text-sm transition-colors ${
+                className={`w-full text-left px-2 sm:px-3 py-2 text-xs sm:text-sm transition-colors leading-tight ${
                   activeTab === mfr
                     ? 'bg-white/[0.12] text-white font-semibold'
                     : 'text-gray-400 hover:text-gray-200 hover:bg-white/[0.07]'
@@ -94,79 +94,87 @@ export const BuyAircraftModal: React.FC = () => {
           </div>
 
           {/* Aircraft list */}
-          <div className="overflow-y-auto flex-1 px-4 py-4">
-          {purchaseError && (
-            <div className="mb-3 px-3 py-2 bg-red-900/40 border border-red-700 rounded text-red-300 text-sm">
-              {purchaseError}
+          <div className="overflow-y-auto flex-1 px-3 sm:px-4 py-3 sm:py-4">
+            {purchaseError && (
+              <div className="mb-3 px-3 py-2 bg-red-900/40 border border-red-700 rounded text-red-300 text-sm">
+                {purchaseError}
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 gap-2 sm:gap-3">
+              {visibleTypes.map(type => {
+                const unavailable = type.yearIntroduced > gameYear;
+                const canAfford = cashUSD >= type.purchasePrice;
+
+                return (
+                  <div
+                    key={type.id}
+                    className={`rounded-lg border px-3 sm:px-4 py-3 transition-colors ${
+                      unavailable
+                        ? 'border-white/10 bg-white/[0.025] opacity-50'
+                        : 'border-white/10 bg-white/[0.055] hover:border-white/20 hover:bg-white/[0.075]'
+                    }`}
+                  >
+                    {/* Mobile: stacked layout */}
+                    <div className="flex items-start gap-3">
+                      {/* Profile SVG — hidden on mobile */}
+                      <div className="hidden sm:flex flex-shrink-0 w-44 items-center justify-center self-center">
+                        <AircraftProfile
+                          type={type}
+                          color={unavailable ? '#6b7280' : '#60a5fa'}
+                          className="w-44 h-16"
+                        />
+                      </div>
+
+                      {/* Info + actions */}
+                      <div className="flex-1 min-w-0">
+                        {/* Top row: model name + price + buy */}
+                        <div className="flex items-start justify-between gap-2 mb-1.5">
+                          <div className="min-w-0">
+                            <div className="flex items-center flex-wrap gap-x-2 gap-y-0.5">
+                              <span className="text-white font-semibold text-sm">{type.model}</span>
+                              <span className="text-xs text-gray-500 capitalize">{type.category}</span>
+                              {unavailable && (
+                                <span className="px-1.5 py-0.5 bg-yellow-900/50 border border-yellow-700 rounded text-yellow-400 text-xs">
+                                  Avail. {type.yearIntroduced}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex-shrink-0 flex flex-col items-end gap-1.5">
+                            <span className={`text-sm font-bold whitespace-nowrap ${!unavailable && !canAfford ? 'text-red-400' : 'text-white'}`}>
+                              {formatUSD(type.purchasePrice)}
+                            </span>
+                            {!unavailable && (
+                              <button
+                                onClick={() => handleBuy(type.id)}
+                                disabled={!canAfford}
+                                className={`px-3 py-1 rounded text-xs font-semibold transition-colors whitespace-nowrap ${
+                                  canAfford
+                                    ? 'apple-button-primary'
+                                    : 'bg-white/10 text-gray-500 cursor-not-allowed'
+                                }`}
+                              >
+                                {canAfford ? 'Buy' : 'No funds'}
+                              </button>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Specs grid */}
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-3 gap-y-0.5 text-xs text-gray-400">
+                          <span>Seats: <span className="text-gray-300">{type.seatsEconomy}Y{type.seatsBusiness > 0 ? `/${type.seatsBusiness}J` : ''}</span></span>
+                          <span>Range: <span className="text-gray-300">{type.rangeKm.toLocaleString()} km</span></span>
+                          <span>Speed: <span className="text-gray-300">{type.cruiseSpeedKmh} km/h</span></span>
+                          <span>Fuel: <span className="text-gray-300">{type.fuelBurnLPer100Km.toLocaleString()} L/100km</span></span>
+                          <span>Maint: <span className="text-gray-300">{formatUSD(type.maintenanceCostPerHourUSD)}/hr</span></span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
-          )}
-
-          <div className="grid grid-cols-1 gap-3">
-            {visibleTypes.map(type => {
-              const unavailable = type.yearIntroduced > gameYear;
-              const canAfford = cashUSD >= type.purchasePrice;
-
-              return (
-                <div
-                  key={type.id}
-                  className={`flex items-center gap-4 rounded-lg border px-4 py-3 transition-colors ${
-                    unavailable
-                      ? 'border-white/10 bg-white/[0.025] opacity-50'
-                      : 'border-white/10 bg-white/[0.055] hover:border-white/20 hover:bg-white/[0.075]'
-                  }`}
-                >
-                  {/* Profile SVG */}
-                  <div className="flex-shrink-0 w-36 sm:w-44 flex items-center justify-center">
-                    <AircraftProfile
-                      type={type}
-                      color={unavailable ? '#6b7280' : '#60a5fa'}
-                      className="w-36 h-14 sm:w-44 sm:h-16"
-                    />
-                  </div>
-
-                  {/* Info */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="text-white font-semibold text-sm">{type.model}</span>
-                      <span className="text-xs text-gray-500 capitalize">{type.category}</span>
-                      {unavailable && (
-                        <span className="ml-1 px-2 py-0.5 bg-yellow-900/50 border border-yellow-700 rounded text-yellow-400 text-xs">
-                          Available {type.yearIntroduced}
-                        </span>
-                      )}
-                    </div>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-0.5 text-xs text-gray-400">
-                      <span>Seats: <span className="text-gray-300">{type.seatsEconomy}Y{type.seatsBusiness > 0 ? ` / ${type.seatsBusiness}J` : ''}</span></span>
-                      <span>Range: <span className="text-gray-300">{type.rangeKm.toLocaleString()} km</span></span>
-                      <span>Speed: <span className="text-gray-300">{type.cruiseSpeedKmh} km/h</span></span>
-                      <span>Fuel: <span className="text-gray-300">{type.fuelBurnLPer100Km.toLocaleString()} L/100km</span></span>
-                      <span>Maint: <span className="text-gray-300">{formatUSD(type.maintenanceCostPerHourUSD)}/hr</span></span>
-                    </div>
-                  </div>
-
-                  {/* Price + Buy */}
-                  <div className="flex-shrink-0 text-right flex flex-col items-end gap-2">
-                    <span className={`text-sm font-bold ${!unavailable && !canAfford ? 'text-red-400' : 'text-white'}`}>
-                      {formatUSD(type.purchasePrice)}
-                    </span>
-                    {!unavailable && (
-                      <button
-                        onClick={() => handleBuy(type.id)}
-                        disabled={!canAfford}
-                        className={`px-3 py-1 rounded text-xs font-semibold transition-colors ${
-                          canAfford
-                            ? 'apple-button-primary'
-                            : 'bg-white/10 text-gray-500 cursor-not-allowed'
-                        }`}
-                      >
-                        {canAfford ? 'Buy' : 'Insufficient funds'}
-                      </button>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
           </div>
         </div>
       </div>
