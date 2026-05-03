@@ -179,6 +179,10 @@ export const NewRouteModal: React.FC = () => {
     if (aFits !== bFits) return aFits ? -1 : 1;
     return a.purchasePrice - b.purchasePrice;
   });
+  const [buyMfr, setBuyMfr] = useState<string | null>(null);
+  const buyMfrs = useMemo(() => Array.from(new Set(buyableTypes.map(t => t.manufacturer))).sort(), [buyableTypes]);
+  const activeBuyMfr = buyMfr ?? buyMfrs[0] ?? '';
+  const shopVisible = buyableTypes.filter(t => t.manufacturer === activeBuyMfr);
 
   return (
     <div className="fixed inset-0 bg-black/80 flex items-end sm:items-center justify-center z-[9999]">
@@ -296,47 +300,66 @@ export const NewRouteModal: React.FC = () => {
 
             {showBuyPanel && (
               <div className="mt-2 border border-gray-700 rounded-lg overflow-hidden">
-                <div className="px-3 py-2 bg-gray-800 text-xs text-gray-400">
+                <div className="px-3 py-2 bg-gray-800 text-xs text-gray-400 border-b border-gray-700">
                   Your cash: <span className="text-white font-semibold">{formatCurrency(playerCash)}</span>
                   {distanceKm && <span className="ml-2">· Route: {distanceKm.toLocaleString()} km</span>}
                 </div>
-                <div className="max-h-52 overflow-y-auto divide-y divide-gray-800">
-                  {buyableTypes.map(t => {
-                    const fits       = distanceKm === null || t.rangeKm >= distanceKm;
-                    const canAfford  = playerCash >= t.purchasePrice;
-                    const isBuying   = buyingTypeId === t.id;
-                    return (
+                <div className="flex h-52">
+                  {/* Manufacturer sidebar */}
+                  <div className="w-28 sm:w-36 shrink-0 border-r border-gray-700 overflow-y-auto py-1 bg-gray-900">
+                    {buyMfrs.map(mfr => (
                       <button
-                        key={t.id}
-                        onClick={() => fits && canAfford && handleBuyAircraft(t.id)}
-                        disabled={!fits || !canAfford || isBuying}
-                        className={`w-full flex items-center justify-between px-3 py-2 text-left text-sm transition-colors ${
-                          !fits
-                            ? 'opacity-40 cursor-not-allowed bg-gray-900'
-                            : !canAfford
-                            ? 'opacity-50 cursor-not-allowed bg-gray-900'
-                            : 'bg-gray-900 hover:bg-gray-800 cursor-pointer'
+                        key={mfr}
+                        onClick={() => setBuyMfr(mfr)}
+                        className={`w-full text-left px-2 py-1.5 text-xs transition-colors ${
+                          activeBuyMfr === mfr
+                            ? 'bg-gray-700 text-white font-semibold'
+                            : 'text-gray-400 hover:text-gray-200 hover:bg-gray-800/60'
                         }`}
                       >
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-2">
-                            <span className="text-white font-medium">{t.manufacturer} {t.model}</span>
-                            {!fits && <span className="text-[10px] text-red-400 bg-red-900/40 px-1 rounded">out of range</span>}
-                            {fits && <span className="text-[10px] text-green-400 bg-green-900/40 px-1 rounded">✓ in range</span>}
-                          </div>
-                          <div className="text-xs text-gray-500">
-                            {t.seatsEconomy}Y/{t.seatsBusiness}J · {t.rangeKm.toLocaleString()} km · {t.cruiseSpeedKmh} km/h
-                          </div>
-                        </div>
-                        <div className="text-right shrink-0 ml-3">
-                          <div className={canAfford ? 'text-green-400 font-semibold' : 'text-red-400 font-semibold'}>
-                            {formatCurrency(t.purchasePrice)}
-                          </div>
-                          {isBuying && <div className="text-xs text-blue-400">Buying…</div>}
-                        </div>
+                        {mfr}
                       </button>
-                    );
-                  })}
+                    ))}
+                  </div>
+                  {/* Aircraft list */}
+                  <div className="flex-1 overflow-y-auto divide-y divide-gray-800 bg-gray-900">
+                    {shopVisible.map(t => {
+                      const fits      = distanceKm === null || t.rangeKm >= distanceKm;
+                      const canAfford = playerCash >= t.purchasePrice;
+                      const isBuying  = buyingTypeId === t.id;
+                      return (
+                        <button
+                          key={t.id}
+                          onClick={() => fits && canAfford && handleBuyAircraft(t.id)}
+                          disabled={!fits || !canAfford || isBuying}
+                          className={`w-full flex items-center justify-between px-3 py-2 text-left text-sm transition-colors ${
+                            !fits
+                              ? 'opacity-40 cursor-not-allowed'
+                              : !canAfford
+                              ? 'opacity-50 cursor-not-allowed'
+                              : 'hover:bg-gray-800 cursor-pointer'
+                          }`}
+                        >
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="text-white font-medium">{t.model}</span>
+                              {!fits && <span className="text-[10px] text-red-400 bg-red-900/40 px-1 rounded">out of range</span>}
+                              {fits && <span className="text-[10px] text-green-400 bg-green-900/40 px-1 rounded">✓ in range</span>}
+                            </div>
+                            <div className="text-xs text-gray-500">
+                              {t.seatsEconomy}Y{t.seatsBusiness > 0 ? `/${t.seatsBusiness}J` : ''} · {t.rangeKm.toLocaleString()} km
+                            </div>
+                          </div>
+                          <div className="text-right shrink-0 ml-3">
+                            <div className={canAfford ? 'text-green-400 font-semibold text-xs' : 'text-red-400 font-semibold text-xs'}>
+                              {formatCurrency(t.purchasePrice)}
+                            </div>
+                            {isBuying && <div className="text-xs text-blue-400">Buying…</div>}
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
               </div>
             )}
