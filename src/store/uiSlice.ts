@@ -2,7 +2,7 @@ import type { StateCreator } from 'zustand';
 import type { GameStore } from './index';
 
 export type PanelId = 'fleet' | 'routes' | 'finance' | 'airlines' | 'hubs';
-export type ModalId = 'buyAircraft' | 'newRoute' | 'routeDetail' | 'takeover' | 'gameOver' | 'newGame' | 'aiRouteDetail';
+export type ModalId = 'buyAircraft' | 'newRoute' | 'routeDetail' | 'takeover' | 'gameOver' | 'newGame' | 'aiRouteDetail' | 'rebrand';
 
 export interface UISlice {
   selectedAirportIata: string | null;

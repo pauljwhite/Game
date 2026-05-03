@@ -20,11 +20,12 @@ function reputationColor(score: number): string {
 }
 
 const AirlineMenu: React.FC<{ onClose: () => void }> = ({ onClose }) => {
-  const airlines    = useGameStore(s => s.airlines);
-  const aiAirlines  = useGameStore(s => s.aiAirlines);
-  const aircraft    = useGameStore(s => s.aircraft);
-  const routes      = useGameStore(s => s.routes);
-  const gameTimeMs  = useGameStore(s => s.gameTimeMs);
+  const airlines      = useGameStore(s => s.airlines);
+  const aiAirlines    = useGameStore(s => s.aiAirlines);
+  const aircraft      = useGameStore(s => s.aircraft);
+  const routes        = useGameStore(s => s.routes);
+  const gameTimeMs    = useGameStore(s => s.gameTimeMs);
+  const openModalById = useGameStore(s => s.openModalById);
   const [confirming, setConfirming] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -140,8 +141,14 @@ const AirlineMenu: React.FC<{ onClose: () => void }> = ({ onClose }) => {
         )}
       </div>
 
-      {/* Start Again */}
-      <div className="px-4 py-3">
+      {/* Actions */}
+      <div className="px-4 py-3 space-y-2">
+        <button
+          onClick={() => { onClose(); openModalById('rebrand'); }}
+          className="apple-button w-full py-2 text-xs font-semibold"
+        >
+          ✏ Rebrand Airline
+        </button>
         <button
           onClick={handleStartAgain}
           onMouseLeave={() => setConfirming(false)}
