@@ -21,7 +21,7 @@ export const AirportPopup: React.FC = () => {
   const playerHasHub = playerAirline?.hubIatas.includes(selectedIata);
 
   return (
-    <div className="absolute bottom-12 left-4 z-50 bg-gray-900 border border-gray-700 rounded-lg p-3 w-64 shadow-xl">
+    <div className="absolute bottom-12 left-4 z-[800] bg-gray-900 border border-gray-700 rounded-lg p-3 w-64 shadow-xl">
       <div className="flex justify-between items-start">
         <div>
           <div className="text-white font-bold text-sm">{airport.name}</div>

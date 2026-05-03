@@ -22,7 +22,7 @@ export const GameMap: React.FC = () => {
 
   return (
     <div className="relative w-full h-full">
-      <div id={MAP_CONTAINER_ID} className="w-full h-full" />
+      <div id={MAP_CONTAINER_ID} className="w-full h-full relative z-0" />
       {map && (
         <>
           <AirportMarkers map={map} />
