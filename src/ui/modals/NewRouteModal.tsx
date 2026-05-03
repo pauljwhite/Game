@@ -278,34 +278,51 @@ export const NewRouteModal: React.FC = () => {
           </div>
 
           {/* Pricing */}
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="text-gray-300 text-sm block mb-1">Economy Price (USD)</label>
-              <input
-                type="number"
-                min={1}
-                step={10}
-                value={priceEconomy}
-                onChange={e => {
-                  const val = Number(e.target.value);
-                  setPriceEconomy(val);
-                  setPriceBusiness(Math.round(val * 4));
-                }}
-                className="w-full bg-gray-800 border border-gray-600 rounded px-3 py-2 text-white text-sm focus:outline-none focus:border-blue-500"
-              />
-            </div>
-            <div>
-              <label className="text-gray-300 text-sm block mb-1">Business Price (USD)</label>
-              <input
-                type="number"
-                min={1}
-                step={10}
-                value={priceBusiness}
-                onChange={e => setPriceBusiness(Number(e.target.value))}
-                className="w-full bg-gray-800 border border-gray-600 rounded px-3 py-2 text-white text-sm focus:outline-none focus:border-blue-500"
-              />
-            </div>
-          </div>
+          {(() => {
+            const refPrice = pnlPreview?.referencePrice ?? null;
+            const maxEco = refPrice ? refPrice * 6 : 9999;
+            const maxBiz = refPrice ? refPrice * 24 : 39999;
+            return (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-300 text-sm">Pricing</span>
+                  {refPrice && (
+                    <button
+                      type="button"
+                      onClick={() => { setPriceEconomy(refPrice); setPriceBusiness(refPrice * 4); }}
+                      className="text-xs text-blue-400 hover:text-blue-300 transition-colors"
+                    >
+                      ↺ Reset to suggested ({formatUSD(refPrice)} / {formatUSD(refPrice * 4)})
+                    </button>
+                  )}
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-gray-400 text-xs block mb-1">Economy (max {formatUSD(maxEco)})</label>
+                    <input
+                      type="number" min={1} max={maxEco} step={10}
+                      value={priceEconomy}
+                      onChange={e => {
+                        const val = Math.min(maxEco, Math.max(1, Number(e.target.value)));
+                        setPriceEconomy(val);
+                        setPriceBusiness(Math.min(maxBiz, Math.round(val * 4)));
+                      }}
+                      className="w-full bg-gray-800 border border-gray-600 rounded px-3 py-2 text-white text-sm focus:outline-none focus:border-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-gray-400 text-xs block mb-1">Business (max {formatUSD(maxBiz)})</label>
+                    <input
+                      type="number" min={1} max={maxBiz} step={10}
+                      value={priceBusiness}
+                      onChange={e => setPriceBusiness(Math.min(maxBiz, Math.max(1, Number(e.target.value))))}
+                      className="w-full bg-gray-800 border border-gray-600 rounded px-3 py-2 text-white text-sm focus:outline-none focus:border-blue-500"
+                    />
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
 
           {/* P&L Preview */}
           {pnlPreview && (

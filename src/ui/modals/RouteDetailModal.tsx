@@ -3,6 +3,8 @@ import { useGameStore } from '@/store';
 import { formatCurrency } from '@/utils/format';
 import { LoadFactorBar } from '@/ui/components/LoadFactorBar';
 import { AIRCRAFT_TYPES } from '@/data/aircraftTypes';
+import { computeFlightCost } from '@/engine/economicsEngine';
+import { FUEL_PRICE_USD_PER_LITER } from '@/utils/constants';
 
 export const RouteDetailModal: React.FC = () => {
   const routes               = useGameStore(s => s.routes);
@@ -37,6 +39,19 @@ export const RouteDetailModal: React.FC = () => {
   const assignedAircraft = route.aircraftId ? aircraft[route.aircraftId] : null;
   const origin      = airports[route.originIata];
   const destination = airports[route.destinationIata];
+
+  // Reference price: cost-per-seat × 1.4, or distance-based fallback
+  const assignedType = assignedAircraft ? AIRCRAFT_TYPES.find(t => t.id === assignedAircraft.typeId) : null;
+  const referencePrice = (() => {
+    if (assignedAircraft && assignedType && origin && destination) {
+      const costs = computeFlightCost(route, assignedAircraft, assignedType, origin, destination, FUEL_PRICE_USD_PER_LITER);
+      const totalSeats = assignedType.seatsEconomy + assignedType.seatsBusiness;
+      return totalSeats > 0 ? Math.round(costs.totalCost / totalSeats * 1.4) : Math.round(route.distanceKm * 0.12);
+    }
+    return Math.round(route.distanceKm * 0.12);
+  })();
+  const maxEco = referencePrice * 6;
+  const maxBiz = referencePrice * 24;
 
   // Aircraft eligible for this route: idle, range sufficient
   const eligibleAircraft = Object.values(aircraft).filter(ac => {
@@ -194,24 +209,36 @@ export const RouteDetailModal: React.FC = () => {
 
         {/* Editable fields */}
         <div className="space-y-4 mb-5">
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="text-gray-300 text-sm block mb-1">Economy Price ($)</label>
-              <input
-                type="number" min={1}
-                className="w-full bg-gray-800 border border-gray-600 rounded px-3 py-2 text-white text-sm focus:outline-none focus:border-blue-500"
-                value={priceEconomy}
-                onChange={e => setPriceEconomy(Number(e.target.value))}
-              />
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-gray-300 text-sm">Pricing</span>
+              <button
+                type="button"
+                onClick={() => { setPriceEconomy(referencePrice); setPriceBusiness(referencePrice * 4); }}
+                className="text-xs text-blue-400 hover:text-blue-300 transition-colors"
+              >
+                ↺ Reset to suggested ({formatCurrency(referencePrice)} / {formatCurrency(referencePrice * 4)})
+              </button>
             </div>
-            <div>
-              <label className="text-gray-300 text-sm block mb-1">Business Price ($)</label>
-              <input
-                type="number" min={1}
-                className="w-full bg-gray-800 border border-gray-600 rounded px-3 py-2 text-white text-sm focus:outline-none focus:border-blue-500"
-                value={priceBusiness}
-                onChange={e => setPriceBusiness(Number(e.target.value))}
-              />
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-gray-400 text-xs block mb-1">Economy (max {formatCurrency(maxEco)})</label>
+                <input
+                  type="number" min={1} max={maxEco}
+                  className="w-full bg-gray-800 border border-gray-600 rounded px-3 py-2 text-white text-sm focus:outline-none focus:border-blue-500"
+                  value={priceEconomy}
+                  onChange={e => setPriceEconomy(Math.min(maxEco, Math.max(1, Number(e.target.value))))}
+                />
+              </div>
+              <div>
+                <label className="text-gray-400 text-xs block mb-1">Business (max {formatCurrency(maxBiz)})</label>
+                <input
+                  type="number" min={1} max={maxBiz}
+                  className="w-full bg-gray-800 border border-gray-600 rounded px-3 py-2 text-white text-sm focus:outline-none focus:border-blue-500"
+                  value={priceBusiness}
+                  onChange={e => setPriceBusiness(Math.min(maxBiz, Math.max(1, Number(e.target.value))))}
+                />
+              </div>
             </div>
           </div>
 
