@@ -9,6 +9,7 @@ import { FUEL_PRICE_USD_PER_LITER, PRICE_ELASTICITY } from '@/utils/constants';
 import { AirportSearchInput } from '@/ui/components/AirportSearchInput';
 import { findAirportByQuery } from '@/utils/airportSearch';
 import { LoadFactorBar } from '@/ui/components/LoadFactorBar';
+import { PriceInput } from '@/ui/components/PriceInput';
 
 function formatUSD(n: number): string {
   if (Math.abs(n) >= 1_000_000) return `$${(n / 1_000_000).toFixed(2)}M`;
@@ -299,24 +300,16 @@ export const NewRouteModal: React.FC = () => {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="text-gray-400 text-xs block mb-1">Economy (max {formatUSD(maxEco)})</label>
-                    <input
-                      type="number" min={1} max={maxEco} step={10}
-                      value={priceEconomy}
-                      onChange={e => {
-                        const val = Math.min(maxEco, Math.max(1, Number(e.target.value)));
-                        setPriceEconomy(val);
-                        setPriceBusiness(Math.min(maxBiz, Math.round(val * 4)));
-                      }}
-                      className="w-full bg-gray-800 border border-gray-600 rounded px-3 py-2 text-white text-sm focus:outline-none focus:border-blue-500"
+                    <PriceInput
+                      value={priceEconomy} min={1} max={maxEco}
+                      onChange={v => { setPriceEconomy(v); setPriceBusiness(Math.min(maxBiz, Math.round(v * 4))); }}
                     />
                   </div>
                   <div>
                     <label className="text-gray-400 text-xs block mb-1">Business (max {formatUSD(maxBiz)})</label>
-                    <input
-                      type="number" min={1} max={maxBiz} step={10}
-                      value={priceBusiness}
-                      onChange={e => setPriceBusiness(Math.min(maxBiz, Math.max(1, Number(e.target.value))))}
-                      className="w-full bg-gray-800 border border-gray-600 rounded px-3 py-2 text-white text-sm focus:outline-none focus:border-blue-500"
+                    <PriceInput
+                      value={priceBusiness} min={1} max={maxBiz}
+                      onChange={v => setPriceBusiness(v)}
                     />
                   </div>
                 </div>

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useGameStore } from '@/store';
 import { formatCurrency } from '@/utils/format';
 import { LoadFactorBar } from '@/ui/components/LoadFactorBar';
+import { PriceInput } from '@/ui/components/PriceInput';
 import { AIRCRAFT_TYPES } from '@/data/aircraftTypes';
 import { computeFlightCost } from '@/engine/economicsEngine';
 import { FUEL_PRICE_USD_PER_LITER } from '@/utils/constants';
@@ -223,20 +224,16 @@ export const RouteDetailModal: React.FC = () => {
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="text-gray-400 text-xs block mb-1">Economy (max {formatCurrency(maxEco)})</label>
-                <input
-                  type="number" min={1} max={maxEco}
-                  className="w-full bg-gray-800 border border-gray-600 rounded px-3 py-2 text-white text-sm focus:outline-none focus:border-blue-500"
-                  value={priceEconomy}
-                  onChange={e => setPriceEconomy(Math.min(maxEco, Math.max(1, Number(e.target.value))))}
+                <PriceInput
+                  value={priceEconomy} min={1} max={maxEco}
+                  onChange={v => setPriceEconomy(v)}
                 />
               </div>
               <div>
                 <label className="text-gray-400 text-xs block mb-1">Business (max {formatCurrency(maxBiz)})</label>
-                <input
-                  type="number" min={1} max={maxBiz}
-                  className="w-full bg-gray-800 border border-gray-600 rounded px-3 py-2 text-white text-sm focus:outline-none focus:border-blue-500"
-                  value={priceBusiness}
-                  onChange={e => setPriceBusiness(Math.min(maxBiz, Math.max(1, Number(e.target.value))))}
+                <PriceInput
+                  value={priceBusiness} min={1} max={maxBiz}
+                  onChange={v => setPriceBusiness(v)}
                 />
               </div>
             </div>
