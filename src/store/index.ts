@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
 import { persist } from 'zustand/middleware';
+import { useEffect, useState } from 'react';
 import { createGameSlice, type GameSlice } from './gameSlice';
 import { createPlayerSlice, type PlayerSlice } from './playerSlice';
 import { createWorldSlice, type WorldSlice } from './worldSlice';
@@ -27,3 +28,14 @@ export const useGameStore = create<GameStore>()(
     },
   ),
 );
+
+export function useHydrated(): boolean {
+  const [hydrated, setHydrated] = useState(() => useGameStore.persist.hasHydrated());
+  useEffect(() => {
+    if (!hydrated) {
+      const unsub = useGameStore.persist.onFinishHydration(() => setHydrated(true));
+      return unsub;
+    }
+  }, [hydrated]);
+  return hydrated;
+}

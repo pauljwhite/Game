@@ -1,5 +1,5 @@
 import React from 'react';
-import { useGameStore } from '@/store';
+import { useGameStore, useHydrated } from '@/store';
 import { TopBar } from './TopBar';
 import { BottomBar } from './BottomBar';
 import { GameMap } from '@/map/GameMap';
@@ -28,6 +28,11 @@ export const Layout: React.FC = () => {
   const openPanel = useGameStore(s => s.openPanel);
   const openModal = useGameStore(s => s.openModal);
   const isInitialized = useGameStore(s => s.isInitialized);
+  const hydrated = useHydrated();
+
+  if (!hydrated) {
+    return <div className="w-screen h-screen bg-gray-950" />;
+  }
 
   const PanelComponent = openPanel ? PANELS[openPanel] : null;
 
