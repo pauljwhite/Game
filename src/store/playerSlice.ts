@@ -341,6 +341,10 @@ export const createPlayerSlice: StateCreator<GameStore, [['zustand/immer', never
       if (ac.assignedRouteId && state.routes[ac.assignedRouteId]) {
         state.routes[ac.assignedRouteId].isActive = true;
       }
+      // Reputation boost for proactive maintenance
+      const repBoost = tier === 'full' ? 3 : tier === 'standard' ? 1.5 : 0.5;
+      const airline = state.airlines[PLAYER_ID];
+      if (airline) airline.reputationScore = Math.min(100, airline.reputationScore + repBoost);
     }),
 
   setAutoMaintenance: (aircraftId, enabled, threshold, tier) =>

@@ -1,5 +1,5 @@
 import type { Airport, Route, Airline } from '@/types';
-import { PRICE_ELASTICITY, REPUTATION_DEMAND_FACTOR } from '@/utils/constants';
+import { PRICE_ELASTICITY, REP_PRICE_FACTOR } from '@/utils/constants';
 
 const SIZE_MULTIPLIER: Record<string, number> = {
   small: 0.3, medium: 1.0, large: 2.5, major: 5.0,
@@ -16,11 +16,19 @@ export function getCompetitivenessScore(price: number, avgCompetitorPrice: numbe
   return Math.pow(price / avgCompetitorPrice, PRICE_ELASTICITY);
 }
 
+function repPricePremium(reputationScore: number): number {
+  return 1 + (reputationScore - 50) * REP_PRICE_FACTOR;
+}
+
 /**
  * Returns the fraction of baseline daily demand the player captures.
  * With competitors: competitive market share via price elasticity.
  * Without competitors: demand is price-elastic vs referencePrice (cost-based
  * fair price). Charging above reference reduces demand; below fills the plane.
+ *
+ * Reputation acts as a price premium: passengers perceive the price as
+ * (actualPrice / repPremium). High-rep airlines can charge more for the same
+ * market share; low-rep airlines are penalised even at the same price.
  */
 export function getPlayerMarketShare(
   routeOrigin: string,
@@ -29,6 +37,7 @@ export function getPlayerMarketShare(
   allAirlines: Airline[],
   allRoutes: Route[],
   referencePrice?: number,
+  playerAirlineId = 'player',
 ): number {
   const routesOnPair = allRoutes.filter(
     r => r.isActive &&
@@ -36,20 +45,24 @@ export function getPlayerMarketShare(
        (r.originIata === routeDest && r.destinationIata === routeOrigin)),
   );
 
+  const playerAirline = allAirlines.find(a => a.id === playerAirlineId);
+  const playerPremium = playerAirline ? repPricePremium(playerAirline.reputationScore) : 1;
+  const playerEffectivePrice = playerPrice / playerPremium;
+
   if (routesOnPair.length === 0) {
     if (referencePrice && referencePrice > 0) {
-      // Solo route: price vs fair-market reference drives demand
-      return Math.min(5, Math.pow(playerPrice / referencePrice, PRICE_ELASTICITY));
+      // Solo route: effective price vs fair-market reference drives demand
+      return Math.min(5, Math.pow(playerEffectivePrice / referencePrice, PRICE_ELASTICITY));
     }
     return 1;
   }
 
   const avgPrice = routesOnPair.reduce((sum, r) => sum + r.priceEconomy, 0) / routesOnPair.length;
-  const playerScore = getCompetitivenessScore(playerPrice, avgPrice);
+  const playerScore = getCompetitivenessScore(playerEffectivePrice, avgPrice);
   const totalScore = routesOnPair.reduce((sum, r) => {
     const airline = allAirlines.find(a => a.id === r.airlineId);
-    const repMod = airline ? 1 + (airline.reputationScore - 50) * REPUTATION_DEMAND_FACTOR : 1;
-    return sum + getCompetitivenessScore(r.priceEconomy, avgPrice) * repMod;
+    const premium = airline ? repPricePremium(airline.reputationScore) : 1;
+    return sum + getCompetitivenessScore(r.priceEconomy / premium, avgPrice);
   }, 0);
 
   return totalScore > 0 ? playerScore / totalScore : 1;

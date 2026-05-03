@@ -149,6 +149,12 @@ export function runDailyTick(store: ReturnType<typeof import('@/store/index')['u
         store.triggerCrash(ac.id);
         store.pushNewsItem(`BREAKING: ${playerAirline.name} ${aircraftType.model} crashes on ${route.originIata}->${route.destinationIata} route!`);
       }
+
+      // Reputation drain for flying poorly maintained aircraft (condition < 40)
+      if (ac.condition < 40) {
+        const drain = ((40 - ac.condition) / 40) * 0.15;
+        store.applyReputationHit('player', -drain);
+      }
     });
 
     const hubFees = (playerAirline.hubIatas.length * HUB_ANNUAL_FEE_USD) / 365;

@@ -65,6 +65,11 @@ export const FinancePanel: React.FC = () => {
           <div className={`text-lg font-bold ${playerAirline.reputationScore >= 60 ? 'text-green-400' : playerAirline.reputationScore >= 30 ? 'text-yellow-400' : 'text-red-400'}`}>
             {playerAirline.reputationScore.toFixed(0)}/100
           </div>
+          <div className="text-[10px] text-gray-500 mt-0.5">
+            {playerAirline.reputationScore >= 50
+              ? `+${(((playerAirline.reputationScore - 50) * 0.004) * 100).toFixed(0)}% price premium`
+              : `-${(((50 - playerAirline.reputationScore) * 0.004) * 100).toFixed(0)}% price penalty`}
+          </div>
         </div>
         {aiHoldings.length > 0 && (
           <div className="col-span-2 glass-card p-2 border border-teal-500/20">
