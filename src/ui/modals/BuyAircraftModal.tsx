@@ -74,25 +74,27 @@ export const BuyAircraftModal: React.FC = () => {
           </button>
         </div>
 
-        {/* Manufacturer tabs */}
-        <div className="flex gap-1 px-6 pt-3 pb-0 flex-wrap flex-shrink-0 border-b border-gray-800">
-          {manufacturers.map(mfr => (
-            <button
-              key={mfr}
-              onClick={() => { setActiveTab(mfr); setPurchaseError(null); }}
-              className={`px-3 py-1.5 text-sm rounded-t transition-colors whitespace-nowrap ${
-                activeTab === mfr
-                  ? 'bg-gray-800 text-white border border-b-0 border-gray-600'
-                  : 'text-gray-400 hover:text-gray-200'
-              }`}
-            >
-              {mfr}
-            </button>
-          ))}
-        </div>
+        {/* Two-column body */}
+        <div className="flex flex-1 min-h-0">
+          {/* Manufacturer sidebar */}
+          <div className="w-36 sm:w-44 shrink-0 border-r border-gray-700 overflow-y-auto py-2">
+            {manufacturers.map(mfr => (
+              <button
+                key={mfr}
+                onClick={() => { setActiveTab(mfr); setPurchaseError(null); }}
+                className={`w-full text-left px-3 py-2 text-sm transition-colors ${
+                  activeTab === mfr
+                    ? 'bg-gray-700 text-white font-semibold'
+                    : 'text-gray-400 hover:text-gray-200 hover:bg-gray-800/60'
+                }`}
+              >
+                {mfr}
+              </button>
+            ))}
+          </div>
 
-        {/* Aircraft list */}
-        <div className="overflow-y-auto flex-1 px-4 sm:px-6 py-4">
+          {/* Aircraft list */}
+          <div className="overflow-y-auto flex-1 px-4 py-4">
           {purchaseError && (
             <div className="mb-3 px-3 py-2 bg-red-900/40 border border-red-700 rounded text-red-300 text-sm">
               {purchaseError}
@@ -164,6 +166,7 @@ export const BuyAircraftModal: React.FC = () => {
                 </div>
               );
             })}
+          </div>
           </div>
         </div>
       </div>
