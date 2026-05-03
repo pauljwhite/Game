@@ -54,10 +54,10 @@ export const RouteDetailModal: React.FC = () => {
   const maxEco = referencePrice * 6;
   const maxBiz = referencePrice * 24;
 
-  // Aircraft eligible for this route: idle, range sufficient
+  // Aircraft eligible for this route: not in maintenance/crashed, range sufficient
   const eligibleAircraft = Object.values(aircraft).filter(ac => {
     if (ac.airlineId !== 'player') return false;
-    if (ac.isGrounded || ac.status === 'maintenance' || ac.status === 'crashed') return false;
+    if (ac.status === 'maintenance' || ac.status === 'crashed') return false;
     if (ac.id === route.aircraftId) return false; // already assigned
     const type = AIRCRAFT_TYPES.find(t => t.id === ac.typeId);
     return type && type.rangeKm >= route.distanceKm;

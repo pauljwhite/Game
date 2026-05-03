@@ -53,13 +53,16 @@ export function runDailyTick(store: ReturnType<typeof import('@/store/index')['u
           store.pushNewsItem(`${ac.name} has completed ${MAINTENANCE_TIERS[tier].label.toLowerCase()} maintenance and returned to service.`);
         }
       }
-      // Auto-maintenance trigger
+      // Auto-maintenance trigger — cooldown: don't re-trigger until after the last maintenance duration
+      const autoTier = ac.autoMaintenanceTier ?? 'standard';
+      const maintCooldownElapsed = gameDay > ac.lastMaintenanceGameDay + MAINTENANCE_TIERS[autoTier].durationDays;
       if (
         ac.airlineId === 'player' &&
         ac.status !== 'maintenance' && ac.status !== 'crashed' &&
         !ac.isGrounded &&
         ac.autoMaintenanceEnabled &&
-        ac.condition <= ac.autoMaintenanceThreshold
+        ac.condition <= ac.autoMaintenanceThreshold &&
+        maintCooldownElapsed
       ) {
         store.startMaintenance(ac.id, gameDay, ac.autoMaintenanceTier ?? 'standard');
         store.pushNewsItem(`Auto-maintenance triggered for ${ac.name} (condition ${ac.condition.toFixed(0)}%).`);

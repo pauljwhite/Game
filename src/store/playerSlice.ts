@@ -191,7 +191,8 @@ export const createPlayerSlice: StateCreator<GameStore, [['zustand/immer', never
       ac.status = routeId ? 'flying' : 'idle';
       if (routeId && state.routes[routeId]) {
         state.routes[routeId].aircraftId = aircraftId;
-        state.routes[routeId].isActive = true;
+        // Only activate if the aircraft is not grounded; completeMaintenance activates it when clear
+        state.routes[routeId].isActive = !ac.isGrounded;
       }
     }),
 
