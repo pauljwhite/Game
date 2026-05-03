@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useGameStore } from '@/store';
 import { haversineKm } from '@/utils/geo';
-import { computeFlightCost, gameDayFromMs } from '@/engine/economicsEngine';
+import { computeFlightCost, gameDayFromMs, msToGameDate } from '@/engine/economicsEngine';
 import { getSuggestedEconomyPrice, getBaselineDailyPax, conditionDemandMod } from '@/engine/demandModel';
 import { AIRCRAFT_TYPES } from '@/data/aircraftTypes';
 import type { Route } from '@/types';
@@ -10,6 +10,7 @@ import { AirportSearchInput } from '@/ui/components/AirportSearchInput';
 import { findAirportByQuery } from '@/utils/airportSearch';
 import { LoadFactorBar } from '@/ui/components/LoadFactorBar';
 import { PriceInput } from '@/ui/components/PriceInput';
+import { formatCurrency } from '@/utils/format';
 
 function formatUSD(n: number): string {
   if (Math.abs(n) >= 1_000_000) return `$${(n / 1_000_000).toFixed(2)}M`;
@@ -18,14 +19,17 @@ function formatUSD(n: number): string {
 }
 
 export const NewRouteModal: React.FC = () => {
-  const airports = useGameStore(s => s.airports);
-  const aircraft = useGameStore(s => s.aircraft);
+  const airports    = useGameStore(s => s.airports);
+  const aircraft    = useGameStore(s => s.aircraft);
+  const airlines    = useGameStore(s => s.airlines);
   const modalPayload = useGameStore(s => s.modalPayload);
-  const closeModal = useGameStore(s => s.closeModal);
+  const closeModal  = useGameStore(s => s.closeModal);
   const createRoute = useGameStore(s => s.createRoute);
-  const gameTimeMs = useGameStore(s => s.gameTimeMs);
+  const buyAircraft = useGameStore(s => s.buyAircraft);
+  const gameTimeMs  = useGameStore(s => s.gameTimeMs);
 
   const gameDay = gameDayFromMs(gameTimeMs);
+  const currentYear = msToGameDate(gameTimeMs).getFullYear();
 
   const prefilledOrigin = typeof modalPayload === 'string' ? modalPayload.toUpperCase() : '';
 
@@ -36,6 +40,8 @@ export const NewRouteModal: React.FC = () => {
   const [priceEconomy, setPriceEconomy] = useState(200);
   const [priceBusiness, setPriceBusiness] = useState(800);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [showBuyPanel, setShowBuyPanel] = useState(false);
+  const [buyingTypeId, setBuyingTypeId] = useState<string | null>(null);
 
   // Resolve airports
   const originAirport = findAirportByQuery(originIata, airports);
@@ -153,6 +159,27 @@ export const NewRouteModal: React.FC = () => {
     }
   }
 
+  function handleBuyAircraft(typeId: string) {
+    const type = AIRCRAFT_TYPES.find(t => t.id === typeId);
+    if (!type) return;
+    setBuyingTypeId(typeId);
+    const newId = buyAircraft(typeId, type, gameDay);
+    setBuyingTypeId(null);
+    if (newId) {
+      setSelectedAircraftId(newId);
+      setShowBuyPanel(false);
+    }
+  }
+
+  const playerCash = airlines['player']?.cashUSD ?? 0;
+  const unlockedTypes = AIRCRAFT_TYPES.filter(t => t.yearIntroduced <= currentYear);
+  const buyableTypes = unlockedTypes.sort((a, b) => {
+    const aFits = distanceKm === null || a.rangeKm >= distanceKm;
+    const bFits = distanceKm === null || b.rangeKm >= distanceKm;
+    if (aFits !== bFits) return aFits ? -1 : 1;
+    return a.purchasePrice - b.purchasePrice;
+  });
+
   return (
     <div className="fixed inset-0 bg-black/80 flex items-end sm:items-center justify-center z-[9999]">
       <div className="bg-gray-900 border border-gray-700 rounded-t-2xl sm:rounded-xl shadow-2xl w-full max-w-2xl max-h-[92svh] sm:max-h-[90vh] flex flex-col">
@@ -253,6 +280,64 @@ export const NewRouteModal: React.FC = () => {
                     </button>
                   );
                 })}
+              </div>
+            )}
+          </div>
+
+          {/* Inline aircraft shop */}
+          <div>
+            <button
+              type="button"
+              onClick={() => setShowBuyPanel(v => !v)}
+              className="text-sm text-blue-400 hover:text-blue-300 transition-colors"
+            >
+              {showBuyPanel ? '▲ Hide aircraft shop' : '+ Buy new aircraft'}
+            </button>
+
+            {showBuyPanel && (
+              <div className="mt-2 border border-gray-700 rounded-lg overflow-hidden">
+                <div className="px-3 py-2 bg-gray-800 text-xs text-gray-400">
+                  Your cash: <span className="text-white font-semibold">{formatCurrency(playerCash)}</span>
+                  {distanceKm && <span className="ml-2">· Route: {distanceKm.toLocaleString()} km</span>}
+                </div>
+                <div className="max-h-52 overflow-y-auto divide-y divide-gray-800">
+                  {buyableTypes.map(t => {
+                    const fits       = distanceKm === null || t.rangeKm >= distanceKm;
+                    const canAfford  = playerCash >= t.purchasePrice;
+                    const isBuying   = buyingTypeId === t.id;
+                    return (
+                      <button
+                        key={t.id}
+                        onClick={() => fits && canAfford && handleBuyAircraft(t.id)}
+                        disabled={!fits || !canAfford || isBuying}
+                        className={`w-full flex items-center justify-between px-3 py-2 text-left text-sm transition-colors ${
+                          !fits
+                            ? 'opacity-40 cursor-not-allowed bg-gray-900'
+                            : !canAfford
+                            ? 'opacity-50 cursor-not-allowed bg-gray-900'
+                            : 'bg-gray-900 hover:bg-gray-800 cursor-pointer'
+                        }`}
+                      >
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="text-white font-medium">{t.manufacturer} {t.model}</span>
+                            {!fits && <span className="text-[10px] text-red-400 bg-red-900/40 px-1 rounded">out of range</span>}
+                            {fits && <span className="text-[10px] text-green-400 bg-green-900/40 px-1 rounded">✓ in range</span>}
+                          </div>
+                          <div className="text-xs text-gray-500">
+                            {t.seatsEconomy}Y/{t.seatsBusiness}J · {t.rangeKm.toLocaleString()} km · {t.cruiseSpeedKmh} km/h
+                          </div>
+                        </div>
+                        <div className="text-right shrink-0 ml-3">
+                          <div className={canAfford ? 'text-green-400 font-semibold' : 'text-red-400 font-semibold'}>
+                            {formatCurrency(t.purchasePrice)}
+                          </div>
+                          {isBuying && <div className="text-xs text-blue-400">Buying…</div>}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
             )}
           </div>

@@ -59,14 +59,17 @@ function generateAirlineName(existingNames: Set<string>): { name: string; iataPr
 }
 
 const MAX_AI_AIRLINES = 16;
-const SPAWN_CHECK_INTERVAL = 30; // game days between spawn checks
-const SPAWN_PROBABILITY = 0.30;  // chance of spawning per check
+const SPAWN_CHECK_INTERVAL = 15; // game days between spawn checks
+const SPAWN_PROBABILITY_BASE = 0.50;
+const SPAWN_PROBABILITY_LOW  = 0.90; // when fewer than 4 active AI airlines
 
 function trySpawnNewAirline(store: StoreState, gameDay: number): void {
   if (gameDay % SPAWN_CHECK_INTERVAL !== 0) return;
   const { aiAirlines, airports } = store;
-  if (Object.keys(aiAirlines).length >= MAX_AI_AIRLINES) return;
-  if (Math.random() > SPAWN_PROBABILITY) return;
+  const activeCount = Object.values(aiAirlines).filter(a => !a.isInsolvent).length;
+  if (activeCount >= MAX_AI_AIRLINES) return;
+  const spawnProb = activeCount < 4 ? SPAWN_PROBABILITY_LOW : SPAWN_PROBABILITY_BASE;
+  if (Math.random() > spawnProb) return;
 
   const existingNames = new Set([
     ...Object.values(aiAirlines).map(a => a.name),
@@ -87,7 +90,7 @@ function trySpawnNewAirline(store: StoreState, gameDay: number): void {
     name, iataPrefix,
     isPlayer: false,
     color, logoEmoji: emoji,
-    cashUSD: 20_000_000 + Math.floor(Math.random() * 20_000_000),
+    cashUSD: 30_000_000 + Math.floor(Math.random() * 30_000_000),
     totalDebt: 0,
     hubIatas: [hubIata],
     fleetIds: [], routeIds: [],
