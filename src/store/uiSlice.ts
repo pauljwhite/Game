@@ -23,7 +23,7 @@ export const createUISlice: StateCreator<GameStore, [['zustand/immer', never]], 
   selectedAirportIata: null,
   selectedRouteId: null,
   openPanel: null,
-  openModal: 'newGame',
+  openModal: null,
   modalPayload: null,
 
   selectAirport: (iata) => set((state) => { state.selectedAirportIata = iata; }),
