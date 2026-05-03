@@ -2,7 +2,13 @@ import React from 'react';
 import { useGameStore } from '@/store';
 import type { GameSpeed } from '@/types';
 
-const SPEEDS: GameSpeed[] = [0, 1, 5, 10, 50, 100];
+const SPEEDS: { value: GameSpeed; label: string; title: string }[] = [
+  { value: 60, label: '1m/s', title: '1 game minute per second' },
+  { value: 300, label: '5m/s', title: '5 game minutes per second' },
+  { value: 1200, label: '20m/s', title: '20 game minutes per second' },
+  { value: 3600, label: '1h/s', title: '1 game hour per second' },
+  { value: 14400, label: '4h/s', title: '4 game hours per second' },
+];
 
 export const SpeedControl: React.FC = () => {
   const speed = useGameStore(s => s.speed);
@@ -21,17 +27,18 @@ export const SpeedControl: React.FC = () => {
       >
         {isPaused ? '▶' : '⏸'}
       </button>
-      {SPEEDS.filter(s => s > 0).map(s => (
+      {SPEEDS.map(option => (
         <button
-          key={s}
-          onClick={() => setSpeed(s)}
+          key={option.value}
+          onClick={() => setSpeed(option.value)}
+          title={option.title}
           className={`px-2 py-1 rounded text-xs font-mono transition-colors ${
-            speed === s && !isPaused
+            speed === option.value && !isPaused
               ? 'bg-blue-500 text-white'
               : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
           }`}
         >
-          {s}x
+          {option.label}
         </button>
       ))}
     </div>

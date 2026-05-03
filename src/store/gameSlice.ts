@@ -28,9 +28,11 @@ const DEFAULT_SETTINGS: GameSettings = {
   aiCount: 6,
 };
 
+const DEFAULT_SPEED: GameSpeed = 300;
+
 export const createGameSlice: StateCreator<GameStore, [['zustand/immer', never]], [], GameSlice> = (set) => ({
   gameTimeMs: 0,
-  speed: 1,
+  speed: DEFAULT_SPEED,
   isPaused: false,
   gameDay: 0,
   lastEconomicsTick: -1,

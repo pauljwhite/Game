@@ -1,4 +1,4 @@
-export type GameSpeed = 0 | 1 | 5 | 10 | 50 | 100;
+export type GameSpeed = 0 | 60 | 300 | 1200 | 3600 | 14400;
 export type Difficulty = 'easy' | 'normal' | 'hard';
 
 export interface GameSettings {
