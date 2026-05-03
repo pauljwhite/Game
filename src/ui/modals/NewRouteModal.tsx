@@ -151,10 +151,10 @@ export const NewRouteModal: React.FC = () => {
   }
 
   return (
-    <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-[9999]">
-      <div className="bg-gray-900 border border-gray-700 rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col">
+    <div className="fixed inset-0 bg-black/80 flex items-end sm:items-center justify-center z-[9999]">
+      <div className="bg-gray-900 border border-gray-700 rounded-t-2xl sm:rounded-xl shadow-2xl w-full max-w-2xl max-h-[92svh] sm:max-h-[90vh] flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-700 flex-shrink-0">
+        <div className="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-700 flex-shrink-0">
           <h2 className="text-xl font-bold text-white">New Route</h2>
           <button
             onClick={closeModal}
@@ -166,7 +166,7 @@ export const NewRouteModal: React.FC = () => {
         </div>
 
         {/* Body */}
-        <div className="overflow-y-auto flex-1 px-6 py-4 space-y-5">
+        <div className="overflow-y-auto flex-1 px-4 sm:px-6 py-4 space-y-5">
 
           {/* Airport Inputs */}
           <div className="grid grid-cols-2 gap-4">
@@ -372,7 +372,7 @@ export const NewRouteModal: React.FC = () => {
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-4 border-t border-gray-700 flex-shrink-0 flex gap-3 justify-end">
+        <div className="px-4 sm:px-6 py-3 sm:py-4 border-t border-gray-700 flex-shrink-0 flex gap-3 justify-end">
           <button
             onClick={closeModal}
             className="px-4 py-2 rounded border border-gray-600 text-gray-300 hover:border-gray-400 text-sm transition-colors"

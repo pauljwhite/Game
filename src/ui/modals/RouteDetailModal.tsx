@@ -100,8 +100,8 @@ export const RouteDetailModal: React.FC = () => {
   }
 
   return (
-    <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-[9999]">
-      <div className="bg-gray-900 border border-gray-700 rounded-xl p-6 shadow-2xl w-full max-w-lg relative max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 bg-black/80 flex items-end sm:items-center justify-center z-[9999]">
+      <div className="bg-gray-900 border border-gray-700 rounded-t-2xl sm:rounded-xl px-4 sm:px-6 py-4 shadow-2xl w-full max-w-lg relative max-h-[92svh] sm:max-h-[90vh] overflow-y-auto">
         <button
           onClick={handleClose}
           className="absolute top-4 right-4 text-gray-400 hover:text-white transition-colors text-xl leading-none"

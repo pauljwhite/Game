@@ -52,7 +52,7 @@ export const Layout: React.FC = () => {
         </div>
 
         {PanelComponent && (
-          <div className="w-96 bg-gray-900 border-l border-gray-800 flex flex-col overflow-hidden shrink-0">
+          <div className="absolute inset-0 z-20 md:relative md:inset-auto md:z-auto md:w-96 w-full bg-gray-900 md:border-l border-gray-800 flex flex-col overflow-hidden shrink-0">
             <PanelComponent />
           </div>
         )}
