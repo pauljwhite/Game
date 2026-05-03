@@ -169,7 +169,7 @@ export const TopBar: React.FC = () => {
   };
 
   return (
-    <header className="h-14 bg-gray-950 border-b border-gray-800 flex items-center px-4 gap-4 z-40 shrink-0">
+    <header className="h-14 bg-gray-950 border-b border-gray-800 flex items-center px-4 gap-4 relative z-40 shrink-0">
       {/* Airline branding — clickable */}
       <div className="relative">
         <button
