@@ -62,22 +62,50 @@ export const RouteLayer: React.FC<RouteLayerProps> = ({ map, mapVersion }) => {
 
   return (
     <>
+      <defs>
+        <filter id="route-glow" x="-20%" y="-20%" width="140%" height="140%">
+          <feGaussianBlur stdDeviation="2.5" result="blur" />
+          <feMerge>
+            <feMergeNode in="blur" />
+            <feMergeNode in="SourceGraphic" />
+          </feMerge>
+        </filter>
+      </defs>
       {arcs.map(arc =>
-        arc.paths.map((d, i) => (
-          <path
-            key={`${arc.routeId}-${i}`}
-            d={d}
-            stroke={arc.color}
-            strokeWidth={arc.isSelected ? 3 : arc.isPlayer ? 1.5 : 1}
-            strokeOpacity={arc.isSelected ? 1 : arc.isPlayer ? 0.8 : 0.4}
-            fill="none"
-            style={{ cursor: arc.isPlayer ? 'pointer' : 'default' }}
-            onClick={arc.isPlayer ? () => {
-              selectRoute(arc.routeId);
-              openModalById('routeDetail', arc.routeId);
-            } : undefined}
-          />
-        ))
+        arc.paths.map((d, i) => {
+          const routeKey = `${arc.routeId}-${i}`;
+          const clickHandler = arc.isPlayer ? () => {
+            selectRoute(arc.routeId);
+            openModalById('routeDetail', arc.routeId);
+          } : undefined;
+
+          return (
+            <g key={routeKey} className="route-arc">
+              <path
+                d={d}
+                stroke={arc.color}
+                strokeWidth={arc.isSelected ? 7 : arc.isPlayer ? 5 : 3}
+                strokeOpacity={arc.isSelected ? 0.35 : arc.isPlayer ? 0.22 : 0.12}
+                fill="none"
+                filter="url(#route-glow)"
+                pointerEvents="none"
+              />
+              <path
+                d={d}
+                stroke={arc.color}
+                strokeWidth={arc.isSelected ? 3 : arc.isPlayer ? 2 : 1.25}
+                strokeOpacity={arc.isSelected ? 1 : arc.isPlayer ? 0.85 : 0.45}
+                strokeLinecap="round"
+                strokeDasharray={arc.isPlayer ? '10 9' : '5 10'}
+                fill="none"
+                className="route-arc-line"
+                style={{ cursor: arc.isPlayer ? 'pointer' : 'default' }}
+                pointerEvents={arc.isPlayer ? 'stroke' : 'none'}
+                onClick={clickHandler}
+              />
+            </g>
+          );
+        })
       )}
     </>
   );

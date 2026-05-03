@@ -4,13 +4,13 @@ export interface PlaneState {
   lat: number;
   lon: number;
   bearing: number;
-  progress: number; // 0–1 along current leg
+  progress: number;
+  cycleElapsedMs: number;
   routeId: string;
   airlineId: string;
   color: string;
 }
 
-// Module-level map - lives outside React/Zustand for 60fps direct DOM updates
 const planePositions = new Map<string, PlaneState>();
 
 export function getPlanePositions(): Map<string, PlaneState> {
@@ -24,12 +24,14 @@ export function initPlanePosition(
   color: string,
   originLat: number,
   originLon: number,
+  cycleElapsedMs = 0,
 ): void {
   planePositions.set(aircraftId, {
     lat: originLat,
     lon: originLon,
     bearing: 0,
     progress: 0,
+    cycleElapsedMs,
     routeId,
     airlineId,
     color,
@@ -52,24 +54,23 @@ export function updatePlanePositions(
 ): void {
   planePositions.forEach((state, aircraftId) => {
     const route = routes[state.routeId];
-    if (!route || !route.isActive || !route.aircraftId) return;
+    if (!route || !route.isActive || route.aircraftId !== aircraftId) return;
 
     const speedKmh = aircraftSpeeds[aircraftId] ?? 850;
     const flightDurationMs = (route.distanceKm / speedKmh) * 3_600_000;
     const cycleMs = flightDurationMs * 2;
 
-    const prevElapsed = state.progress * flightDurationMs;
-    const newElapsed = (prevElapsed + deltaGameMs) % cycleMs;
+    state.cycleElapsedMs = (state.cycleElapsedMs + deltaGameMs) % cycleMs;
 
     let progress: number;
     let fromLat: number, fromLon: number, toLat: number, toLon: number;
 
-    if (newElapsed < flightDurationMs) {
-      progress = newElapsed / flightDurationMs;
+    if (state.cycleElapsedMs < flightDurationMs) {
+      progress = state.cycleElapsedMs / flightDurationMs;
       fromLat = route.originLat; fromLon = route.originLon;
       toLat = route.destLat; toLon = route.destLon;
     } else {
-      progress = (newElapsed - flightDurationMs) / flightDurationMs;
+      progress = (state.cycleElapsedMs - flightDurationMs) / flightDurationMs;
       fromLat = route.destLat; fromLon = route.destLon;
       toLat = route.originLat; toLon = route.originLon;
     }
@@ -88,6 +89,6 @@ export function updatePlanePositions(
     state.lat = lat;
     state.lon = lon;
     state.bearing = bearing;
-    state.progress = newElapsed < flightDurationMs ? progress : 0;
+    state.progress = progress;
   });
 }
