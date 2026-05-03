@@ -6,12 +6,17 @@ import { AIRCRAFT_TYPES } from '@/data/aircraftTypes';
 
 let rafHandle = 0;
 let lastRealTimeMs = 0;
+let lastStoreCommitRealMs = 0;
+let loopGameTimeMs = 0;
 
 const MAX_DELTA_REAL_MS = 500; // cap to prevent runaway on tab refocus
+const STORE_COMMIT_INTERVAL_MS = 1000;
 
 export function startGameLoop(): void {
   if (rafHandle) return; // already running
+  loopGameTimeMs = useGameStore.getState().gameTimeMs;
   lastRealTimeMs = performance.now();
+  lastStoreCommitRealMs = lastRealTimeMs;
   rafHandle = requestAnimationFrame(tick);
 }
 
@@ -27,7 +32,9 @@ function tick(nowMs: number): void {
 
   const store = useGameStore.getState();
   if (store.isPaused || store.speed === 0) {
+    loopGameTimeMs = store.gameTimeMs;
     lastRealTimeMs = nowMs;
+    lastStoreCommitRealMs = nowMs;
     return;
   }
 
@@ -35,12 +42,15 @@ function tick(nowMs: number): void {
   lastRealTimeMs = nowMs;
 
   const deltaGame = deltaReal * store.speed;
-  const newGameTimeMs = store.gameTimeMs + deltaGame;
-  const prevDay = Math.floor(store.gameTimeMs / 86_400_000);
-  const newDay = Math.floor(newGameTimeMs / 86_400_000);
+  const prevDay = Math.floor(loopGameTimeMs / 86_400_000);
+  loopGameTimeMs += deltaGame;
+  const newDay = Math.floor(loopGameTimeMs / 86_400_000);
 
-  // Advance time
-  store.advanceTime(newGameTimeMs, newDay);
+  const shouldCommitTime = newDay > prevDay || nowMs - lastStoreCommitRealMs >= STORE_COMMIT_INTERVAL_MS;
+  if (shouldCommitTime) {
+    store.advanceTime(loopGameTimeMs, newDay);
+    lastStoreCommitRealMs = nowMs;
+  }
 
   const newState = useGameStore.getState();
 
