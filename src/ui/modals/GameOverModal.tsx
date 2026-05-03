@@ -2,6 +2,7 @@ import React from 'react';
 import { useGameStore } from '@/store';
 import { formatCurrency, formatGameDate } from '@/utils/format';
 import { GAME_EPOCH_YEAR } from '@/utils/constants';
+import { startGameLoop } from '@/engine/gameLoop';
 
 export const GameOverModal: React.FC = () => {
   const modalPayload = useGameStore(s => s.modalPayload);
@@ -12,6 +13,7 @@ export const GameOverModal: React.FC = () => {
   const openModalById = useGameStore(s => s.openModalById);
   const playerAirlineId = useGameStore(s => s.playerAirlineId);
 
+  const closeModal = useGameStore(s => s.closeModal);
   const result = modalPayload as 'win' | 'lose' | null;
   const playerAirline = airlines[playerAirlineId];
 
@@ -43,7 +45,7 @@ export const GameOverModal: React.FC = () => {
         {/* Condition explanation */}
         <div className={`rounded-lg p-3 mb-5 text-center text-sm ${isWin ? 'bg-yellow-900/30 border border-yellow-700/50 text-yellow-300' : 'bg-red-900/30 border border-red-700/50 text-red-300'}`}>
           {isWin
-            ? 'Your airline captured over 50% of the global market share - a true empire!'
+            ? 'Every rival airline has collapsed. You are the last carrier standing — a true monopoly!'
             : 'Your airline accumulated over $100M in debt and became insolvent.'}
         </div>
 
@@ -106,13 +108,23 @@ export const GameOverModal: React.FC = () => {
           </div>
         </div>
 
-        {/* Play again */}
-        <button
-          onClick={() => openModalById('newGame')}
-          className="w-full py-3 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-lg transition-colors"
-        >
-          Play Again
-        </button>
+        {/* Actions */}
+        <div className={`flex gap-2 ${isWin ? 'flex-col sm:flex-row' : ''}`}>
+          {isWin && (
+            <button
+              onClick={() => { closeModal(); startGameLoop(); }}
+              className="flex-1 py-3 bg-white/10 hover:bg-white/15 border border-white/15 text-white font-bold rounded-lg transition-colors text-sm"
+            >
+              Continue Playing
+            </button>
+          )}
+          <button
+            onClick={() => openModalById('newGame')}
+            className="flex-1 py-3 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-lg transition-colors"
+          >
+            Play Again
+          </button>
+        </div>
       </div>
     </div>
   );

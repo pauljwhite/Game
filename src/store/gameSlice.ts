@@ -11,12 +11,14 @@ export interface GameSlice {
   settings: GameSettings;
   version: string;
   isInitialized: boolean;
+  hasWon: boolean;
 
   advanceTime: (newGameTimeMs: number, newGameDay: number) => void;
   setSpeed: (speed: GameSpeed) => void;
   togglePause: () => void;
   setLastEconomicsTick: (day: number) => void;
   initGameSettings: (settings: GameSettings) => void;
+  setHasWon: () => void;
 }
 
 const DEFAULT_SETTINGS: GameSettings = {
@@ -40,6 +42,7 @@ export const createGameSlice: StateCreator<GameStore, [['zustand/immer', never]]
   settings: DEFAULT_SETTINGS,
   version: '1.0.0',
   isInitialized: false,
+  hasWon: false,
 
   advanceTime: (newGameTimeMs, newGameDay) =>
     set((state) => {
@@ -64,7 +67,11 @@ export const createGameSlice: StateCreator<GameStore, [['zustand/immer', never]]
     set((state) => {
       state.settings = settings;
       state.isInitialized = true;
+      state.hasWon = false;
     }),
+
+  setHasWon: () =>
+    set((state) => { state.hasWon = true; }),
 });
 
 export type { GameState };
