@@ -116,9 +116,11 @@ export function runDailyTick(store: ReturnType<typeof import('@/store/index')['u
       const flightCosts = computeFlightCost(route, ac, aircraftType, origin, dest, globalFuelPrice);
       const flightsPerDay = route.flightsPerWeek / 7;
 
-      // Demand calculation — reference price drives solo-route elasticity
+      // Reference prices: cost-per-seat basis; business at 4× economy
       const totalSeats = aircraftType.seatsEconomy + aircraftType.seatsBusiness;
-      const referencePrice = totalSeats > 0 ? Math.round(flightCosts.totalCost / totalSeats * 1.4) : 200;
+      const ecoReferencePrice = totalSeats > 0 ? Math.round(flightCosts.totalCost / totalSeats * 1.3) : 200;
+      const bizReferencePrice = ecoReferencePrice * 4;
+
       const originUtil = (prevAirportPax[route.originIata] ?? 0) / getAirportCapacity(origin.size, currentYear);
       const destUtil   = (prevAirportPax[route.destinationIata] ?? 0) / getAirportCapacity(dest.size, currentYear);
       const satMod     = airportSaturationMod(originUtil) * airportSaturationMod(destUtil);
@@ -126,14 +128,18 @@ export function runDailyTick(store: ReturnType<typeof import('@/store/index')['u
       const repMod = 1 + (playerAirline.reputationScore - 50) * REPUTATION_DEMAND_FACTOR;
       const crashPenalty = playerAirline.crashPenaltyDaysLeft > 0 ? (1 - CRASH_DEMAND_PENALTY_PCT) : 1;
       const condMod = conditionDemandMod(ac.condition);
-      const marketShare = getPlayerMarketShare(route.originIata, route.destinationIata, route.priceEconomy, allAirlines, allRoutes, referencePrice);
-      const dailyPax = Math.floor(baselinePax * marketShare * repMod * crashPenalty * condMod);
 
+      // Economy class — independent demand
+      const ecoMarketShare = getPlayerMarketShare(route.originIata, route.destinationIata, route.priceEconomy, allAirlines, allRoutes, ecoReferencePrice);
       const ecoCapacity = aircraftType.seatsEconomy * flightsPerDay;
+      const ecoPax = Math.min(ecoCapacity, Math.floor(baselinePax * 0.90 * ecoMarketShare * repMod * crashPenalty * condMod));
+
+      // Business class — independent demand (10% of route baseline, competes on biz price)
       const bizCapacity = aircraftType.seatsBusiness * flightsPerDay;
-      const bizSplit = Math.min(0.25, Math.max(0.05, 0.10 * Math.sqrt(route.priceBusiness / (route.priceEconomy * 6 + 1))));
-      const ecoPax = Math.min(ecoCapacity, Math.floor(dailyPax * (1 - bizSplit)));
-      const bizPax = Math.min(bizCapacity, Math.floor(dailyPax * bizSplit));
+      const bizMarketShare = aircraftType.seatsBusiness > 0
+        ? getPlayerMarketShare(route.originIata, route.destinationIata, route.priceBusiness, allAirlines, allRoutes, bizReferencePrice, 'player', 'business')
+        : 0;
+      const bizPax = Math.min(bizCapacity, Math.floor(baselinePax * 0.10 * bizMarketShare * repMod * crashPenalty * condMod));
 
       const dailyRevenue = ecoPax * route.priceEconomy + bizPax * route.priceBusiness;
       const dailyCost = flightCosts.totalCost * flightsPerDay;

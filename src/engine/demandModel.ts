@@ -38,11 +38,15 @@ export function getPlayerMarketShare(
   allRoutes: Route[],
   referencePrice?: number,
   playerAirlineId = 'player',
+  cabin: 'economy' | 'business' = 'economy',
 ): number {
+  const getPrice = (r: Route) => cabin === 'business' ? r.priceBusiness : r.priceEconomy;
+
   const routesOnPair = allRoutes.filter(
     r => r.isActive &&
       ((r.originIata === routeOrigin && r.destinationIata === routeDest) ||
-       (r.originIata === routeDest && r.destinationIata === routeOrigin)),
+       (r.originIata === routeDest && r.destinationIata === routeOrigin)) &&
+      (cabin === 'economy' || getPrice(r) > 0),
   );
 
   const playerAirline = allAirlines.find(a => a.id === playerAirlineId);
@@ -51,18 +55,17 @@ export function getPlayerMarketShare(
 
   if (routesOnPair.length === 0) {
     if (referencePrice && referencePrice > 0) {
-      // Solo route: effective price vs fair-market reference drives demand
       return Math.min(5, Math.pow(playerEffectivePrice / referencePrice, PRICE_ELASTICITY));
     }
     return 1;
   }
 
-  const avgPrice = routesOnPair.reduce((sum, r) => sum + r.priceEconomy, 0) / routesOnPair.length;
+  const avgPrice = routesOnPair.reduce((sum, r) => sum + getPrice(r), 0) / routesOnPair.length;
   const playerScore = getCompetitivenessScore(playerEffectivePrice, avgPrice);
   const totalScore = routesOnPair.reduce((sum, r) => {
     const airline = allAirlines.find(a => a.id === r.airlineId);
     const premium = airline ? repPricePremium(airline.reputationScore) : 1;
-    return sum + getCompetitivenessScore(r.priceEconomy / premium, avgPrice);
+    return sum + getCompetitivenessScore(getPrice(r) / premium, avgPrice);
   }, 0);
 
   return totalScore > 0 ? playerScore / totalScore : 1;
