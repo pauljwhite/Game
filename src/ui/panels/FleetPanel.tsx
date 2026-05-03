@@ -55,8 +55,8 @@ function AircraftCard({ ac, gameDay }: { ac: Aircraft; gameDay: number }) {
         {/* Model */}
         <span className="text-white text-sm font-medium w-16 sm:w-20 shrink-0 truncate">{type.model}</span>
 
-        {/* Route — never truncated */}
-        <span className="shrink-0 text-gray-400 text-xs">{routeLabel}</span>
+        {/* Route */}
+        <span className="w-24 shrink-0 text-gray-400 text-xs">{routeLabel}</span>
 
         {/* Spacer */}
         <span className="flex-1" />
@@ -295,6 +295,18 @@ export const FleetPanel: React.FC = () => {
           <button onClick={closePanel} aria-label="Close" className="w-7 h-7 flex items-center justify-center text-gray-400 hover:text-white hover:bg-gray-700 rounded transition-colors text-lg leading-none">×</button>
         </div>
       </div>
+
+      {/* Column headers */}
+      {fleetList.length > 0 && (
+        <div className="flex items-center gap-1.5 px-2 py-1 border-b border-white/5 text-[10px] text-gray-500 select-none bg-white/[0.02]">
+          <span className="w-2 shrink-0" />
+          <span className="w-16 sm:w-20 shrink-0">Aircraft</span>
+          <span className="w-24 shrink-0">Route</span>
+          <span className="flex-1" />
+          <span className="hidden sm:block w-10 text-right shrink-0">Hrs</span>
+          <span className="shrink-0 pr-1">Cond.</span>
+        </div>
+      )}
 
       <div className="flex-1 overflow-y-auto overflow-x-hidden">
         {fleetList.length === 0 && (
