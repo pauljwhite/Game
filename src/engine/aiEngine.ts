@@ -1,10 +1,11 @@
 import type { Airline, Route, Aircraft, Airport, AircraftType } from '@/types';
+import type { MaintenanceTier } from '@/types/aircraft';
 import { AIRCRAFT_TYPES } from '@/data/aircraftTypes';
 import { getBaselineDailyPax, getPlayerMarketShare } from './demandModel';
 import { computeFlightCost } from './economicsEngine';
 import { haversineKm } from '@/utils/geo';
 import { v4 as uuidv4 } from 'uuid';
-import { FUEL_PRICE_USD_PER_LITER } from '@/utils/constants';
+import { FUEL_PRICE_USD_PER_LITER, MAINTENANCE_TIERS, computeMaintenanceCost } from '@/utils/constants';
 
 type StoreState = ReturnType<typeof import('@/store/index')['useGameStore']['getState']>;
 
@@ -135,6 +136,60 @@ const AI_LOAD_TARGET: Record<string, number> = {
   conservative: 0.65,
 };
 
+// ── Maintenance discipline by personality ────────────────────────────────────
+// Threshold: condition % at which maintenance is triggered
+// Tier: quality of work — premium/conservative pay for better upkeep
+const AI_MAINT_THRESHOLD: Record<string, number> = {
+  premium:      65,   // very proactive — brand depends on safety image
+  conservative: 52,
+  balanced:     40,
+  aggressive:   28,   // cuts corners, flies degraded to save money
+  budget:       18,   // bare minimum — will fly nearly to grounding
+};
+
+const AI_MAINT_TIER: Record<string, MaintenanceTier> = {
+  premium:      'full',
+  conservative: 'standard',
+  balanced:     'standard',
+  aggressive:   'light',
+  budget:       'light',
+};
+
+function runAIMaintenanceTick(store: StoreState, gameDay: number): void {
+  const { aiAirlines, aiAircraft } = store;
+
+  Object.values(aiAirlines).forEach(airline => {
+    if (airline.isInsolvent) return;
+
+    const threshold = AI_MAINT_THRESHOLD[airline.personality] ?? 40;
+    const tier = (AI_MAINT_TIER[airline.personality] ?? 'standard') as MaintenanceTier;
+    const maintDuration = MAINTENANCE_TIERS[tier].durationDays;
+
+    airline.fleetIds.forEach(acId => {
+      const ac = aiAircraft[acId];
+      if (!ac || ac.status === 'crashed') return;
+
+      // Complete elapsed maintenance
+      if (ac.status === 'maintenance') {
+        if (gameDay - ac.lastMaintenanceGameDay >= maintDuration) {
+          store.completeAIMaintenance(acId);
+        }
+        return;
+      }
+
+      // Trigger maintenance when condition falls below personality threshold
+      if (ac.condition <= threshold) {
+        const aircraftType = AIRCRAFT_TYPES.find(t => t.id === ac.typeId);
+        if (!aircraftType) return;
+        const cost = computeMaintenanceCost(tier, ac.maintenanceHoursOwed, aircraftType.maintenanceCostPerHourUSD);
+        // Skip if airline can't afford it (they'll keep flying degraded — risky but realistic)
+        if (airline.cashUSD < cost) return;
+        store.startAIMaintenance(acId, gameDay, tier);
+      }
+    });
+  });
+}
+
 const AI_BUYOUT_INTERVAL = 90;   // days between AI-to-AI acquisition checks
 const AI_BUYOUT_PROBABILITY = 0.08;
 const AI_DISSOLVE_INTERVAL = 30;  // days between dissolution checks
@@ -185,6 +240,7 @@ export function runAITick(store: StoreState, gameDay: number): void {
   trySpawnNewAirline(store, gameDay);
   tryAIBuyout(store, gameDay);
   tryDissolveInsolvent(store, gameDay);
+  runAIMaintenanceTick(store, gameDay);
 
   const { aiAirlines, aiAircraft, aiRoutes, airports } = store;
   const allRoutes = [...Object.values(store.routes), ...Object.values(aiRoutes)];

@@ -1,6 +1,9 @@
 import type { StateCreator } from 'zustand';
 import type { Airport, Airline, Aircraft, Route } from '@/types';
 import { AIRPORTS } from '@/data/airports';
+import { MAINTENANCE_TIERS, computeMaintenanceCost } from '@/utils/constants';
+import { AIRCRAFT_TYPES } from '@/data/aircraftTypes';
+import type { MaintenanceTier } from '@/types/aircraft';
 import type { GameStore } from './index';
 
 export interface WorldSlice {
@@ -23,6 +26,8 @@ export interface WorldSlice {
   setAirportHub: (iata: string, isHub: boolean) => void;
   setAirportClosure: (iata: string, untilGameDay: number, reason: string) => void;
   updateAIAircraftCondition: (aircraftId: string, conditionDelta: number, hoursOwed: number) => void;
+  startAIMaintenance: (aircraftId: string, gameDay: number, tier: MaintenanceTier) => void;
+  completeAIMaintenance: (aircraftId: string) => void;
   updateAIAirlineStats: (id: string, netProfit: number, passengers: number) => void;
   removeAIAirline: (id: string) => void;
   addAIAirline: (airline: Airline) => void;
@@ -116,17 +121,48 @@ export const createWorldSlice: StateCreator<GameStore, [['zustand/immer', never]
       ac.condition = Math.max(0, Math.min(100, ac.condition + conditionDelta));
       ac.maintenanceHoursOwed += hoursOwed;
       ac.totalFlightHours += hoursOwed;
-      if (ac.condition < 20) {
+      // Emergency grounding at critically low condition (maintenance tick will handle restoration)
+      if (ac.condition < 15 && !ac.isGrounded && ac.status !== 'maintenance') {
         ac.isGrounded = true;
         if (ac.assignedRouteId && state.aiRoutes[ac.assignedRouteId]) {
           state.aiRoutes[ac.assignedRouteId].isActive = false;
         }
-        ac.condition = Math.min(100, ac.condition + 40);
-        ac.maintenanceHoursOwed = 0;
-        ac.isGrounded = false;
-        if (ac.assignedRouteId && state.aiRoutes[ac.assignedRouteId]) {
-          state.aiRoutes[ac.assignedRouteId].isActive = true;
-        }
+      }
+    }),
+
+  startAIMaintenance: (aircraftId, gameDay, tier) =>
+    set((state) => {
+      const ac = state.aiAircraft[aircraftId];
+      if (!ac) return;
+      const airline = state.aiAirlines[ac.airlineId];
+      const aircraftType = AIRCRAFT_TYPES.find(t => t.id === ac.typeId);
+      if (!airline || !aircraftType) return;
+      const cost = computeMaintenanceCost(tier, ac.maintenanceHoursOwed, aircraftType.maintenanceCostPerHourUSD);
+      ac.status = 'maintenance';
+      ac.isGrounded = true;
+      ac.lastMaintenanceGameDay = gameDay;
+      ac.activeMaintTier = tier;
+      if (ac.assignedRouteId && state.aiRoutes[ac.assignedRouteId]) {
+        state.aiRoutes[ac.assignedRouteId].isActive = false;
+      }
+      airline.cashUSD -= cost;
+    }),
+
+  completeAIMaintenance: (aircraftId) =>
+    set((state) => {
+      const ac = state.aiAircraft[aircraftId];
+      if (!ac) return;
+      const tier = ac.activeMaintTier ?? 'standard';
+      const gain = MAINTENANCE_TIERS[tier].conditionGain;
+      ac.condition = gain >= 999 ? 100 : Math.min(100, ac.condition + gain);
+      ac.maintenanceHoursOwed = 0;
+      ac.isGrounded = false;
+      ac.groundedReason = undefined;
+      ac.activeMaintTier = null;
+      ac.status = ac.assignedRouteId ? 'flying' : 'idle';
+      ac.crashRisk = 0;
+      if (ac.assignedRouteId && state.aiRoutes[ac.assignedRouteId]) {
+        state.aiRoutes[ac.assignedRouteId].isActive = true;
       }
     }),
 
