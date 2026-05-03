@@ -74,7 +74,7 @@ export const NewGameModal: React.FC = () => {
   }
 
   return (
-    <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50">
+    <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-[9999]">
       <div className="bg-gray-900 border border-gray-700 rounded-xl w-full max-w-md p-6 shadow-2xl">
         <h1 className="text-2xl font-bold text-white mb-1">Airline Empire</h1>
         <p className="text-gray-400 text-sm mb-5">Build your airline from the ground up. Start in 1960.</p>
