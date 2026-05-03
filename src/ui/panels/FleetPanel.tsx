@@ -53,29 +53,26 @@ function AircraftCard({ ac, gameDay }: { ac: Aircraft; gameDay: number }) {
         <span className={`w-2 h-2 rounded-full shrink-0 ${condBg}`} />
 
         {/* Model */}
-        <span className="text-white text-sm font-medium w-16 sm:w-20 shrink-0 truncate">{type.model}</span>
+        <span className="text-white text-sm font-medium w-14 shrink-0 truncate">{type.model}</span>
 
-        {/* Route */}
-        <span className="w-24 shrink-0 text-gray-400 text-xs">{routeLabel}</span>
-
-        {/* Spacer */}
-        <span className="flex-1" />
+        {/* Route — absorbs remaining space */}
+        <span className="flex-1 min-w-0 text-gray-400 text-xs truncate">{routeLabel}</span>
 
         {/* Flight hours — hidden on mobile */}
         <span className="hidden sm:block text-[10px] text-gray-500 shrink-0 w-10 text-right">
           {Math.round(ac.totalFlightHours).toLocaleString()}h
         </span>
 
-        {/* Status chips — all on the right beside condition */}
+        {/* Status chips */}
         {needsMaint && <span className="soft-tag border-red-300/20 bg-red-500/15 text-red-200 shrink-0">MAINT</span>}
-        {inMaint    && <span className="soft-tag border-yellow-300/20 bg-yellow-500/15 text-yellow-200 shrink-0">IN MAINT</span>}
-        {ac.autoMaintenanceEnabled && !inMaint && (
+        {inMaint    && <span className="soft-tag border-yellow-300/20 bg-yellow-500/15 text-yellow-200 shrink-0">MAINT</span>}
+        {ac.autoMaintenanceEnabled && !inMaint && !needsMaint && (
           <span className="soft-tag border-sky-300/20 bg-sky-500/15 text-sky-200 shrink-0">AUTO</span>
         )}
 
         {/* Condition bar + % */}
         <div className="shrink-0 flex items-center gap-1">
-          <div className="w-10 h-1.5 bg-white/10 rounded-full overflow-hidden">
+          <div className="w-8 h-1.5 bg-white/10 rounded-full overflow-hidden">
             <div className={`h-full ${condBg}`} style={{ width: `${conditionPct}%` }} />
           </div>
           <span className={`text-[10px] w-6 text-right tabular-nums ${condText}`}>{conditionPct.toFixed(0)}%</span>
@@ -300,9 +297,8 @@ export const FleetPanel: React.FC = () => {
       {fleetList.length > 0 && (
         <div className="flex items-center gap-1.5 px-2 py-1 border-b border-white/5 text-[10px] text-gray-500 select-none bg-white/[0.02]">
           <span className="w-2 shrink-0" />
-          <span className="w-16 sm:w-20 shrink-0">Aircraft</span>
-          <span className="w-24 shrink-0">Route</span>
-          <span className="flex-1" />
+          <span className="w-14 shrink-0">Aircraft</span>
+          <span className="flex-1 min-w-0">Route</span>
           <span className="hidden sm:block w-10 text-right shrink-0">Hrs</span>
           <span className="shrink-0 pr-1">Cond.</span>
         </div>
