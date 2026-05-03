@@ -38,6 +38,10 @@ export const Layout: React.FC = () => {
 
   return (
     <div className="flex flex-col h-screen bg-gray-950 text-white overflow-hidden">
+      {/* DEBUG — remove after fix */}
+      <div style={{position:'fixed',bottom:4,left:4,background:'rgba(0,0,0,0.85)',color:'#0f0',fontFamily:'monospace',fontSize:11,padding:'4px 8px',zIndex:9999,pointerEvents:'none'}}>
+        hydrated:{String(hydrated)} init:{String(isInitialized)} modal:{String(openModal)}
+      </div>
       {isInitialized && <TopBar />}
 
       <div className="flex-1 flex relative overflow-hidden">
