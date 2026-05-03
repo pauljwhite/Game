@@ -38,6 +38,7 @@ export interface WorldSlice {
   aiAcquireAirline: (buyerId: string, targetId: string, cost: number) => void;
   setShareholding: (targetId: string, ownerId: string, newPercent: number) => void;
   applyAIDividend: (airlineId: string, amount: number) => void;
+  payDividend: (payerAirlineId: string, receiverOwnerId: string, amount: number) => void;
 }
 
 function createAirportMap(): Record<string, Airport> {
@@ -249,6 +250,20 @@ export const createWorldSlice: StateCreator<GameStore, [['zustand/immer', never]
     set((state) => {
       if (state.aiAirlines[airlineId]) {
         state.aiAirlines[airlineId].cashUSD += amount;
+      }
+    }),
+
+  payDividend: (payerAirlineId, receiverOwnerId, amount) =>
+    set((state) => {
+      // Deduct from the airline paying out the dividend
+      if (state.aiAirlines[payerAirlineId]) {
+        state.aiAirlines[payerAirlineId].cashUSD -= amount;
+      }
+      // Credit the shareholder
+      if (receiverOwnerId === 'player') {
+        if (state.airlines['player']) state.airlines['player'].cashUSD += amount;
+      } else if (state.aiAirlines[receiverOwnerId]) {
+        state.aiAirlines[receiverOwnerId].cashUSD += amount;
       }
     }),
 });

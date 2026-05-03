@@ -8,6 +8,7 @@ import {
 import { getBaselineDailyPax, getPlayerMarketShare, conditionDemandMod, getAirportCapacity, airportSaturationMod } from './demandModel';
 import { runRandomEventsTick } from './randomEvents';
 import { AIRCRAFT_TYPES } from '@/data/aircraftTypes';
+import { formatCurrency } from '@/utils/format';
 
 export function computeFlightCost(
   route: Route,
@@ -286,20 +287,21 @@ export function runDailyTick(store: ReturnType<typeof import('@/store/index')['u
     }
   });
 
-  // Distribute dividends using this tick's computed profits (not stale lastDailyProfit)
+  // Distribute dividends: deduct from payer, credit shareholder atomically
+  let playerDividendTotal = 0;
   Object.entries(aiNetProfits).forEach(([id, profit]) => {
     if (profit <= 0) return;
     const shareholders = aiAirlines[id]?.shareholders;
     if (!shareholders) return;
     Object.entries(shareholders).forEach(([ownerId, pct]) => {
       const div = (pct / 100) * profit;
-      if (ownerId === 'player') {
-        store.applyDividend(div);
-      } else if (aiAirlines[ownerId]) {
-        store.applyAIDividend(ownerId, div);
-      }
+      store.payDividend(id, ownerId, div);
+      if (ownerId === 'player') playerDividendTotal += div;
     });
   });
+  if (playerDividendTotal > 500_000) {
+    store.pushNewsItem(`Dividends: ${formatCurrency(playerDividendTotal)} received from shareholdings today.`);
+  }
 
   void gameDay;
   void allRoutes;
