@@ -45,7 +45,7 @@ export const Layout: React.FC = () => {
     <div className="flex flex-col h-screen bg-gray-950 text-white overflow-hidden">
       <TopBar />
 
-      <div className="flex-1 flex relative overflow-hidden">
+      <div className="flex-1 flex relative overflow-hidden z-0">
         <div className="flex-1 relative">
           <GameMap />
           <AirportPopup />
