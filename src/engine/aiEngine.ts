@@ -8,6 +8,104 @@ import { FUEL_PRICE_USD_PER_LITER } from '@/utils/constants';
 
 type StoreState = ReturnType<typeof import('@/store/index')['useGameStore']['getState']>;
 
+// ── Airline name generation ───────────────────────────────────────────────────
+
+const NAME_PREFIXES = [
+  'Atlas', 'Nordic', 'Pacific', 'Horizon', 'Stellar', 'Astra', 'Pinnacle',
+  'Summit', 'Cardinal', 'Zenith', 'Liberty', 'Frontier', 'Pioneer', 'Vanguard',
+  'Polar', 'Tropic', 'Alpine', 'Sahara', 'Orient', 'Andean', 'Caspian',
+  'Baltic', 'Adriatic', 'Iberian', 'Boreal', 'Austral', 'Solar', 'Nova',
+  'Apex', 'Crown', 'Delta', 'Omega', 'Laurentian', 'Aegean', 'Amber',
+  'Azure', 'Borealis', 'Cascade', 'Crest', 'Equinox', 'Falcon', 'Garuda',
+  'Halcyon', 'Indigo', 'Jade', 'Kestrel', 'Lodestar', 'Magellan', 'Nimbus',
+  'Orion', 'Pegasus', 'Quest', 'Raptor', 'Solaris', 'Tasman', 'Uluru',
+  'Venture', 'Windward', 'Xcalibur', 'Yellowstone', 'Zephyr',
+];
+
+const NAME_SUFFIXES = [
+  'Air', 'Airlines', 'Airways', 'Aviation', 'Express', 'Connect',
+  'Jet', 'Wings', 'Lines', 'Global', 'Link', 'Sky', 'Aero', 'Fly',
+];
+
+const AIRLINE_EMOJIS = ['✈️', '🛫', '🌍', '🌎', '🌏', '🦅', '🌐', '⭐', '🌟', '🚀', '🌙', '🦉', '🦆', '🌊', '🏔️'];
+
+const AIRLINE_COLORS = [
+  '#ef4444', '#f97316', '#eab308', '#22c55e', '#06b6d4', '#3b82f6',
+  '#8b5cf6', '#ec4899', '#14b8a6', '#f59e0b', '#84cc16', '#6366f1',
+  '#10b981', '#0ea5e9', '#d946ef', '#f43f5e',
+];
+
+const SPAWN_HUBS = [
+  'JFK', 'LAX', 'LHR', 'CDG', 'FRA', 'AMS', 'NRT', 'HKG', 'SIN', 'DXB',
+  'SYD', 'GRU', 'MEX', 'JNB', 'BOM', 'PEK', 'ICN', 'BKK', 'KUL', 'IST',
+  'ATL', 'ORD', 'DFW', 'MIA', 'SFO', 'YYZ', 'MAD', 'BCN', 'FCO', 'MUC',
+  'ZRH', 'VIE', 'CPH', 'OSL', 'ARN', 'WAW', 'LIS', 'ATH', 'CAI', 'NBO',
+  'CPT', 'DEL', 'BLR', 'MNL', 'CGK', 'AKL', 'SCL', 'BOG', 'LIM', 'YVR',
+];
+
+const PERSONALITIES: Airline['personality'][] = ['aggressive', 'balanced', 'budget', 'premium', 'conservative'];
+
+function generateAirlineName(existingNames: Set<string>): { name: string; iataPrefix: string } {
+  let name = '';
+  for (let i = 0; i < 30; i++) {
+    const prefix = NAME_PREFIXES[Math.floor(Math.random() * NAME_PREFIXES.length)];
+    const suffix = NAME_SUFFIXES[Math.floor(Math.random() * NAME_SUFFIXES.length)];
+    name = `${prefix} ${suffix}`;
+    if (!existingNames.has(name)) break;
+  }
+  const words = name.split(' ');
+  const iataPrefix = words.map(w => w[0]).join('').toUpperCase().slice(0, 2);
+  return { name, iataPrefix };
+}
+
+const MAX_AI_AIRLINES = 16;
+const SPAWN_CHECK_INTERVAL = 30; // game days between spawn checks
+const SPAWN_PROBABILITY = 0.30;  // chance of spawning per check
+
+function trySpawnNewAirline(store: StoreState, gameDay: number): void {
+  if (gameDay % SPAWN_CHECK_INTERVAL !== 0) return;
+  const { aiAirlines, airports } = store;
+  if (Object.keys(aiAirlines).length >= MAX_AI_AIRLINES) return;
+  if (Math.random() > SPAWN_PROBABILITY) return;
+
+  const existingNames = new Set([
+    ...Object.values(aiAirlines).map(a => a.name),
+    ...Object.values(store.airlines).map(a => a.name),
+  ]);
+  const usedHubs = new Set(Object.values(aiAirlines).flatMap(a => a.hubIatas));
+  const availableHubs = SPAWN_HUBS.filter(h => !usedHubs.has(h) && airports[h]);
+  if (availableHubs.length === 0) return;
+
+  const hubIata = availableHubs[Math.floor(Math.random() * availableHubs.length)];
+  const { name, iataPrefix } = generateAirlineName(existingNames);
+  const color = AIRLINE_COLORS[Math.floor(Math.random() * AIRLINE_COLORS.length)];
+  const emoji = AIRLINE_EMOJIS[Math.floor(Math.random() * AIRLINE_EMOJIS.length)];
+  const personality = PERSONALITIES[Math.floor(Math.random() * PERSONALITIES.length)];
+
+  const newAirline: Airline = {
+    id: `ai-spawned-${uuidv4()}`,
+    name, iataPrefix,
+    isPlayer: false,
+    color, logoEmoji: emoji,
+    cashUSD: 20_000_000 + Math.floor(Math.random() * 20_000_000),
+    totalDebt: 0,
+    hubIatas: [hubIata],
+    fleetIds: [], routeIds: [],
+    personality,
+    foundedGameDay: gameDay,
+    isInsolvent: false, canBeTakenOver: false,
+    marketSharePercent: 0,
+    reputationScore: 50,
+    totalPassengersAllTime: 0,
+    dailyStats: [],
+    crashPenaltyDaysLeft: 0,
+  };
+
+  store.addAIAirline(newAirline);
+  store.setAirportHub(hubIata, true);
+  store.pushNewsItem(`NEW ENTRANT: ${name} has launched operations with a new hub at ${hubIata}.`);
+}
+
 const AI_EXPAND_INTERVAL_DAYS: Record<string, number> = {
   aggressive: 3,
   balanced: 7,
@@ -33,6 +131,8 @@ const AI_LOAD_TARGET: Record<string, number> = {
 };
 
 export function runAITick(store: StoreState, gameDay: number): void {
+  trySpawnNewAirline(store, gameDay);
+
   const { aiAirlines, aiAircraft, aiRoutes, airports } = store;
   const allRoutes = [...Object.values(store.routes), ...Object.values(aiRoutes)];
   const allAirlines = [...Object.values(store.airlines), ...Object.values(aiAirlines)];
