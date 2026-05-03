@@ -2,6 +2,9 @@ import type { NewsArticle } from '@/store/uiSlice';
 import { AIRCRAFT_TYPES } from '@/data/aircraftTypes';
 import { computeMaintenanceCost } from '@/utils/constants';
 
+// Global throttle — multiply all event probabilities by this factor (0.6 = 40% fewer events)
+const EVENT_SCALE = 0.6;
+
 function aiIgnoreGroundingChance(airline: { cashUSD: number; personality: string }): boolean {
   let chance = 0.15;
   if (airline.cashUSD < 5_000_000)  chance = 0.85;
@@ -482,7 +485,7 @@ export function runRandomEventsTick(
 
     for (const ac of eligibleAc) {
       for (const evt of AIRCRAFT_EVENTS) {
-        if (Math.random() > evt.probability) continue;
+        if (Math.random() > evt.probability * EVENT_SCALE) continue;
 
         // Find a plausible airport for the news message
         const route = ac.assignedRouteId ? routes[ac.assignedRouteId] : null;
@@ -524,7 +527,7 @@ export function runRandomEventsTick(
 
     for (const ac of eligibleAc) {
       for (const evt of AIRCRAFT_EVENTS) {
-        if (Math.random() > evt.probability) continue;
+        if (Math.random() > evt.probability * EVENT_SCALE) continue;
 
         const route = ac.assignedRouteId ? aiRoutes[ac.assignedRouteId] : null;
         const airportIata = route ? route.destinationIata : undefined;
@@ -567,7 +570,7 @@ export function runRandomEventsTick(
     if (aiAirline.isInsolvent) return;
 
     for (const scandal of AI_SCANDAL_EVENTS) {
-      if (Math.random() > scandal.probability) continue;
+      if (Math.random() > scandal.probability * EVENT_SCALE) continue;
 
       const msg = scandal.newsTemplate.replace('{airline}', aiAirline.name);
       store.pushNewsItem(msg);
@@ -590,7 +593,7 @@ export function runRandomEventsTick(
   for (const airport of airportList) {
     for (const evt of AIRPORT_EVENTS) {
       if (!evt.sizesAffected.includes(airport.size)) continue;
-      if (Math.random() > evt.probability) continue;
+      if (Math.random() > evt.probability * EVENT_SCALE) continue;
 
       const durationDays = evt.minDays + Math.floor(Math.random() * (evt.maxDays - evt.minDays + 1));
       const untilDay = gameDay + durationDays - 1;
