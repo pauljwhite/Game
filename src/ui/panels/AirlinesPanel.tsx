@@ -26,10 +26,14 @@ export const AirlinesPanel: React.FC = () => {
   const totalPax = (playerAirline?.totalPassengersAllTime ?? 0) +
     Object.values(aiAirlines).reduce((s, a) => s + a.totalPassengersAllTime, 0);
 
+  const sortedAI = Object.values(aiAirlines)
+    .map(a => ({ ...a, isPlayer: false }))
+    .sort((a, b) => b.totalPassengersAllTime - a.totalPassengersAllTime);
+
   const allAirlines = [
     ...(playerAirline ? [{ ...playerAirline, isPlayer: true }] : []),
-    ...Object.values(aiAirlines).map(a => ({ ...a, isPlayer: false })),
-  ].sort((a, b) => b.totalPassengersAllTime - a.totalPassengersAllTime);
+    ...sortedAI,
+  ];
 
   return (
     <div className="flex flex-col h-full">
