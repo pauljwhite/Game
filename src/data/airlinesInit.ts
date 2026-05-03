@@ -1,0 +1,80 @@
+export interface AIAirlineInit {
+  name: string;
+  iataPrefix: string;
+  color: string;
+  logoEmoji: string;
+  personality: 'aggressive' | 'balanced' | 'conservative' | 'budget' | 'premium';
+  startHub: string;
+  secondHub: string;
+  startingAircraftTypeId: string;
+  startCash: number;
+}
+
+export const AI_AIRLINES_INIT: AIAirlineInit[] = [
+  {
+    name: 'Eagle Air',
+    iataPrefix: 'EA',
+    color: '#ef4444',
+    logoEmoji: '🦅',
+    personality: 'aggressive',
+    startHub: 'JFK',
+    secondHub: 'LAX',
+    startingAircraftTypeId: 'b707-120',
+    startCash: 80_000_000,
+  },
+  {
+    name: 'Sky Pacific',
+    iataPrefix: 'SP',
+    color: '#3b82f6',
+    logoEmoji: '✈️',
+    personality: 'balanced',
+    startHub: 'NRT',
+    secondHub: 'HKG',
+    startingAircraftTypeId: 'dc8-50',
+    startCash: 70_000_000,
+  },
+  {
+    name: 'Euro Wings',
+    iataPrefix: 'EW',
+    color: '#22c55e',
+    logoEmoji: '🌍',
+    personality: 'budget',
+    startHub: 'FRA',
+    secondHub: 'CDG',
+    startingAircraftTypeId: 'b707-120',
+    startCash: 60_000_000,
+  },
+  {
+    name: 'Gulf Connect',
+    iataPrefix: 'GC',
+    color: '#f59e0b',
+    logoEmoji: '🌙',
+    personality: 'premium',
+    startHub: 'LHR',
+    secondHub: 'AMS',
+    startingAircraftTypeId: 'dc8-50',
+    startCash: 90_000_000,
+  },
+  {
+    name: 'Meridian Airlines',
+    iataPrefix: 'MA',
+    color: '#a855f7',
+    logoEmoji: '🌐',
+    personality: 'conservative',
+    startHub: 'SYD',
+    secondHub: 'MEL',
+    startingAircraftTypeId: 'b707-320',
+    startCash: 75_000_000,
+  },
+  {
+    name: 'Condor Global',
+    iataPrefix: 'CG',
+    color: '#14b8a6',
+    logoEmoji: '🦅',
+    personality: 'balanced',
+    startHub: 'GRU',
+    secondHub: 'EZE',
+    startingAircraftTypeId: 'b707-120',
+    startCash: 55_000_000,
+  },
+];
