@@ -1,7 +1,7 @@
 import React from 'react';
 import { useGameStore } from '@/store';
 import { SpeedControl } from './components/SpeedControl';
-import { formatCurrency, formatGameDate } from '@/utils/format';
+import { formatCurrency, formatGameClock, formatGameDate } from '@/utils/format';
 import type { PanelId } from '@/store/uiSlice';
 
 const NAV_ITEMS: { id: PanelId; label: string }[] = [
@@ -21,6 +21,7 @@ export const TopBar: React.FC = () => {
 
   const playerAirline = airlines['player'];
   const gameDate = formatGameDate(gameTimeMs);
+  const gameClock = formatGameClock(gameTimeMs);
 
   const togglePanel = (id: PanelId) => {
     openPanel === id ? closePanel() : openPanelById(id);
@@ -44,7 +45,11 @@ export const TopBar: React.FC = () => {
       <div className="text-gray-500">|</div>
 
       {/* Game date */}
-      <div className="text-gray-300 text-sm font-mono shrink-0">{gameDate}</div>
+      <div className="text-gray-300 text-sm font-mono shrink-0">
+        <span>{gameDate}</span>
+        <span className="text-gray-500 mx-2">|</span>
+        <span className="text-blue-300">{gameClock}</span>
+      </div>
 
       <div className="text-gray-500">|</div>
 

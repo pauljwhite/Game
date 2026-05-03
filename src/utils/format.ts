@@ -15,6 +15,12 @@ export function formatGameDate(gameTimeMs: number): string {
   return d.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
 }
 
+export function formatGameClock(gameTimeMs: number): string {
+  const epochMs = new Date(GAME_EPOCH_YEAR, 0, 1).getTime();
+  const d = new Date(epochMs + gameTimeMs);
+  return d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false });
+}
+
 export function getGameYear(gameTimeMs: number): number {
   const epochMs = new Date(GAME_EPOCH_YEAR, 0, 1).getTime();
   return new Date(epochMs + gameTimeMs).getFullYear();

@@ -24,7 +24,7 @@ export const SpeedControl: React.FC = () => {
       {SPEEDS.filter(s => s > 0).map(s => (
         <button
           key={s}
-          onClick={() => { setSpeed(s); if (isPaused) togglePause(); }}
+          onClick={() => setSpeed(s)}
           className={`px-2 py-1 rounded text-xs font-mono transition-colors ${
             speed === s && !isPaused
               ? 'bg-blue-500 text-white'
