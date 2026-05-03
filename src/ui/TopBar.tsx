@@ -169,50 +169,67 @@ export const TopBar: React.FC = () => {
   };
 
   return (
-    <header className="h-14 bg-gray-950 border-b border-gray-800 flex items-center px-4 gap-4 relative z-10 shrink-0">
-      {/* Airline branding — clickable */}
-      <div className="relative">
-        <button
-          onClick={() => setMenuOpen(v => !v)}
-          className="flex items-center gap-2 min-w-0 hover:bg-gray-800 rounded px-2 py-1 transition-colors"
-        >
-          <span className="text-xl">{playerAirline?.logoEmoji ?? '✈'}</span>
-          <div className="leading-none min-w-0 text-left">
-            <div className="text-white font-bold text-sm truncate max-w-[160px]">
-              {playerAirline?.name ?? 'Airline Empire'}
+    <header className="bg-gray-950 border-b border-gray-800 relative z-10 shrink-0">
+      {/* Primary row: branding | date | speed | (nav on lg+) */}
+      <div className="h-12 flex items-center px-3 gap-2">
+        {/* Airline branding — clickable */}
+        <div className="relative shrink-0">
+          <button
+            onClick={() => setMenuOpen(v => !v)}
+            className="flex items-center gap-1.5 min-w-0 hover:bg-gray-800 rounded px-2 py-1 transition-colors"
+          >
+            <span className="text-lg">{playerAirline?.logoEmoji ?? '✈'}</span>
+            <div className="leading-none min-w-0 text-left">
+              <div className="text-white font-bold text-xs truncate max-w-[120px] sm:max-w-[160px]">
+                {playerAirline?.name ?? 'Airline Empire'}
+              </div>
+              <div className={`text-xs font-mono ${(playerAirline?.cashUSD ?? 0) >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                {playerAirline ? formatCurrency(playerAirline.cashUSD) : '-'}
+              </div>
             </div>
-            <div className={`text-xs font-mono ${(playerAirline?.cashUSD ?? 0) >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-              {playerAirline ? formatCurrency(playerAirline.cashUSD) : '-'}
-            </div>
-          </div>
-          <span className="text-gray-600 text-xs ml-1">▾</span>
-        </button>
-        {menuOpen && <AirlineMenu onClose={() => setMenuOpen(false)} />}
+            <span className="text-gray-600 text-xs">▾</span>
+          </button>
+          {menuOpen && <AirlineMenu onClose={() => setMenuOpen(false)} />}
+        </div>
+
+        {/* Date — hidden on xs, shown from sm */}
+        <div className="hidden sm:flex items-center gap-1 text-xs font-mono shrink-0">
+          <span className="text-gray-500">|</span>
+          <span className="text-gray-300">{gameDate}</span>
+          <span className="text-gray-600">·</span>
+          <span className="text-blue-300">{gameClock}</span>
+        </div>
+
+        <div className="flex-1" />
+
+        {/* Speed control */}
+        <SpeedControl />
+
+        {/* Navigation — only on lg and wider */}
+        <nav className="hidden lg:flex items-center gap-1 ml-2 shrink-0">
+          {NAV_ITEMS.map(item => (
+            <button
+              key={item.id}
+              onClick={() => togglePanel(item.id)}
+              className={`px-3 py-1.5 rounded text-xs font-medium transition-colors ${
+                openPanel === item.id
+                  ? 'bg-blue-600 text-white'
+                  : 'text-gray-400 hover:text-white hover:bg-gray-800'
+              }`}
+            >
+              {item.label}
+            </button>
+          ))}
+        </nav>
       </div>
 
-      <div className="text-gray-500">|</div>
-
-      {/* Game date */}
-      <div className="text-gray-300 text-sm font-mono shrink-0">
-        <span>{gameDate}</span>
-        <span className="text-gray-500 mx-2">|</span>
-        <span className="text-blue-300">{gameClock}</span>
-      </div>
-
-      <div className="text-gray-500">|</div>
-
-      {/* Speed control */}
-      <SpeedControl />
-
-      <div className="flex-1" />
-
-      {/* Navigation */}
-      <nav className="flex items-center gap-1">
+      {/* Secondary nav row — visible below lg */}
+      <div className="lg:hidden flex items-center gap-1 px-3 pb-1.5 overflow-x-auto scrollbar-none">
         {NAV_ITEMS.map(item => (
           <button
             key={item.id}
             onClick={() => togglePanel(item.id)}
-            className={`px-3 py-1.5 rounded text-xs font-medium transition-colors ${
+            className={`px-3 py-1 rounded text-xs font-medium whitespace-nowrap transition-colors shrink-0 ${
               openPanel === item.id
                 ? 'bg-blue-600 text-white'
                 : 'text-gray-400 hover:text-white hover:bg-gray-800'
@@ -221,7 +238,7 @@ export const TopBar: React.FC = () => {
             {item.label}
           </button>
         ))}
-      </nav>
+      </div>
     </header>
   );
 };

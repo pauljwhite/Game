@@ -42,7 +42,7 @@ export const Layout: React.FC = () => {
   const PanelComponent = openPanel ? PANELS[openPanel] : null;
 
   return (
-    <div className="flex flex-col h-screen bg-gray-950 text-white overflow-hidden">
+    <div className="flex flex-col h-[100svh] bg-gray-950 text-white overflow-hidden">
       <TopBar />
 
       <div className="flex-1 flex relative overflow-hidden z-0">

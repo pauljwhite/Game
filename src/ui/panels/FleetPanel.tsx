@@ -105,7 +105,7 @@ function AircraftCard({ ac, gameDay }: { ac: Aircraft; gameDay: number }) {
               {showAuto ? '▴' : '▾'} Auto-maintenance
               {ac.autoMaintenanceEnabled && (
                 <span className="ml-1 text-blue-400">
-                  ON · {MAINTENANCE_TIERS[ac.autoMaintenanceTier].label} @ {ac.autoMaintenanceThreshold}%
+                  ON · {MAINTENANCE_TIERS[ac.autoMaintenanceTier ?? 'standard'].label} @ {ac.autoMaintenanceThreshold ?? 40}%
                 </span>
               )}
             </button>
@@ -116,7 +116,7 @@ function AircraftCard({ ac, gameDay }: { ac: Aircraft; gameDay: number }) {
               <div className="flex items-center justify-between">
                 <span className="text-xs text-gray-300">Auto-maintenance</span>
                 <button
-                  onClick={() => setAutoMaintenance(ac.id, !ac.autoMaintenanceEnabled, ac.autoMaintenanceThreshold, ac.autoMaintenanceTier)}
+                  onClick={() => setAutoMaintenance(ac.id, !ac.autoMaintenanceEnabled, ac.autoMaintenanceThreshold ?? 40, ac.autoMaintenanceTier ?? 'standard')}
                   className={`text-xs px-2 py-0.5 rounded font-semibold transition-colors ${
                     ac.autoMaintenanceEnabled
                       ? 'bg-blue-600 hover:bg-blue-500 text-white'
@@ -132,12 +132,12 @@ function AircraftCard({ ac, gameDay }: { ac: Aircraft; gameDay: number }) {
                   <div>
                     <div className="flex justify-between text-[10px] text-gray-400 mb-1">
                       <span>Trigger threshold</span>
-                      <span className="text-white">{ac.autoMaintenanceThreshold}%</span>
+                      <span className="text-white">{ac.autoMaintenanceThreshold ?? 40}%</span>
                     </div>
                     <input
                       type="range" min={20} max={80} step={5}
-                      value={ac.autoMaintenanceThreshold}
-                      onChange={e => setAutoMaintenance(ac.id, true, Number(e.target.value), ac.autoMaintenanceTier)}
+                      value={ac.autoMaintenanceThreshold ?? 40}
+                      onChange={e => setAutoMaintenance(ac.id, true, Number(e.target.value), ac.autoMaintenanceTier ?? 'standard')}
                       className="w-full accent-blue-500 h-1"
                     />
                     <div className="flex justify-between text-[10px] text-gray-600 mt-0.5">
@@ -153,7 +153,7 @@ function AircraftCard({ ac, gameDay }: { ac: Aircraft; gameDay: number }) {
                           key={tier}
                           onClick={() => setAutoMaintenance(ac.id, true, ac.autoMaintenanceThreshold, tier)}
                           className={`py-1 rounded text-[10px] font-medium transition-colors ${
-                            ac.autoMaintenanceTier === tier
+                            (ac.autoMaintenanceTier ?? 'standard') === tier
                               ? 'bg-blue-600 text-white'
                               : 'bg-gray-700 text-gray-400 hover:bg-gray-600'
                           }`}

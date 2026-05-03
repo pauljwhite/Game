@@ -55,10 +55,26 @@ function sanitizePersistedState(state: Partial<GameStore>): Partial<GameStore> {
     ]),
   );
 
+  // Backfill missing maintenance fields on aircraft from older saves
+  type MaintFields = { activeMaintTier: null; autoMaintenanceEnabled: boolean; autoMaintenanceThreshold: number; autoMaintenanceTier: 'light' | 'standard' | 'full' };
+  const normalizedAircraft: Record<string, typeof aircraft[string]> = Object.fromEntries(
+    Object.entries(aircraft).map(([id, ac]) => {
+      const raw = ac as unknown as Record<string, unknown>;
+      const defaults: MaintFields = {
+        activeMaintTier: null,
+        autoMaintenanceEnabled: (raw.autoMaintenanceEnabled as boolean | undefined) ?? false,
+        autoMaintenanceThreshold: (raw.autoMaintenanceThreshold as number | undefined) ?? 40,
+        autoMaintenanceTier: ((raw.autoMaintenanceTier as string | undefined) ?? 'standard') as 'light' | 'standard' | 'full',
+      };
+      return [id, { ...defaults, ...ac }];
+    }),
+  );
+
   const sanitized: Partial<GameStore> = {
     ...stateWithoutStaticAirports,
     airlines,
     aiAirlines,
+    aircraft: normalizedAircraft,
     speed: VALID_GAME_SPEEDS.has(state.speed as number) ? state.speed : DEFAULT_GAME_SPEED,
     isPaused: false,
   };
