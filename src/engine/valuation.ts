@@ -62,3 +62,54 @@ export function calculateBuyoutPrice(
 
   return { fleetValue, routeValue, cashValue, debtValue, controlPremium, totalPrice };
 }
+
+export function rawCompanyValue(
+  target: Airline,
+  aiAircraft: Record<string, Aircraft>,
+  aiRoutes: Record<string, Route>,
+): number {
+  const fleetValue = target.fleetIds.reduce((sum, id) => {
+    const ac = aiAircraft[id];
+    if (!ac) return sum;
+    const type = typeMap[ac.typeId];
+    if (!type) return sum;
+    return sum + type.purchasePrice * (0.3 + 0.7 * (ac.condition / 100));
+  }, 0);
+  const annualProfit = target.routeIds.reduce((sum, id) => {
+    const route = aiRoutes[id];
+    if (!route) return sum;
+    return sum + Math.max(0, route.dailyProfit * 365);
+  }, 0);
+  const routeValue = annualProfit * 2;
+  const cashAdj = target.cashUSD; // positive: asset, negative: liability
+  return Math.max(0, fleetValue + routeValue + cashAdj);
+}
+
+export function calculateSharePrice(
+  percentToBuy: number,
+  currentPlayerPercent: number,
+  target: Airline,
+  aiAircraft: Record<string, Aircraft>,
+  aiRoutes: Record<string, Route>,
+  fromSecondaryMarket = false,
+): number {
+  const baseValue = rawCompanyValue(target, aiAircraft, aiRoutes);
+  const pricePerPct = baseValue / 100;
+
+  // Block size premium
+  const willCrossMajority = currentPlayerPercent < 50 && (currentPlayerPercent + percentToBuy) >= 50;
+  let blockMultiplier: number;
+  if (willCrossMajority) {
+    blockMultiplier = 1.25;
+  } else if (percentToBuy > 25) {
+    blockMultiplier = 1.1;
+  } else if (percentToBuy > 10) {
+    blockMultiplier = 1.05;
+  } else {
+    blockMultiplier = 1.0;
+  }
+
+  const secondaryPremium = fromSecondaryMarket ? 1.15 : 1.0;
+  const total = pricePerPct * percentToBuy * blockMultiplier * secondaryPremium;
+  return Math.round(total / 100_000) * 100_000; // round to nearest $100k
+}

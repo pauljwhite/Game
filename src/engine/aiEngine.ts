@@ -102,6 +102,8 @@ function trySpawnNewAirline(store: StoreState, gameDay: number): void {
     totalPassengersAllTime: 0,
     dailyStats: [],
     crashPenaltyDaysLeft: 0,
+    shareholders: {},
+    lastDailyProfit: 0,
   };
 
   store.addAIAirline(newAirline);

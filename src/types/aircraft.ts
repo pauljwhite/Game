@@ -54,4 +54,5 @@ export interface Aircraft {
   autoMaintenanceEnabled: boolean;
   autoMaintenanceThreshold: number;         // trigger at this condition %
   autoMaintenanceTier: MaintenanceTier;
+  groundedReason?: string;
 }

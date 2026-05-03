@@ -21,6 +21,7 @@ export interface WorldSlice {
   setGlobalFuelPrice: (price: number) => void;
   updateTotalMarketPAX: (pax: number) => void;
   setAirportHub: (iata: string, isHub: boolean) => void;
+  setAirportClosure: (iata: string, untilGameDay: number, reason: string) => void;
   updateAIAircraftCondition: (aircraftId: string, conditionDelta: number, hoursOwed: number) => void;
   updateAIAirlineStats: (id: string, netProfit: number, passengers: number) => void;
   removeAIAirline: (id: string) => void;
@@ -28,6 +29,8 @@ export interface WorldSlice {
   addAIAircraft: (aircraft: Aircraft) => void;
   updateAIRoute: (routeId: string, changes: Partial<Route>) => void;
   aiAcquireAirline: (buyerId: string, targetId: string, cost: number) => void;
+  setShareholding: (targetId: string, ownerId: string, newPercent: number) => void;
+  applyAIDividend: (airlineId: string, amount: number) => void;
 }
 
 function createAirportMap(): Record<string, Airport> {
@@ -98,6 +101,14 @@ export const createWorldSlice: StateCreator<GameStore, [['zustand/immer', never]
       if (state.airports[iata]) state.airports[iata].isHub = isHub;
     }),
 
+  setAirportClosure: (iata, untilGameDay, reason) =>
+    set((state) => {
+      if (state.airports[iata]) {
+        state.airports[iata].closedUntilGameDay = untilGameDay;
+        state.airports[iata].closureReason = reason;
+      }
+    }),
+
   updateAIAircraftCondition: (aircraftId, conditionDelta, hoursOwed) =>
     set((state) => {
       const ac = state.aiAircraft[aircraftId];
@@ -125,6 +136,7 @@ export const createWorldSlice: StateCreator<GameStore, [['zustand/immer', never]
       if (!airline) return;
       airline.cashUSD += netProfit;
       airline.totalPassengersAllTime += passengers;
+      airline.lastDailyProfit = netProfit;
       airline.isInsolvent = airline.cashUSD < -50_000_000;
       airline.canBeTakenOver = airline.cashUSD < 0 && Math.abs(airline.cashUSD) > 20_000_000;
     }),
@@ -167,6 +179,34 @@ export const createWorldSlice: StateCreator<GameStore, [['zustand/immer', never]
         const route = state.aiRoutes[id];
         if (route) { route.airlineId = buyerId; buyer.routeIds.push(id); }
       });
+      // Transfer any shares target held in other airlines to buyer
+      Object.entries(target.shareholders ?? {}).forEach(([ownedId, pct]) => {
+        if (state.aiAirlines[ownedId] && pct > 0) {
+          state.aiAirlines[ownedId].shareholders ??= {};
+          const existing = state.aiAirlines[ownedId].shareholders[buyerId] ?? 0;
+          state.aiAirlines[ownedId].shareholders[buyerId] = existing + pct;
+          delete state.aiAirlines[ownedId].shareholders[targetId];
+        }
+      });
       delete state.aiAirlines[targetId];
+    }),
+
+  setShareholding: (targetId, ownerId, newPercent) =>
+    set((state) => {
+      const target = state.aiAirlines[targetId];
+      if (!target) return;
+      target.shareholders ??= {};
+      if (newPercent <= 0) {
+        delete target.shareholders[ownerId];
+      } else {
+        target.shareholders[ownerId] = newPercent;
+      }
+    }),
+
+  applyAIDividend: (airlineId, amount) =>
+    set((state) => {
+      if (state.aiAirlines[airlineId]) {
+        state.aiAirlines[airlineId].cashUSD += amount;
+      }
     }),
 });

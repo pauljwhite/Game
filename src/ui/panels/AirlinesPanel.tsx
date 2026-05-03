@@ -33,16 +33,16 @@ export const AirlinesPanel: React.FC = () => {
 
   return (
     <div className="flex flex-col h-full">
-      <div className="flex items-center justify-between p-3 border-b border-gray-700">
+      <div className="panel-header flex items-center justify-between">
         <h2 className="text-white font-bold">Airlines</h2>
         <button onClick={closePanel} aria-label="Close" className="w-7 h-7 flex items-center justify-center text-gray-400 hover:text-white hover:bg-gray-700 rounded transition-colors text-lg leading-none">×</button>
       </div>
 
-      {/* Player row — pinned above the scroll area */}
+      {/* Player row */}
       {playerAirline && (() => {
         const share = totalPax > 0 ? (playerAirline.totalPassengersAllTime / totalPax) * 100 : 0;
         return (
-          <div className="border-b-2 border-blue-800/50 bg-gray-900 shrink-0">
+          <div className="border-b border-sky-300/20 bg-sky-400/[0.055] shrink-0">
             <div className="p-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2 min-w-0">
@@ -74,16 +74,19 @@ export const AirlinesPanel: React.FC = () => {
       <div className="flex-1 overflow-y-auto">
         {activeAI.map(airline => {
           const share = totalPax > 0 ? (airline.totalPassengersAllTime / totalPax) * 100 : 0;
-
+          const playerStake = (airline.shareholders ?? {})['player'] ?? 0;
+          const hasMajority = playerStake >= 50;
           const isExpanded = expandedId === airline.id;
-          const isAI = true;
 
           const fleetEntries = airline.fleetIds.map(id => aiAircraft[id]).filter(Boolean);
           const routeEntries = airline.routeIds.map(id => aiRoutes[id]).filter(Boolean);
 
+          const otherShareholders = Object.entries(airline.shareholders ?? {})
+            .filter(([id, pct]) => id !== 'player' && pct > 0)
+            .map(([id, pct]) => ({ name: aiAirlines[id]?.name ?? id, pct }));
+
           return (
-            <div key={airline.id} className={`border-b border-gray-800 ${airline.isInsolvent ? 'opacity-50' : ''}`}>
-              {/* Main row */}
+            <div key={airline.id} className="border-b border-gray-800">
               <div
                 className="p-3 cursor-pointer hover:bg-gray-800/50 transition-colors"
                 onClick={() => setExpandedId(isExpanded ? null : airline.id)}
@@ -92,6 +95,11 @@ export const AirlinesPanel: React.FC = () => {
                   <div className="flex items-center gap-2 min-w-0">
                     <div className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: airline.color }} />
                     <span className="text-white text-sm font-medium truncate">{airline.name}</span>
+                    {playerStake > 0 && (
+                      <span className="shrink-0 text-[10px] font-semibold px-1.5 py-0.5 rounded bg-teal-500/20 text-teal-300 border border-teal-500/30">
+                        You: {playerStake.toFixed(0)}%
+                      </span>
+                    )}
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
                     <span className="text-gray-300 text-sm">{share.toFixed(1)}%</span>
@@ -100,10 +108,7 @@ export const AirlinesPanel: React.FC = () => {
                 </div>
 
                 <div className="mt-1 h-1.5 bg-gray-700 rounded overflow-hidden">
-                  <div
-                    className="h-full rounded"
-                    style={{ width: `${share}%`, backgroundColor: airline.color }}
-                  />
+                  <div className="h-full rounded" style={{ width: `${share}%`, backgroundColor: airline.color }} />
                 </div>
 
                 <div className="mt-1.5 grid grid-cols-3 gap-x-2 text-xs text-gray-400">
@@ -117,22 +122,54 @@ export const AirlinesPanel: React.FC = () => {
                   {airline.personality && <span className="ml-1 capitalize text-gray-600">· {airline.personality}</span>}
                 </div>
 
-                {!airline.isInsolvent && (
+                {/* Action buttons */}
+                <div className="mt-2 flex gap-1.5">
+                  <button
+                    onClick={e => { e.stopPropagation(); openModalById('sharesPurchase', airline.id); }}
+                    className="flex-1 py-1 bg-teal-900/60 hover:bg-teal-800/80 text-teal-200 text-xs rounded transition-colors"
+                  >
+                    Buy Shares{playerStake > 0 ? ` (${playerStake.toFixed(0)}%)` : ''}
+                  </button>
                   <button
                     onClick={e => { e.stopPropagation(); openModalById('takeover', airline.id); }}
-                    className="mt-2 w-full py-1 bg-indigo-900 hover:bg-indigo-800 text-indigo-200 text-xs rounded transition-colors"
+                    disabled={!hasMajority}
+                    title={hasMajority ? 'Acquire airline' : `Need 50% stake (you own ${playerStake.toFixed(0)}%)`}
+                    className={`flex-1 py-1 text-xs rounded transition-colors ${
+                      hasMajority
+                        ? 'bg-indigo-700 hover:bg-indigo-600 text-indigo-100'
+                        : 'bg-gray-800 text-gray-600 cursor-not-allowed'
+                    }`}
                   >
-                    Buy Out
+                    Take Over{!hasMajority ? ` (${playerStake.toFixed(0)}/50%)` : ''}
                   </button>
-                )}
-                {airline.isInsolvent && (
-                  <div className="mt-1 text-xs text-red-500">INSOLVENT</div>
-                )}
+                </div>
               </div>
 
-              {/* Expanded fleet + routes inspector */}
-              {isExpanded && isAI && (
+              {/* Expanded detail */}
+              {isExpanded && (
                 <div className="bg-gray-900/80 border-t border-gray-700/50 px-3 pb-3">
+
+                  {/* Shareholders */}
+                  {(playerStake > 0 || otherShareholders.length > 0) && (
+                    <div className="pt-2 pb-2 border-b border-gray-700/50 mb-2">
+                      <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Shareholders</div>
+                      <div className="flex flex-wrap gap-1.5">
+                        {playerStake > 0 && (
+                          <span className="text-[10px] px-2 py-0.5 rounded bg-teal-500/15 text-teal-300 border border-teal-500/25">
+                            You {playerStake.toFixed(0)}%
+                          </span>
+                        )}
+                        {otherShareholders.map(s => (
+                          <span key={s.name} className="text-[10px] px-2 py-0.5 rounded bg-white/5 text-gray-400 border border-white/10">
+                            {s.name} {s.pct.toFixed(0)}%
+                          </span>
+                        ))}
+                        <span className="text-[10px] px-2 py-0.5 rounded bg-white/5 text-gray-500 border border-white/10">
+                          Float {Math.max(0, 100 - playerStake - otherShareholders.reduce((s, x) => s + x.pct, 0)).toFixed(0)}%
+                        </span>
+                      </div>
+                    </div>
+                  )}
 
                   {/* Fleet */}
                   <div className="pt-2">
@@ -227,7 +264,7 @@ export const AirlinesPanel: React.FC = () => {
           {insolventOpen && (
             <div className="max-h-48 overflow-y-auto">
               {insolventAI.map(airline => (
-                <div key={airline.id} className="px-3 py-2 border-b border-gray-800 opacity-50">
+                <div key={airline.id} className="px-3 py-2 border-b border-gray-800 opacity-60">
                   <div className="flex items-center justify-between text-xs">
                     <div className="flex items-center gap-2 min-w-0">
                       <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: airline.color }} />
@@ -240,7 +277,7 @@ export const AirlinesPanel: React.FC = () => {
                   </div>
                   <button
                     onClick={() => openModalById('takeover', airline.id)}
-                    className="mt-1.5 w-full py-0.5 bg-indigo-900/60 hover:bg-indigo-800 text-indigo-300 text-xs rounded transition-colors opacity-100"
+                    className="mt-1.5 w-full py-0.5 bg-indigo-900/60 hover:bg-indigo-800 text-indigo-300 text-xs rounded transition-colors"
                   >
                     Buy Out (distressed)
                   </button>

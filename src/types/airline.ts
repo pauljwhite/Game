@@ -35,4 +35,6 @@ export interface Airline {
   totalPassengersAllTime: number;
   dailyStats: DailySnapshot[];
   crashPenaltyDaysLeft: number;
+  shareholders: Record<string, number>; // ownerId → % they own of this airline
+  lastDailyProfit: number;              // set each tick; used for dividend calculation
 }

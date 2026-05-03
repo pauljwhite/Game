@@ -56,16 +56,20 @@ export function runDailyTick(store: ReturnType<typeof import('@/store/index')['u
       // Auto-maintenance trigger — cooldown: don't re-trigger until after the last maintenance duration
       const autoTier = ac.autoMaintenanceTier ?? 'standard';
       const maintCooldownElapsed = gameDay > ac.lastMaintenanceGameDay + MAINTENANCE_TIERS[autoTier].durationDays;
+      const belowThreshold = ac.condition <= (ac.autoMaintenanceThreshold ?? 40);
+      const groundedNeedsFix = ac.isGrounded && ac.status !== 'maintenance';
       if (
         ac.airlineId === 'player' &&
         ac.status !== 'maintenance' && ac.status !== 'crashed' &&
-        !ac.isGrounded &&
         ac.autoMaintenanceEnabled &&
-        ac.condition <= ac.autoMaintenanceThreshold &&
+        (belowThreshold || groundedNeedsFix) &&
         maintCooldownElapsed
       ) {
         store.startMaintenance(ac.id, gameDay, ac.autoMaintenanceTier ?? 'standard');
-        store.pushNewsItem(`Auto-maintenance triggered for ${ac.name} (condition ${ac.condition.toFixed(0)}%).`);
+        const reason = groundedNeedsFix
+          ? `grounded (${ac.groundedReason ?? 'incident'})`
+          : `condition ${ac.condition.toFixed(0)}%`;
+        store.pushNewsItem(`Auto-maintenance triggered for ${ac.name} (${reason}).`);
       }
     });
 
@@ -221,6 +225,21 @@ export function runDailyTick(store: ReturnType<typeof import('@/store/index')['u
       store.pushNewsItem(`BANKRUPTCY: ${aiAirline.name} has declared bankruptcy and ceased operations.`);
       aiAirline.routeIds.forEach(rid => store.updateAIRoute(rid, { isActive: false }));
     }
+  });
+
+  // Distribute dividends from profitable AI airlines to all shareholders
+  Object.values(aiAirlines).forEach(aiAirline => {
+    const profit = aiAirline.lastDailyProfit ?? 0;
+    if (profit <= 0 || !aiAirline.shareholders) return;
+    Object.entries(aiAirline.shareholders).forEach(([ownerId, pct]) => {
+      if (pct <= 0) return;
+      const div = (pct / 100) * profit;
+      if (ownerId === 'player') {
+        store.applyDividend(div);
+      } else if (aiAirlines[ownerId]) {
+        store.applyAIDividend(ownerId, div);
+      }
+    });
   });
 
   void gameDay;

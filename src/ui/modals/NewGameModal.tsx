@@ -103,8 +103,16 @@ export const NewGameModal: React.FC = () => {
         totalPassengersAllTime: 0,
         dailyStats:             [],
         crashPenaltyDaysLeft:   0,
+        shareholders:           {},
+        lastDailyProfit:        0,
       };
     });
+
+    // Seed cross-shareholdings for realism
+    // Eagle Air (ai-0) owns 8% of Sky Pacific (ai-1)
+    if (aiAirlines['ai-1']) aiAirlines['ai-1'].shareholders['ai-0'] = 8;
+    // Sky Pacific (ai-1) owns 5% of Meridian Airlines (ai-4)
+    if (aiAirlines['ai-4']) aiAirlines['ai-4'].shareholders['ai-1'] = 5;
 
     setAIAirlines(aiAirlines, {}, {});
     closeModal();
