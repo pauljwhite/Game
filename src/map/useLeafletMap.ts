@@ -36,7 +36,7 @@ export function useLeafletMap(containerId: string): LeafletMapHandle {
       { subdomains: 'abcd', maxZoom: 19 },
     ).addTo(m);
 
-    // SVG overlay — absolutely positioned over the map container
+    // SVG overlay - absolutely positioned over the map container
     const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
     svg.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
     svg.style.position = 'absolute';

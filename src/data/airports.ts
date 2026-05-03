@@ -1,7 +1,7 @@
 import type { Airport } from '@/types/airport';
 
 export const AIRPORTS: Airport[] = [
-  // NORTH AMERICA — USA
+  // NORTH AMERICA - USA
   { iata: 'JFK', name: 'John F. Kennedy Intl', city: 'New York', country: 'US', lat: 40.6413, lon: -73.7781, size: 'major', region: 'north_america', landingFee: 3200 },
   { iata: 'LAX', name: 'Los Angeles Intl', city: 'Los Angeles', country: 'US', lat: 33.9425, lon: -118.4081, size: 'major', region: 'north_america', landingFee: 2800 },
   { iata: 'ORD', name: "O'Hare Intl", city: 'Chicago', country: 'US', lat: 41.9742, lon: -87.9073, size: 'major', region: 'north_america', landingFee: 2600 },
@@ -35,14 +35,14 @@ export const AIRPORTS: Airport[] = [
   { iata: 'SAN', name: 'San Diego Intl', city: 'San Diego', country: 'US', lat: 32.7338, lon: -117.1933, size: 'medium', region: 'north_america', landingFee: 1200 },
   { iata: 'TPA', name: 'Tampa Intl', city: 'Tampa', country: 'US', lat: 27.9755, lon: -82.5332, size: 'medium', region: 'north_america', landingFee: 1100 },
 
-  // NORTH AMERICA — Canada
+  // NORTH AMERICA - Canada
   { iata: 'YYZ', name: 'Toronto Pearson Intl', city: 'Toronto', country: 'CA', lat: 43.6772, lon: -79.6306, size: 'major', region: 'north_america', landingFee: 2400 },
   { iata: 'YVR', name: 'Vancouver Intl', city: 'Vancouver', country: 'CA', lat: 49.1967, lon: -123.1815, size: 'large', region: 'north_america', landingFee: 2000 },
   { iata: 'YUL', name: 'Montreal-Trudeau Intl', city: 'Montreal', country: 'CA', lat: 45.4706, lon: -73.7408, size: 'large', region: 'north_america', landingFee: 1800 },
   { iata: 'YYC', name: 'Calgary Intl', city: 'Calgary', country: 'CA', lat: 51.1315, lon: -114.0106, size: 'medium', region: 'north_america', landingFee: 1400 },
   { iata: 'YEG', name: 'Edmonton Intl', city: 'Edmonton', country: 'CA', lat: 53.3097, lon: -113.5800, size: 'medium', region: 'north_america', landingFee: 1200 },
 
-  // NORTH AMERICA — Mexico
+  // NORTH AMERICA - Mexico
   { iata: 'MEX', name: 'Benito Juárez Intl', city: 'Mexico City', country: 'MX', lat: 19.4363, lon: -99.0721, size: 'major', region: 'north_america', landingFee: 1900 },
   { iata: 'CUN', name: 'Cancún Intl', city: 'Cancún', country: 'MX', lat: 21.0365, lon: -86.8771, size: 'large', region: 'north_america', landingFee: 1400 },
   { iata: 'GDL', name: 'Guadalajara Intl', city: 'Guadalajara', country: 'MX', lat: 20.5218, lon: -103.3110, size: 'medium', region: 'north_america', landingFee: 1100 },
@@ -93,7 +93,7 @@ export const AIRPORTS: Airport[] = [
   { iata: 'SVO', name: 'Sheremetyevo Intl', city: 'Moscow', country: 'RU', lat: 55.9726, lon: 37.4146, size: 'major', region: 'europe', landingFee: 2200 },
   { iata: 'LED', name: 'Pulkovo Airport', city: 'St. Petersburg', country: 'RU', lat: 59.8003, lon: 30.2625, size: 'large', region: 'europe', landingFee: 1600 },
 
-  // ASIA-PACIFIC — Japan
+  // ASIA-PACIFIC - Japan
   { iata: 'HND', name: 'Haneda Airport', city: 'Tokyo', country: 'JP', lat: 35.5494, lon: 139.7798, size: 'major', region: 'asia_pacific', landingFee: 3600 },
   { iata: 'NRT', name: 'Narita Intl', city: 'Tokyo', country: 'JP', lat: 35.7720, lon: 140.3929, size: 'major', region: 'asia_pacific', landingFee: 3400 },
   { iata: 'KIX', name: 'Kansai Intl', city: 'Osaka', country: 'JP', lat: 34.4269, lon: 135.2440, size: 'major', region: 'asia_pacific', landingFee: 2800 },
@@ -101,7 +101,7 @@ export const AIRPORTS: Airport[] = [
   { iata: 'FUK', name: 'Fukuoka Airport', city: 'Fukuoka', country: 'JP', lat: 33.5859, lon: 130.4511, size: 'large', region: 'asia_pacific', landingFee: 2000 },
   { iata: 'NGO', name: 'Chubu Centrair Intl', city: 'Nagoya', country: 'JP', lat: 34.8583, lon: 136.8050, size: 'large', region: 'asia_pacific', landingFee: 2200 },
 
-  // ASIA-PACIFIC — China
+  // ASIA-PACIFIC - China
   { iata: 'PEK', name: 'Beijing Capital Intl', city: 'Beijing', country: 'CN', lat: 40.0799, lon: 116.6031, size: 'major', region: 'asia_pacific', landingFee: 3000 },
   { iata: 'PKX', name: 'Beijing Daxing Intl', city: 'Beijing', country: 'CN', lat: 39.5098, lon: 116.4105, size: 'major', region: 'asia_pacific', landingFee: 2800 },
   { iata: 'PVG', name: 'Pudong Intl', city: 'Shanghai', country: 'CN', lat: 31.1434, lon: 121.8052, size: 'major', region: 'asia_pacific', landingFee: 3000 },
@@ -118,14 +118,14 @@ export const AIRPORTS: Airport[] = [
   { iata: 'HGH', name: 'Hangzhou Xiaoshan Intl', city: 'Hangzhou', country: 'CN', lat: 30.2295, lon: 120.4346, size: 'large', region: 'asia_pacific', landingFee: 1800 },
   { iata: 'URC', name: 'Ürümqi Diwopu Intl', city: 'Ürümqi', country: 'CN', lat: 43.9071, lon: 87.4742, size: 'medium', region: 'asia_pacific', landingFee: 1200 },
 
-  // ASIA-PACIFIC — Korea / Taiwan / Hong Kong
+  // ASIA-PACIFIC - Korea / Taiwan / Hong Kong
   { iata: 'ICN', name: 'Incheon Intl', city: 'Seoul', country: 'KR', lat: 37.4602, lon: 126.4407, size: 'major', region: 'asia_pacific', landingFee: 3000 },
   { iata: 'GMP', name: 'Gimpo Intl', city: 'Seoul', country: 'KR', lat: 37.5583, lon: 126.7906, size: 'large', region: 'asia_pacific', landingFee: 2200 },
   { iata: 'PUS', name: 'Gimhae Intl', city: 'Busan', country: 'KR', lat: 35.1795, lon: 128.9382, size: 'large', region: 'asia_pacific', landingFee: 1800 },
   { iata: 'TPE', name: 'Taiwan Taoyuan Intl', city: 'Taipei', country: 'TW', lat: 25.0777, lon: 121.2328, size: 'major', region: 'asia_pacific', landingFee: 2400 },
   { iata: 'HKG', name: 'Hong Kong Intl', city: 'Hong Kong', country: 'HK', lat: 22.3080, lon: 113.9185, size: 'major', region: 'asia_pacific', landingFee: 3400 },
 
-  // ASIA-PACIFIC — Southeast Asia
+  // ASIA-PACIFIC - Southeast Asia
   { iata: 'SIN', name: 'Changi Airport', city: 'Singapore', country: 'SG', lat: 1.3644, lon: 103.9915, size: 'major', region: 'asia_pacific', landingFee: 3200 },
   { iata: 'BKK', name: 'Suvarnabhumi', city: 'Bangkok', country: 'TH', lat: 13.6900, lon: 100.7501, size: 'major', region: 'asia_pacific', landingFee: 2600 },
   { iata: 'KUL', name: 'Kuala Lumpur Intl', city: 'Kuala Lumpur', country: 'MY', lat: 2.7456, lon: 101.7099, size: 'major', region: 'asia_pacific', landingFee: 2400 },
@@ -135,7 +135,7 @@ export const AIRPORTS: Airport[] = [
   { iata: 'HAN', name: 'Noi Bai Intl', city: 'Hanoi', country: 'VN', lat: 21.2187, lon: 105.8047, size: 'large', region: 'asia_pacific', landingFee: 1400 },
   { iata: 'RGN', name: 'Yangon Intl', city: 'Yangon', country: 'MM', lat: 16.9073, lon: 96.1332, size: 'medium', region: 'asia_pacific', landingFee: 1000 },
 
-  // ASIA-PACIFIC — South Asia
+  // ASIA-PACIFIC - South Asia
   { iata: 'DEL', name: 'Indira Gandhi Intl', city: 'Delhi', country: 'IN', lat: 28.5562, lon: 77.1000, size: 'major', region: 'asia_pacific', landingFee: 2600 },
   { iata: 'BOM', name: 'Chhatrapati Shivaji Intl', city: 'Mumbai', country: 'IN', lat: 19.0896, lon: 72.8656, size: 'major', region: 'asia_pacific', landingFee: 2400 },
   { iata: 'MAA', name: 'Chennai Intl', city: 'Chennai', country: 'IN', lat: 12.9941, lon: 80.1709, size: 'large', region: 'asia_pacific', landingFee: 1800 },
@@ -146,7 +146,7 @@ export const AIRPORTS: Airport[] = [
   { iata: 'DAC', name: 'Hazrat Shahjalal Intl', city: 'Dhaka', country: 'BD', lat: 23.8433, lon: 90.3978, size: 'large', region: 'asia_pacific', landingFee: 1400 },
   { iata: 'KHI', name: 'Jinnah Intl', city: 'Karachi', country: 'PK', lat: 24.9065, lon: 67.1608, size: 'large', region: 'asia_pacific', landingFee: 1400 },
 
-  // ASIA-PACIFIC — Australia / New Zealand
+  // ASIA-PACIFIC - Australia / New Zealand
   { iata: 'SYD', name: 'Kingsford Smith Intl', city: 'Sydney', country: 'AU', lat: -33.9399, lon: 151.1753, size: 'major', region: 'asia_pacific', landingFee: 2800 },
   { iata: 'MEL', name: 'Melbourne Airport', city: 'Melbourne', country: 'AU', lat: -37.6690, lon: 144.8410, size: 'major', region: 'asia_pacific', landingFee: 2600 },
   { iata: 'BNE', name: 'Brisbane Airport', city: 'Brisbane', country: 'AU', lat: -27.3842, lon: 153.1175, size: 'large', region: 'asia_pacific', landingFee: 2200 },
@@ -188,7 +188,7 @@ export const AIRPORTS: Airport[] = [
   { iata: 'DKR', name: 'Léopold Sédar Senghor Intl', city: 'Dakar', country: 'SN', lat: 14.7397, lon: -17.4902, size: 'medium', region: 'africa', landingFee: 1100 },
   { iata: 'EBB', name: 'Entebbe Intl', city: 'Entebbe', country: 'UG', lat: 0.0424, lon: 32.4435, size: 'medium', region: 'africa', landingFee: 1100 },
 
-  // LATIN AMERICA — Brazil
+  // LATIN AMERICA - Brazil
   { iata: 'GRU', name: 'Guarulhos Intl', city: 'São Paulo', country: 'BR', lat: -23.4356, lon: -46.4731, size: 'major', region: 'latin_america', landingFee: 2200 },
   { iata: 'GIG', name: 'Galeão Intl', city: 'Rio de Janeiro', country: 'BR', lat: -22.8099, lon: -43.2505, size: 'major', region: 'latin_america', landingFee: 2000 },
   { iata: 'BSB', name: 'Brasília Intl', city: 'Brasília', country: 'BR', lat: -15.8711, lon: -47.9186, size: 'large', region: 'latin_america', landingFee: 1600 },
@@ -196,20 +196,20 @@ export const AIRPORTS: Airport[] = [
   { iata: 'FOR', name: 'Pinto Martins Intl', city: 'Fortaleza', country: 'BR', lat: -3.7763, lon: -38.5326, size: 'medium', region: 'latin_america', landingFee: 1200 },
   { iata: 'REC', name: 'Guararapes Intl', city: 'Recife', country: 'BR', lat: -8.1265, lon: -34.9230, size: 'medium', region: 'latin_america', landingFee: 1200 },
 
-  // LATIN AMERICA — Southern Cone
+  // LATIN AMERICA - Southern Cone
   { iata: 'EZE', name: 'Ministro Pistarini Intl', city: 'Buenos Aires', country: 'AR', lat: -34.8222, lon: -58.5358, size: 'major', region: 'latin_america', landingFee: 2000 },
   { iata: 'SCL', name: 'Arturo Merino Benítez Intl', city: 'Santiago', country: 'CL', lat: -33.3928, lon: -70.7858, size: 'major', region: 'latin_america', landingFee: 1800 },
   { iata: 'MVD', name: 'Carrasco Intl', city: 'Montevideo', country: 'UY', lat: -34.8384, lon: -56.0308, size: 'medium', region: 'latin_america', landingFee: 1200 },
   { iata: 'ASU', name: 'Silvio Pettirossi Intl', city: 'Asunción', country: 'PY', lat: -25.2400, lon: -57.5197, size: 'medium', region: 'latin_america', landingFee: 1000 },
   { iata: 'LPB', name: 'El Alto Intl', city: 'La Paz', country: 'BO', lat: -16.5133, lon: -68.1923, size: 'medium', region: 'latin_america', landingFee: 1000 },
 
-  // LATIN AMERICA — Andean
+  // LATIN AMERICA - Andean
   { iata: 'LIM', name: 'Jorge Chávez Intl', city: 'Lima', country: 'PE', lat: -12.0219, lon: -77.1143, size: 'major', region: 'latin_america', landingFee: 1600 },
   { iata: 'BOG', name: 'El Dorado Intl', city: 'Bogotá', country: 'CO', lat: 4.7016, lon: -74.1469, size: 'major', region: 'latin_america', landingFee: 1600 },
   { iata: 'UIO', name: 'Mariscal Sucre Intl', city: 'Quito', country: 'EC', lat: -0.1292, lon: -78.3576, size: 'large', region: 'latin_america', landingFee: 1400 },
   { iata: 'CCS', name: 'Simón Bolívar Intl', city: 'Caracas', country: 'VE', lat: 10.6031, lon: -66.9914, size: 'large', region: 'latin_america', landingFee: 1400 },
 
-  // LATIN AMERICA — Central America & Caribbean
+  // LATIN AMERICA - Central America & Caribbean
   { iata: 'PTY', name: 'Tocumen Intl', city: 'Panama City', country: 'PA', lat: 9.0714, lon: -79.3835, size: 'large', region: 'latin_america', landingFee: 1600 },
   { iata: 'SJO', name: 'Juan Santamaría Intl', city: 'San José', country: 'CR', lat: 9.9939, lon: -84.2088, size: 'medium', region: 'latin_america', landingFee: 1200 },
   { iata: 'GUA', name: 'La Aurora Intl', city: 'Guatemala City', country: 'GT', lat: 14.5833, lon: -90.5275, size: 'medium', region: 'latin_america', landingFee: 1100 },

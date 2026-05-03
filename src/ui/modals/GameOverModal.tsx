@@ -42,7 +42,7 @@ export const GameOverModal: React.FC = () => {
         {/* Condition explanation */}
         <div className={`rounded-lg p-3 mb-5 text-center text-sm ${isWin ? 'bg-yellow-900/30 border border-yellow-700/50 text-yellow-300' : 'bg-red-900/30 border border-red-700/50 text-red-300'}`}>
           {isWin
-            ? 'Your airline captured over 50% of the global market share — a true empire!'
+            ? 'Your airline captured over 50% of the global market share - a true empire!'
             : 'Your airline accumulated over $100M in debt and became insolvent.'}
         </div>
 

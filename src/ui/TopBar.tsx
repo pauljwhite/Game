@@ -36,7 +36,7 @@ export const TopBar: React.FC = () => {
             {playerAirline?.name ?? 'Airline Empire'}
           </div>
           <div className={`text-xs font-mono ${(playerAirline?.cashUSD ?? 0) >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-            {playerAirline ? formatCurrency(playerAirline.cashUSD) : '—'}
+            {playerAirline ? formatCurrency(playerAirline.cashUSD) : '-'}
           </div>
         </div>
       </div>

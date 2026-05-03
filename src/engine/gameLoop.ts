@@ -45,7 +45,7 @@ function tick(nowMs: number): void {
   const newState = useGameStore.getState();
 
   if (newDay > prevDay) {
-    // One or more game days have passed — run economics + AI
+    // One or more game days have passed - run economics + AI
     runDailyTick(newState);
     runAITick(newState, newDay);
   }

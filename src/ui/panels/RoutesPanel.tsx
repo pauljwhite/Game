@@ -45,7 +45,7 @@ export const RoutesPanel: React.FC = () => {
                 <div className="flex items-center gap-2">
                   <span className={`w-2 h-2 rounded-full ${route.isActive ? 'bg-green-400' : 'bg-gray-500'}`} />
                   <span className="text-white font-mono text-sm">
-                    {route.originIata} → {route.destinationIata}
+                    {route.originIata} -> {route.destinationIata}
                   </span>
                 </div>
                 <span className={`text-sm font-medium ${profitColor}`}>

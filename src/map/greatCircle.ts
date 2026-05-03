@@ -36,7 +36,7 @@ export function computeArcSegments(
     const lonDiff = Math.abs(next.lon - prev.lon);
 
     if (lonDiff > 180) {
-      // Antimeridian crossing — start new segment
+      // Antimeridian crossing - start new segment
       segments.push({ points: current });
       current = [next];
     } else {

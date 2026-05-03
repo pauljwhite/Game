@@ -66,7 +66,7 @@ export const FleetPanel: React.FC = () => {
                   </div>
                   <div className="text-gray-400 text-xs mt-0.5">
                     {assignedRoute
-                      ? `${assignedRoute.originIata} → ${assignedRoute.destinationIata}`
+                      ? `${assignedRoute.originIata} -> ${assignedRoute.destinationIata}`
                       : 'Unassigned'}
                   </div>
 

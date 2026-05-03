@@ -5,6 +5,9 @@ import { computeFlightCost, gameDayFromMs } from '@/engine/economicsEngine';
 import { getSuggestedEconomyPrice } from '@/engine/demandModel';
 import { AIRCRAFT_TYPES } from '@/data/aircraftTypes';
 import type { Route } from '@/types';
+import { FUEL_PRICE_USD_PER_LITER } from '@/utils/constants';
+import { AirportSearchInput } from '@/ui/components/AirportSearchInput';
+import { findAirportByQuery } from '@/utils/airportSearch';
 
 function formatUSD(n: number): string {
   if (Math.abs(n) >= 1_000_000) return `$${(n / 1_000_000).toFixed(2)}M`;
@@ -33,8 +36,8 @@ export const NewRouteModal: React.FC = () => {
   const [submitError, setSubmitError] = useState<string | null>(null);
 
   // Resolve airports
-  const originAirport = airports[originIata.toUpperCase()] ?? null;
-  const destAirport = airports[destIata.toUpperCase()] ?? null;
+  const originAirport = findAirportByQuery(originIata, airports);
+  const destAirport = findAirportByQuery(destIata, airports);
 
   const distanceKm = useMemo(() => {
     if (!originAirport || !destAirport) return null;
@@ -69,7 +72,7 @@ export const NewRouteModal: React.FC = () => {
   // Validation
   const validOrigin = !!originAirport;
   const validDest = !!destAirport;
-  const sameAirport = originIata.toUpperCase() === destIata.toUpperCase() && originIata.length === 3;
+  const sameAirport = !!originAirport && !!destAirport && originAirport.iata === destAirport.iata;
   const outOfRange = distanceKm !== null && selectedType !== null && distanceKm > selectedType.rangeKm;
 
   const canSubmit =
@@ -86,8 +89,8 @@ export const NewRouteModal: React.FC = () => {
     const mockRoute: Route = {
       id: 'preview',
       airlineId: 'player',
-      originIata: originIata.toUpperCase(),
-      destinationIata: destIata.toUpperCase(),
+      originIata: originAirport?.iata ?? originIata.toUpperCase(),
+      destinationIata: destAirport?.iata ?? destIata.toUpperCase(),
       aircraftId: selectedAc.id,
       flightsPerWeek,
       priceEconomy,
@@ -104,7 +107,7 @@ export const NewRouteModal: React.FC = () => {
       loadFactorBusiness: 0,
     };
 
-    const costs = computeFlightCost(mockRoute, selectedAc, selectedType, originAirport, destAirport);
+    const costs = computeFlightCost(mockRoute, selectedAc, selectedType, originAirport, destAirport, FUEL_PRICE_USD_PER_LITER);
     const flightsPerDay = flightsPerWeek / 7;
     const dailyCost = costs.totalCost * flightsPerDay;
 
@@ -123,8 +126,8 @@ export const NewRouteModal: React.FC = () => {
     setSubmitError(null);
 
     const config = {
-      originIata: originIata.toUpperCase(),
-      destinationIata: destIata.toUpperCase(),
+      originIata: originAirport!.iata,
+      destinationIata: destAirport!.iata,
       aircraftId: selectedAircraftId,
       flightsPerWeek,
       priceEconomy,
@@ -150,7 +153,7 @@ export const NewRouteModal: React.FC = () => {
             className="text-gray-400 hover:text-white text-2xl leading-none transition-colors"
             aria-label="Close"
           >
-            ✕
+            x
           </button>
         </div>
 
@@ -159,42 +162,22 @@ export const NewRouteModal: React.FC = () => {
 
           {/* Airport Inputs */}
           <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="text-gray-300 text-sm block mb-1">Origin (IATA)</label>
-              <input
-                className={`w-full bg-gray-800 border rounded px-3 py-2 text-white text-sm font-mono uppercase focus:outline-none focus:border-blue-500 ${
-                  originIata.length === 3 && !validOrigin ? 'border-red-600' : 'border-gray-600'
-                }`}
-                value={originIata}
-                onChange={e => setOriginIata(e.target.value.toUpperCase().slice(0, 3))}
-                placeholder="JFK"
-                maxLength={3}
-              />
-              {originAirport && (
-                <p className="text-xs text-gray-400 mt-1">{originAirport.name}</p>
-              )}
-              {originIata.length === 3 && !validOrigin && (
-                <p className="text-xs text-red-400 mt-1">Airport not found</p>
-              )}
-            </div>
-            <div>
-              <label className="text-gray-300 text-sm block mb-1">Destination (IATA)</label>
-              <input
-                className={`w-full bg-gray-800 border rounded px-3 py-2 text-white text-sm font-mono uppercase focus:outline-none focus:border-blue-500 ${
-                  destIata.length === 3 && !validDest ? 'border-red-600' : 'border-gray-600'
-                }`}
-                value={destIata}
-                onChange={e => setDestIata(e.target.value.toUpperCase().slice(0, 3))}
-                placeholder="LAX"
-                maxLength={3}
-              />
-              {destAirport && (
-                <p className="text-xs text-gray-400 mt-1">{destAirport.name}</p>
-              )}
-              {destIata.length === 3 && !validDest && (
-                <p className="text-xs text-red-400 mt-1">Airport not found</p>
-              )}
-            </div>
+            <AirportSearchInput
+              label="Origin"
+              value={originIata}
+              airports={airports}
+              placeholder="JFK, KJFK, New York"
+              onChange={setOriginIata}
+              onSelect={airport => setOriginIata(airport.iata)}
+            />
+            <AirportSearchInput
+              label="Destination"
+              value={destIata}
+              airports={airports}
+              placeholder="LAX, KLAX, Los Angeles"
+              onChange={setDestIata}
+              onSelect={airport => setDestIata(airport.iata)}
+            />
           </div>
 
           {/* Distance */}
@@ -216,7 +199,7 @@ export const NewRouteModal: React.FC = () => {
           {/* Aircraft Selector */}
           <div>
             <label className="text-gray-300 text-sm block mb-2">
-              Aircraft <span className="text-gray-500 font-normal">(optional — route inactive without one)</span>
+              Aircraft <span className="text-gray-500 font-normal">(optional - route inactive without one)</span>
             </label>
             {availableAircraft.length === 0 ? (
               <p className="text-sm text-gray-500 italic">No unassigned aircraft available. Buy aircraft first.</p>
@@ -252,7 +235,7 @@ export const NewRouteModal: React.FC = () => {
                       {acType?.model ?? ac.typeId}
                       {acType && (
                         <span className="ml-2 text-gray-500 text-xs">
-                          {acType.seatsEconomy}Y{acType.seatsBusiness > 0 ? `/${acType.seatsBusiness}J` : ''} · {acType.rangeKm.toLocaleString()} km
+                          {acType.seatsEconomy}Y{acType.seatsBusiness > 0 ? `/${acType.seatsBusiness}J` : ''} - {acType.rangeKm.toLocaleString()} km
                         </span>
                       )}
                       {tooFar && <span className="ml-2 text-red-500 text-xs">out of range</span>}
@@ -337,7 +320,7 @@ export const NewRouteModal: React.FC = () => {
                 </div>
               </div>
               <p className="text-xs text-gray-500 mt-2">
-                Flight time: {pnlPreview.flightDurationHours.toFixed(1)}h · {flightsPerWeek} flights/week
+                Flight time: {pnlPreview.flightDurationHours.toFixed(1)}h - {flightsPerWeek} flights/week
               </p>
             </div>
           )}
