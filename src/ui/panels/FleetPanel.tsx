@@ -62,8 +62,11 @@ function AircraftCard({ ac, gameDay }: { ac: Aircraft; gameDay: number }) {
           {ac.autoMaintenanceEnabled && !inMaint && <span className="soft-tag border-sky-300/20 bg-sky-500/15 text-sky-200">AUTO</span>}
         </span>
 
-        {/* Route — flexible */}
-        <span className="flex-1 text-gray-400 text-xs truncate min-w-0">{routeLabel}</span>
+        {/* Route — never truncated */}
+        <span className="shrink-0 text-gray-400 text-xs">{routeLabel}</span>
+
+        {/* Spacer */}
+        <span className="flex-1" />
 
         {/* Flight hours */}
         <span className="text-[10px] text-gray-500 shrink-0 w-12 text-right">
