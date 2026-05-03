@@ -144,7 +144,7 @@ export function runDailyTick(store: ReturnType<typeof import('@/store/index')['u
     store.recoverReputation('player');
   }
 
-  // AI economics (simplified)
+  // AI economics (same model as player, capped by seat capacity)
   Object.values(aiAirlines).forEach(aiAirline => {
     if (aiAirline.isInsolvent) return;
     let aiRevenue = 0;
@@ -165,15 +165,42 @@ export function runDailyTick(store: ReturnType<typeof import('@/store/index')['u
 
       const flightCosts = computeFlightCost(route, ac, aircraftType, origin, dest, globalFuelPrice);
       const flightsPerDay = route.flightsPerWeek / 7;
-      const baselinePax = getBaselineDailyPax(origin, dest);
-      const marketShare = getPlayerMarketShare(route.originIata, route.destinationIata, route.priceEconomy, allAirlines, allRoutes);
-      const dailyPax = Math.floor(baselinePax * marketShare);
 
-      aiRevenue += dailyPax * route.priceEconomy * flightsPerDay;
-      aiCost += flightCosts.totalCost * flightsPerDay;
+      // Reference price for solo-route elasticity (same formula as player)
+      const totalSeats = aircraftType.seatsEconomy + aircraftType.seatsBusiness;
+      const referencePrice = totalSeats > 0 ? Math.round(flightCosts.totalCost / totalSeats * 1.4) : 200;
+
+      const baselinePax = getBaselineDailyPax(origin, dest);
+      const marketShare = getPlayerMarketShare(
+        route.originIata, route.destinationIata,
+        route.priceEconomy, allAirlines, allRoutes, referencePrice,
+      );
+      const demandPax = Math.floor(baselinePax * marketShare);
+
+      // Cap to actual seat capacity
+      const ecoCapacity = Math.floor(aircraftType.seatsEconomy * flightsPerDay);
+      const dailyPax = Math.min(demandPax, ecoCapacity);
+      const loadFactor = ecoCapacity > 0 ? dailyPax / ecoCapacity : 0;
+
+      const dailyRevenue = dailyPax * route.priceEconomy;
+      const dailyCost = flightCosts.totalCost * flightsPerDay;
+      const dailyProfit = dailyRevenue - dailyCost;
+
+      aiRevenue += dailyRevenue;
+      aiCost += dailyCost;
       aiPax += dailyPax;
 
-      store.updateAIAircraftCondition(ac.id, -flightsPerDay * 0.05, flightsPerDay * flightCosts.flightDurationHours);
+      store.updateAIRoute(routeId, {
+        dailyRevenue, dailyCost, dailyProfit,
+        loadFactorEconomy: loadFactor,
+        dailyPassengers: dailyPax,
+      });
+
+      store.updateAIAircraftCondition(
+        ac.id,
+        -(flightsPerDay * flightCosts.flightDurationHours * 0.08),
+        flightsPerDay * flightCosts.flightDurationHours,
+      );
     });
 
     store.updateAIAirlineStats(aiAirline.id, aiRevenue - aiCost, aiPax);
