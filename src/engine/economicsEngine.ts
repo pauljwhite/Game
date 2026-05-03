@@ -87,6 +87,12 @@ export function runDailyTick(store: ReturnType<typeof import('@/store/index')['u
       const dest = airports[route.destinationIata];
       if (!origin || !dest) return;
 
+      // Skip if either airport is closed today
+      if (
+        (origin.closedUntilGameDay !== undefined && origin.closedUntilGameDay >= gameDay) ||
+        (dest.closedUntilGameDay !== undefined && dest.closedUntilGameDay >= gameDay)
+      ) return;
+
       const aircraftType: AircraftType | undefined = AIRCRAFT_TYPES.find(t => t.id === ac.typeId);
       if (!aircraftType) return;
 

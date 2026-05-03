@@ -19,9 +19,17 @@ export const AirportPopup: React.FC = () => {
   const playerAirline = airlines['player'];
   const isHub = airport.isHub;
   const playerHasHub = playerAirline?.hubIatas.includes(selectedIata);
+  const gameDay = useGameStore(s => s.gameDay);
+  const isClosed = airport.closedUntilGameDay !== undefined && airport.closedUntilGameDay >= gameDay;
 
   return (
     <div className="absolute bottom-12 left-4 z-[800] glass-panel rounded-xl p-3 w-64">
+      {isClosed && (
+        <div className="mb-2 px-2 py-1.5 bg-red-900/50 border border-red-500/50 rounded-lg flex items-center gap-1.5">
+          <span className="text-red-400 font-bold text-xs">CLOSED</span>
+          <span className="text-red-300 text-xs">{airport.closureReason}</span>
+        </div>
+      )}
       <div className="flex justify-between items-start">
         <div>
           <div className="text-white font-bold text-sm">{airport.name}</div>

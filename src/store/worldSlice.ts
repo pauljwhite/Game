@@ -21,6 +21,7 @@ export interface WorldSlice {
   setGlobalFuelPrice: (price: number) => void;
   updateTotalMarketPAX: (pax: number) => void;
   setAirportHub: (iata: string, isHub: boolean) => void;
+  setAirportClosure: (iata: string, untilGameDay: number, reason: string) => void;
   updateAIAircraftCondition: (aircraftId: string, conditionDelta: number, hoursOwed: number) => void;
   updateAIAirlineStats: (id: string, netProfit: number, passengers: number) => void;
   removeAIAirline: (id: string) => void;
@@ -96,6 +97,14 @@ export const createWorldSlice: StateCreator<GameStore, [['zustand/immer', never]
   setAirportHub: (iata, isHub) =>
     set((state) => {
       if (state.airports[iata]) state.airports[iata].isHub = isHub;
+    }),
+
+  setAirportClosure: (iata, untilGameDay, reason) =>
+    set((state) => {
+      if (state.airports[iata]) {
+        state.airports[iata].closedUntilGameDay = untilGameDay;
+        state.airports[iata].closureReason = reason;
+      }
     }),
 
   updateAIAircraftCondition: (aircraftId, conditionDelta, hoursOwed) =>

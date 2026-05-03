@@ -146,6 +146,99 @@ const AI_SCANDAL_EVENTS: ScandalEventDef[] = [
   },
 ];
 
+interface AirportEventDef {
+  id: string;
+  newsTemplate: string; // {airport}, {city}
+  closureReason: string; // short label for UI
+  minDays: number;
+  maxDays: number;
+  probability: number; // per eligible airport per day
+  sizesAffected: string[]; // which airport sizes can be hit
+}
+
+const AIRPORT_EVENTS: AirportEventDef[] = [
+  {
+    id: 'storm',
+    newsTemplate: 'STORM: Severe weather forces closure of {city} Airport ({airport}). Flights suspended for {duration}.',
+    closureReason: 'Storm',
+    minDays: 1, maxDays: 2,
+    probability: 0.0004,
+    sizesAffected: ['small', 'medium', 'large', 'major'],
+  },
+  {
+    id: 'blizzard',
+    newsTemplate: 'BLIZZARD: Heavy snowfall shuts down {city} Airport ({airport}). Operations halted for {duration}.',
+    closureReason: 'Blizzard',
+    minDays: 1, maxDays: 3,
+    probability: 0.0003,
+    sizesAffected: ['medium', 'large', 'major'],
+  },
+  {
+    id: 'fog',
+    newsTemplate: 'FOG: Dense fog blankets {city} Airport ({airport}), forcing a {duration} suspension of all flights.',
+    closureReason: 'Dense fog',
+    minDays: 1, maxDays: 1,
+    probability: 0.0005,
+    sizesAffected: ['small', 'medium', 'large', 'major'],
+  },
+  {
+    id: 'it_outage',
+    newsTemplate: 'IT OUTAGE: Systems failure at {city} Airport ({airport}) grounds all flights. Engineers working to restore services.',
+    closureReason: 'IT outage',
+    minDays: 1, maxDays: 1,
+    probability: 0.0003,
+    sizesAffected: ['large', 'major'],
+  },
+  {
+    id: 'security_alert',
+    newsTemplate: 'SECURITY: {city} Airport ({airport}) evacuated and closed following a security alert. Flights diverted.',
+    closureReason: 'Security alert',
+    minDays: 1, maxDays: 1,
+    probability: 0.0002,
+    sizesAffected: ['large', 'major'],
+  },
+  {
+    id: 'runway_incident',
+    newsTemplate: 'RUNWAY CLOSED: {city} Airport ({airport}) runway closed following an aircraft incident. Flights suspended for {duration}.',
+    closureReason: 'Runway incident',
+    minDays: 1, maxDays: 2,
+    probability: 0.0003,
+    sizesAffected: ['medium', 'large', 'major'],
+  },
+  {
+    id: 'ash_cloud',
+    newsTemplate: 'ASH CLOUD: Volcanic ash disruption closes {city} Airport ({airport}) for {duration}.',
+    closureReason: 'Volcanic ash',
+    minDays: 1, maxDays: 3,
+    probability: 0.00015,
+    sizesAffected: ['small', 'medium', 'large', 'major'],
+  },
+  {
+    id: 'flood',
+    newsTemplate: 'FLOODING: Flash flooding at {city} Airport ({airport}) suspends all operations for {duration}.',
+    closureReason: 'Flooding',
+    minDays: 1, maxDays: 2,
+    probability: 0.0002,
+    sizesAffected: ['small', 'medium', 'large', 'major'],
+  },
+  {
+    id: 'bird_flock',
+    newsTemplate: 'BIRD STRIKE RISK: Large bird flock grounds all traffic at {city} Airport ({airport}) for {duration}.',
+    closureReason: 'Bird flock hazard',
+    minDays: 1, maxDays: 1,
+    probability: 0.0002,
+    sizesAffected: ['small', 'medium'],
+  },
+  {
+    id: 'power_failure',
+    newsTemplate: 'POWER FAILURE: Major blackout at {city} Airport ({airport}) halts all operations. Backup power insufficient.',
+    closureReason: 'Power failure',
+    minDays: 1, maxDays: 2,
+    probability: 0.00025,
+    sizesAffected: ['medium', 'large', 'major'],
+  },
+];
+
 function pickAirport(store: ReturnType<typeof import('@/store/index')['useGameStore']['getState']>, iata: string | undefined): string {
   if (iata && store.airports[iata]) return store.airports[iata].city;
   const keys = Object.keys(store.airports);
@@ -251,4 +344,32 @@ export function runRandomEventsTick(
       break; // one scandal per airline per day
     }
   });
+
+  // ── Airport closure events ─────────────────────────────────────────────
+  const { airports, gameDay } = store;
+  const airportList = Object.values(airports).filter(ap => {
+    // Skip airports already closed
+    if (ap.closedUntilGameDay && ap.closedUntilGameDay >= gameDay) return false;
+    return true;
+  });
+
+  for (const airport of airportList) {
+    for (const evt of AIRPORT_EVENTS) {
+      if (!evt.sizesAffected.includes(airport.size)) continue;
+      if (Math.random() > evt.probability) continue;
+
+      const durationDays = evt.minDays + Math.floor(Math.random() * (evt.maxDays - evt.minDays + 1));
+      const untilDay = gameDay + durationDays - 1;
+      const durationLabel = durationDays === 1 ? '1 day' : `${durationDays} days`;
+
+      const msg = evt.newsTemplate
+        .replace('{airport}', airport.iata)
+        .replace('{city}', airport.city)
+        .replace('{duration}', durationLabel);
+
+      store.pushNewsItem(msg);
+      store.setAirportClosure(airport.iata, untilDay, evt.closureReason);
+      break; // one event per airport per day
+    }
+  }
 }
