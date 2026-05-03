@@ -233,6 +233,20 @@ export function runDailyTick(store: ReturnType<typeof import('@/store/index')['u
     }
   });
 
+  // Distribute dividends from profitable AI airlines to their shareholders
+  Object.values(aiAirlines).forEach(aiAirline => {
+    const profit = aiAirline.lastDailyProfit ?? 0;
+    if (profit <= 0 || !aiAirline.shareholders) return;
+    Object.entries(aiAirline.shareholders).forEach(([ownerId, pct]) => {
+      const div = (pct / 100) * profit;
+      if (ownerId === 'player') {
+        store.applyDividend(div);
+      } else if (aiAirlines[ownerId]) {
+        store.applyAIDividend(ownerId, div);
+      }
+    });
+  });
+
   void gameDay;
   void allRoutes;
   void _ac;

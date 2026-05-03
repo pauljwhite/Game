@@ -5,7 +5,7 @@ import { v4 as uuid } from 'uuid';
 import { haversineKm } from '@/utils/geo';
 import { AIRCRAFT_TYPES } from '@/data/aircraftTypes';
 import { computeMaintenanceCost, MAINTENANCE_TIERS } from '@/utils/constants';
-import { computeAircraftValue, calculateBuyoutPrice } from '@/engine/valuation';
+import { computeAircraftValue, calculateBuyoutPrice, rawCompanyValue, calculateSharePrice } from '@/engine/valuation';
 import type { GameStore } from './index';
 
 export interface RouteConfig {
@@ -45,6 +45,8 @@ export interface PlayerSlice {
   recoverReputation: (airlineId: string) => void;
   setPRCampaign: (airlineId: string) => void;
   rebrandAirline: (newName: string | null, newColor: string | null, cost: number) => void;
+  buyShares: (targetId: string, percent: number, source: 'market' | string) => void;
+  applyDividend: (amount: number) => void;
 }
 
 const PLAYER_ID = 'player';
@@ -78,6 +80,8 @@ export const createPlayerSlice: StateCreator<GameStore, [['zustand/immer', never
         totalPassengersAllTime: 0,
         dailyStats: [],
         crashPenaltyDaysLeft: 0,
+        shareholders: {},
+        lastDailyProfit: 0,
       };
       state.airlines[PLAYER_ID] = airline;
     }),
@@ -220,8 +224,12 @@ export const createPlayerSlice: StateCreator<GameStore, [['zustand/immer', never
     set((state) => {
       const target = aiAirlines[targetAirlineId];
       if (!target) return;
+      const playerStake = (target.shareholders ?? {})['player'] ?? 0;
+      if (!target.isInsolvent && playerStake < 50) return;
       const { totalPrice } = calculateBuyoutPrice(target, aiAircraft, aiRoutes);
-      state.airlines[PLAYER_ID].cashUSD -= totalPrice;
+      const ownedValue = rawCompanyValue(target, aiAircraft, aiRoutes) * (playerStake / 100);
+      const adjustedPrice = Math.max(0, totalPrice - ownedValue);
+      state.airlines[PLAYER_ID].cashUSD -= adjustedPrice;
 
       // Transfer fleet — reset grounding and initialise player-only fields
       target.fleetIds.forEach(id => {
@@ -390,5 +398,57 @@ export const createPlayerSlice: StateCreator<GameStore, [['zustand/immer', never
       airline.cashUSD -= cost;
       if (newName) airline.name = newName;
       if (newColor) airline.color = newColor;
+    }),
+
+  buyShares: (targetId, percent, source) => {
+    const state = get();
+    const target = state.aiAirlines[targetId];
+    const player = state.airlines[PLAYER_ID];
+    if (!target || !player) return;
+
+    const currentPlayerPct = (target.shareholders ?? {})[PLAYER_ID] ?? 0;
+    const isSecondary = source !== 'market';
+
+    const cost = calculateSharePrice(
+      percent, currentPlayerPct, target, state.aiAircraft, state.aiRoutes, isSecondary,
+    );
+
+    if (player.cashUSD < cost) return;
+
+    if (isSecondary) {
+      const sellerPct = (target.shareholders ?? {})[source] ?? 0;
+      if (sellerPct < percent) return;
+    } else {
+      const ownedTotal = Object.values(target.shareholders ?? {}).reduce((s, v) => s + v, 0);
+      if (100 - ownedTotal < percent) return;
+    }
+
+    set((s) => {
+      const t = s.aiAirlines[targetId];
+      const p = s.airlines[PLAYER_ID];
+      if (!t || !p) return;
+      t.shareholders ??= {};
+      t.shareholders[PLAYER_ID] = (t.shareholders[PLAYER_ID] ?? 0) + percent;
+      if (isSecondary) {
+        const prev = t.shareholders[source] ?? 0;
+        const remaining = prev - percent;
+        if (remaining <= 0) delete t.shareholders[source];
+        else t.shareholders[source] = remaining;
+      }
+      p.cashUSD -= cost;
+    });
+
+    get().pushNewsItem(
+      `You acquired ${percent}% stake in ${target.name} for ${
+        new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(cost)
+      }.`,
+    );
+  },
+
+  applyDividend: (amount) =>
+    set((state) => {
+      if (state.airlines[PLAYER_ID]) {
+        state.airlines[PLAYER_ID].cashUSD += amount;
+      }
     }),
 });

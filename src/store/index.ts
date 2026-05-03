@@ -11,7 +11,7 @@ export type GameStore = GameSlice & PlayerSlice & WorldSlice & UISlice;
 
 const VALID_GAME_SPEEDS = new Set([0, 60, 300, 1200, 3600, 14400]);
 const DEFAULT_GAME_SPEED = 300;
-const SAVE_VERSION = 6;
+const SAVE_VERSION = 7;
 
 function uniqueExistingIds(ids: unknown, exists: (id: string) => boolean): string[] {
   if (!Array.isArray(ids)) return [];
@@ -42,6 +42,8 @@ function sanitizePersistedState(state: Partial<GameStore>): Partial<GameStore> {
           ...airline,
           totalPassengersAllTime: typeof raw.totalPassengersAllTime === 'number' ? raw.totalPassengersAllTime : 0,
           crashPenaltyDaysLeft: typeof raw.crashPenaltyDaysLeft === 'number' ? raw.crashPenaltyDaysLeft : 0,
+          shareholders: (raw.shareholders as Record<string, number> | undefined) ?? {},
+          lastDailyProfit: typeof raw.lastDailyProfit === 'number' ? raw.lastDailyProfit : 0,
           routeIds: uniqueExistingIds(airline.routeIds, routeId => aiRoutes[routeId]?.airlineId === id),
           fleetIds: uniqueExistingIds(airline.fleetIds, aircraftId => aiAircraft[aircraftId]?.airlineId === id),
         },
@@ -58,6 +60,8 @@ function sanitizePersistedState(state: Partial<GameStore>): Partial<GameStore> {
           ...airline,
           totalPassengersAllTime: typeof raw.totalPassengersAllTime === 'number' ? raw.totalPassengersAllTime : 0,
           crashPenaltyDaysLeft: typeof raw.crashPenaltyDaysLeft === 'number' ? raw.crashPenaltyDaysLeft : 0,
+          shareholders: (raw.shareholders as Record<string, number> | undefined) ?? {},
+          lastDailyProfit: typeof raw.lastDailyProfit === 'number' ? raw.lastDailyProfit : 0,
           routeIds: uniqueExistingIds(airline.routeIds, routeId => routes[routeId]?.airlineId === id),
           fleetIds: uniqueExistingIds(airline.fleetIds, aircraftId => aircraft[aircraftId]?.airlineId === id),
         },

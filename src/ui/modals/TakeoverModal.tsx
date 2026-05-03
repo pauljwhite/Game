@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useGameStore } from '@/store';
 import { formatCurrency } from '@/utils/format';
 import { AIRCRAFT_TYPES } from '@/data/aircraftTypes';
-import { calculateBuyoutPrice } from '@/engine/valuation';
+import { calculateBuyoutPrice, rawCompanyValue } from '@/engine/valuation';
 
 const typeMap = Object.fromEntries(AIRCRAFT_TYPES.map(t => [t.id, t]));
 
@@ -27,8 +27,14 @@ export const TakeoverModal: React.FC = () => {
 
   if (!target || !playerAirline) return null;
 
+  const playerStake = (target.shareholders ?? {})['player'] ?? 0;
+  const hasMajority = playerStake >= 50;
+  const canProceed  = target.isInsolvent || hasMajority;
+
   const val        = calculateBuyoutPrice(target, aiAircraft, aiRoutes);
-  const canAfford  = playerAirline.cashUSD >= val.totalPrice;
+  const ownedValue = rawCompanyValue(target, aiAircraft, aiRoutes) * (playerStake / 100);
+  const adjustedPrice = Math.max(0, val.totalPrice - ownedValue);
+  const canAfford  = playerAirline.cashUSD >= adjustedPrice;
 
   // Fleet summary grouped by type
   const fleetSummary: Record<string, { count: number; model: string }> = {};
@@ -44,11 +50,11 @@ export const TakeoverModal: React.FC = () => {
   const routeCount = target.routeIds.length;
 
   function handleConfirm() {
-    if (!targetId || !canAfford) return;
+    if (!targetId || !canAfford || !canProceed) return;
     if (!confirmed) { setConfirmed(true); return; }
     takeoverAirline(targetId, aiAirlines, aiRoutes, aiAircraft);
     removeAIAirline(targetId);
-    pushNewsItem(`${playerAirline.name} has acquired ${target!.name} for ${formatCurrency(val.totalPrice)}.`);
+    pushNewsItem(`${playerAirline.name} has acquired ${target!.name} for ${formatCurrency(adjustedPrice)}.`);
     closeModal();
   }
 
@@ -69,12 +75,23 @@ export const TakeoverModal: React.FC = () => {
         <div className="flex items-center gap-3 mb-4">
           <span className="text-3xl">{target.logoEmoji}</span>
           <div>
-            <h2 className="text-xl font-bold text-white">Buy Out {target.name}</h2>
+            <h2 className="text-xl font-bold text-white">Acquire {target.name}</h2>
             <p className="text-gray-400 text-sm">
               {target.isInsolvent ? 'Distressed acquisition' : `${target.personality} airline · Hub: ${target.hubIatas.join(', ')}`}
             </p>
           </div>
         </div>
+
+        {/* Majority gate warning */}
+        {!canProceed && (
+          <div className="mb-4 px-4 py-3 bg-amber-900/40 border border-amber-500/40 rounded-lg text-sm">
+            <div className="text-amber-300 font-semibold mb-0.5">Majority stake required</div>
+            <div className="text-amber-200/80 text-xs">
+              You need &gt;50% ownership to acquire this airline. You own {playerStake.toFixed(0)}%.
+              Use "Buy Shares" to build your stake.
+            </div>
+          </div>
+        )}
 
         {/* Valuation breakdown */}
         <div className="glass-card p-4 mb-4 space-y-2 text-sm">
@@ -104,9 +121,15 @@ export const TakeoverModal: React.FC = () => {
             <span className="text-gray-400">Control premium (20%)</span>
             <span className="text-white">{formatCurrency(val.controlPremium)}</span>
           </div>
+          {playerStake > 0 && (
+            <div className="flex justify-between text-teal-300">
+              <span>Your {playerStake.toFixed(0)}% stake (already paid)</span>
+              <span>−{formatCurrency(ownedValue)}</span>
+            </div>
+          )}
           <div className="border-t border-gray-700 pt-2 flex justify-between font-bold">
             <span className="text-gray-200">Acquisition price</span>
-            <span className="text-white text-base">{formatCurrency(val.totalPrice)}</span>
+            <span className="text-white text-base">{formatCurrency(adjustedPrice)}</span>
           </div>
         </div>
 
@@ -141,15 +164,17 @@ export const TakeoverModal: React.FC = () => {
         </div>
 
         {/* Affordability */}
-        <div className="glass-card px-4 py-3 mb-5 flex justify-between items-center text-sm">
-          <span className="text-gray-400">Your cash after</span>
-          <span className={canAfford ? 'text-green-400 font-semibold' : 'text-red-400 font-semibold'}>
-            {formatCurrency(playerAirline.cashUSD - val.totalPrice)}
-          </span>
-        </div>
+        {canProceed && (
+          <div className="glass-card px-4 py-3 mb-5 flex justify-between items-center text-sm">
+            <span className="text-gray-400">Your cash after</span>
+            <span className={canAfford ? 'text-green-400 font-semibold' : 'text-red-400 font-semibold'}>
+              {formatCurrency(playerAirline.cashUSD - adjustedPrice)}
+            </span>
+          </div>
+        )}
 
-        {!canAfford && (
-          <p className="text-red-400 text-xs mb-3 text-center">Insufficient funds — need {formatCurrency(val.totalPrice - playerAirline.cashUSD)} more.</p>
+        {canProceed && !canAfford && (
+          <p className="text-red-400 text-xs mb-3 text-center">Insufficient funds — need {formatCurrency(adjustedPrice - playerAirline.cashUSD)} more.</p>
         )}
 
         <div className="flex gap-3">
@@ -158,13 +183,13 @@ export const TakeoverModal: React.FC = () => {
           </button>
           <button
             onClick={handleConfirm}
-            disabled={!canAfford}
+            disabled={!canAfford || !canProceed}
             onMouseLeave={() => setConfirmed(false)}
             className={`flex-1 py-2.5 font-semibold rounded-lg transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed ${
               confirmed ? 'bg-red-600 hover:bg-red-500 text-white' : 'bg-green-700 hover:bg-green-600 text-white'
             }`}
           >
-            {confirmed ? 'Confirm — no going back' : `Buy Out for ${formatCurrency(val.totalPrice)}`}
+            {confirmed ? 'Confirm — no going back' : `Acquire for ${formatCurrency(adjustedPrice)}`}
           </button>
         </div>
       </div>

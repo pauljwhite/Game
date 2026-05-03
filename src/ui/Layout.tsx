@@ -17,6 +17,7 @@ import { TakeoverModal } from './modals/TakeoverModal';
 import { GameOverModal } from './modals/GameOverModal';
 import { CompetitorRouteModal } from './modals/CompetitorRouteModal';
 import { RebrandModal } from './modals/RebrandModal';
+import { SharePurchaseModal } from './modals/SharePurchaseModal';
 
 const PANELS = {
   fleet: FleetPanel,
@@ -69,6 +70,7 @@ export const Layout: React.FC = () => {
       {openModal === 'gameOver' && <GameOverModal />}
       {openModal === 'aiRouteDetail' && <CompetitorRouteModal />}
       {openModal === 'rebrand' && <RebrandModal />}
+      {openModal === 'sharesPurchase' && <SharePurchaseModal />}
     </div>
   );
 };

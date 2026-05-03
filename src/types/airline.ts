@@ -35,4 +35,6 @@ export interface Airline {
   totalPassengersAllTime: number;
   dailyStats: DailySnapshot[];
   crashPenaltyDaysLeft: number;
+  shareholders: Record<string, number>; // ownerId ('player' | aiId) → % owned
+  lastDailyProfit: number;
 }
