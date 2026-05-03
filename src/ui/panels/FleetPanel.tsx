@@ -18,7 +18,10 @@ function AircraftCard({ ac, gameDay }: { ac: Aircraft; gameDay: number }) {
   const airlines          = useGameStore(s => s.airlines);
   const routes            = useGameStore(s => s.routes);
 
-  const [showAuto, setShowAuto] = useState(false);
+  const [openSection, setOpenSection] = useState<'oneoff' | 'auto' | null>(null);
+
+  const toggleSection = (s: 'oneoff' | 'auto') =>
+    setOpenSection(prev => (prev === s ? null : s));
 
   const type          = AIRCRAFT_TYPES.find(t => t.id === ac.typeId);
   const playerAirline = airlines['player'];
@@ -67,57 +70,73 @@ function AircraftCard({ ac, gameDay }: { ac: Aircraft; gameDay: number }) {
         </div>
       </div>
 
-      {/* Maintenance tier buttons */}
+      {/* Maintenance accordion */}
       {canStartMaint && (
-        <div className="mt-2 space-y-1.5">
-          <div className="grid grid-cols-3 gap-1">
-            {TIER_ORDER.map(tier => {
-              const cfg  = MAINTENANCE_TIERS[tier];
-              const cost = computeMaintenanceCost(tier, ac.maintenanceHoursOwed, type.maintenanceCostPerHourUSD);
-              const gain = cfg.conditionGain >= 999
-                ? Math.min(100, 100 - ac.condition)
-                : Math.min(cfg.conditionGain, 100 - ac.condition);
-              const costPerPt = gain > 0 ? Math.round(cost / gain) : cost;
-              return (
-                <button
-                  key={tier}
-                  onClick={() => startMaintenance(ac.id, gameDay, tier)}
-                  title={cfg.desc}
-                  className="px-1.5 py-1.5 bg-gray-700 hover:bg-gray-600 text-gray-200 rounded text-center transition-colors"
-                >
-                  <div className="text-xs font-semibold">{cfg.label}</div>
-                  <div className="text-[10px] text-gray-400">{formatCurrency(cost)}</div>
-                  <div className="text-[10px] text-gray-500">
-                    {cfg.conditionGain >= 999 ? '→100%' : `+${cfg.conditionGain}%`}
-                    {' · '}{formatCurrency(costPerPt)}/pt
-                  </div>
-                </button>
-              );
-            })}
-          </div>
+        <div className="mt-2 border border-gray-800 rounded overflow-hidden text-xs">
 
-          {/* Auto-maintenance toggle row */}
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setShowAuto(v => !v)}
-              className="text-[10px] text-gray-500 hover:text-gray-300 transition-colors"
-            >
-              {showAuto ? '▴' : '▾'} Auto-maintenance
+          {/* One-off header */}
+          <button
+            onClick={() => toggleSection('oneoff')}
+            className="w-full flex items-center justify-between px-3 py-2 bg-gray-800 hover:bg-gray-750 transition-colors"
+          >
+            <span className="font-medium text-gray-200">One-off maintenance</span>
+            <span className="text-gray-500">{openSection === 'oneoff' ? '▴' : '▾'}</span>
+          </button>
+
+          {openSection === 'oneoff' && (
+            <div className="p-2 grid grid-cols-3 gap-1 bg-gray-900">
+              {TIER_ORDER.map(tier => {
+                const cfg  = MAINTENANCE_TIERS[tier];
+                const cost = computeMaintenanceCost(tier, ac.maintenanceHoursOwed, type.maintenanceCostPerHourUSD);
+                const gain = cfg.conditionGain >= 999
+                  ? Math.min(100, 100 - ac.condition)
+                  : Math.min(cfg.conditionGain, 100 - ac.condition);
+                const costPerPt = gain > 0 ? Math.round(cost / gain) : cost;
+                return (
+                  <button
+                    key={tier}
+                    onClick={() => startMaintenance(ac.id, gameDay, tier)}
+                    title={cfg.desc}
+                    className="px-1.5 py-1.5 bg-gray-700 hover:bg-gray-600 text-gray-200 rounded text-center transition-colors"
+                  >
+                    <div className="text-xs font-semibold">{cfg.label}</div>
+                    <div className="text-[10px] text-gray-400">{formatCurrency(cost)}</div>
+                    <div className="text-[10px] text-gray-500">
+                      {cfg.conditionGain >= 999 ? '→100%' : `+${cfg.conditionGain}%`}
+                      {' · '}{formatCurrency(costPerPt)}/pt
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Divider */}
+          <div className="border-t border-gray-800" />
+
+          {/* Auto-maintenance header */}
+          <button
+            onClick={() => toggleSection('auto')}
+            className="w-full flex items-center justify-between px-3 py-2 bg-gray-800 hover:bg-gray-750 transition-colors"
+          >
+            <span className="font-medium text-gray-200">
+              Auto-maintenance
               {ac.autoMaintenanceEnabled && (
-                <span className="ml-1 text-blue-400">
+                <span className="ml-2 text-blue-400 font-normal">
                   ON · {MAINTENANCE_TIERS[ac.autoMaintenanceTier ?? 'standard'].label} @ {ac.autoMaintenanceThreshold ?? 40}%
                 </span>
               )}
-            </button>
-          </div>
+            </span>
+            <span className="text-gray-500">{openSection === 'auto' ? '▴' : '▾'}</span>
+          </button>
 
-          {showAuto && (
-            <div className="bg-gray-800 rounded p-2 space-y-2">
+          {openSection === 'auto' && (
+            <div className="p-2 space-y-2 bg-gray-900">
               <div className="flex items-center justify-between">
-                <span className="text-xs text-gray-300">Auto-maintenance</span>
+                <span className="text-gray-300">Enable auto-maintenance</span>
                 <button
                   onClick={() => setAutoMaintenance(ac.id, !ac.autoMaintenanceEnabled, ac.autoMaintenanceThreshold ?? 40, ac.autoMaintenanceTier ?? 'standard')}
-                  className={`text-xs px-2 py-0.5 rounded font-semibold transition-colors ${
+                  className={`px-2 py-0.5 rounded font-semibold transition-colors ${
                     ac.autoMaintenanceEnabled
                       ? 'bg-blue-600 hover:bg-blue-500 text-white'
                       : 'bg-gray-600 hover:bg-gray-500 text-gray-300'
@@ -131,7 +150,7 @@ function AircraftCard({ ac, gameDay }: { ac: Aircraft; gameDay: number }) {
                 <>
                   <div>
                     <div className="flex justify-between text-[10px] text-gray-400 mb-1">
-                      <span>Trigger threshold</span>
+                      <span>Trigger at condition</span>
                       <span className="text-white">{ac.autoMaintenanceThreshold ?? 40}%</span>
                     </div>
                     <input
@@ -146,12 +165,12 @@ function AircraftCard({ ac, gameDay }: { ac: Aircraft; gameDay: number }) {
                   </div>
 
                   <div>
-                    <div className="text-[10px] text-gray-400 mb-1">Maintenance type</div>
+                    <div className="text-[10px] text-gray-400 mb-1">Maintenance tier</div>
                     <div className="grid grid-cols-3 gap-1">
                       {TIER_ORDER.map(tier => (
                         <button
                           key={tier}
-                          onClick={() => setAutoMaintenance(ac.id, true, ac.autoMaintenanceThreshold, tier)}
+                          onClick={() => setAutoMaintenance(ac.id, true, ac.autoMaintenanceThreshold ?? 40, tier)}
                           className={`py-1 rounded text-[10px] font-medium transition-colors ${
                             (ac.autoMaintenanceTier ?? 'standard') === tier
                               ? 'bg-blue-600 text-white'
