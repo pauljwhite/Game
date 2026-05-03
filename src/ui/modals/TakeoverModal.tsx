@@ -43,7 +43,7 @@ export const TakeoverModal: React.FC = () => {
   }
 
   return (
-    <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50">
+    <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-[9999]">
       <div className="bg-gray-900 border border-gray-700 rounded-xl p-6 shadow-2xl w-full max-w-md relative">
         {/* Close button */}
         <button
