@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useGameStore } from '@/store';
 import { haversineKm } from '@/utils/geo';
 import { computeFlightCost, gameDayFromMs } from '@/engine/economicsEngine';
-import { getSuggestedEconomyPrice, getBaselineDailyPax } from '@/engine/demandModel';
+import { getSuggestedEconomyPrice, getBaselineDailyPax, conditionDemandMod } from '@/engine/demandModel';
 import { AIRCRAFT_TYPES } from '@/data/aircraftTypes';
 import type { Route } from '@/types';
 import { FUEL_PRICE_USD_PER_LITER, PRICE_ELASTICITY } from '@/utils/constants';
@@ -115,8 +115,9 @@ export const NewRouteModal: React.FC = () => {
     const bizCapacity = selectedType.seatsBusiness * flightsPerDay;
     const bizSplit = Math.min(0.25, Math.max(0.05, 0.10 * Math.sqrt(priceBusiness / (priceEconomy * 6 + 1))));
 
-    const ecoPax = Math.min(ecoCapacity, baselinePax * ecoFactor * (1 - bizSplit));
-    const bizPax = Math.min(bizCapacity, baselinePax * bizFactor * bizSplit);
+    const condMod = conditionDemandMod(selectedAc.condition);
+    const ecoPax = Math.min(ecoCapacity, baselinePax * ecoFactor * condMod * (1 - bizSplit));
+    const bizPax = Math.min(bizCapacity, baselinePax * bizFactor * condMod * bizSplit);
     const loadFactorEco = ecoCapacity > 0 ? ecoPax / ecoCapacity : 0;
     const loadFactorBiz = bizCapacity > 0 ? bizPax / bizCapacity : 0;
 
@@ -127,6 +128,7 @@ export const NewRouteModal: React.FC = () => {
       dailyRevenue, dailyCost, dailyProfit,
       loadFactorEco, loadFactorBiz,
       referencePrice, flightDurationHours: costs.flightDurationHours,
+      condMod,
     };
   }, [selectedAc, selectedType, originAirport, destAirport, distanceKm, flightsPerWeek, priceEconomy, priceBusiness, gameDay]);
 
@@ -332,6 +334,11 @@ export const NewRouteModal: React.FC = () => {
                 Suggested price: <span className="text-gray-400">{formatUSD(pnlPreview.referencePrice)}</span>
                 {' · '}higher price = lower load factor · lower price = fuller plane
               </p>
+              {pnlPreview.condMod < 0.95 && (
+                <p className="text-[10px] text-yellow-500">
+                  ⚠ Aircraft condition {selectedAc!.condition.toFixed(0)}% is reducing demand by {((1 - pnlPreview.condMod) * 100).toFixed(0)}%
+                </p>
+              )}
 
               {/* Revenue / cost / profit */}
               <div className="grid grid-cols-3 gap-3 text-sm">
