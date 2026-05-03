@@ -32,8 +32,8 @@ export const AirportPopup: React.FC = () => {
   const capacity = getAirportCapacity(airport.size, currentYear);
   const utilization = dailyPax / capacity;
   const satMod = airportSaturationMod(utilization);
-  const barPct = Math.min(100, utilization * 100);
-  const barColor = utilization < 0.6 ? 'bg-green-500' : utilization < 1.0 ? 'bg-yellow-500' : 'bg-red-500';
+  const demandPct = Math.round(satMod * 100);
+  const barColor = satMod > 0.8 ? 'bg-green-500' : satMod > 0.55 ? 'bg-yellow-500' : 'bg-red-500';
 
   return (
     <div className="absolute bottom-12 left-4 z-[800] glass-panel rounded-xl p-3 w-64">
@@ -78,13 +78,12 @@ export const AirportPopup: React.FC = () => {
       <div className="mt-3">
         <div className="flex justify-between items-center text-xs mb-1">
           <span className="text-gray-400">Market demand</span>
-          <span className={utilization >= 0.5 ? (utilization < 1.0 ? 'text-yellow-400' : 'text-red-400') : 'text-gray-300'}>
-            {(utilization * 100).toFixed(0)}%
-            {utilization >= 0.5 && <span className="text-gray-500 ml-1">({(satMod * 100).toFixed(0)}% eff.)</span>}
+          <span className={demandPct > 80 ? 'text-green-400' : demandPct > 55 ? 'text-yellow-400' : 'text-red-400'}>
+            {demandPct}%
           </span>
         </div>
         <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
-          <div className={`h-full rounded-full transition-all ${barColor}`} style={{ width: `${barPct}%` }} />
+          <div className={`h-full rounded-full transition-all ${barColor}`} style={{ width: `${demandPct}%` }} />
         </div>
       </div>
 
