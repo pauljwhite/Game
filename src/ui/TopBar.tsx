@@ -181,7 +181,7 @@ export const TopBar: React.FC = () => {
             <span className="text-lg">{playerAirline?.logoEmoji ?? '✈'}</span>
             <div className="leading-none min-w-0 text-left">
               <div className="text-white font-bold text-xs truncate max-w-[120px] sm:max-w-[160px]">
-                {playerAirline?.name ?? 'Airline Empire'}
+                {playerAirline?.name ?? 'Mighty Airline Empire'}
               </div>
               <div className={`text-xs font-mono ${(playerAirline?.cashUSD ?? 0) >= 0 ? 'text-green-400' : 'text-red-400'}`}>
                 {playerAirline ? formatCurrency(playerAirline.cashUSD) : '-'}

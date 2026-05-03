@@ -38,7 +38,7 @@ export const createWorldSlice: StateCreator<GameStore, [['zustand/immer', never]
   aiAircraft: {},
   aiRoutes: {},
   globalFuelPrice: 0.82,
-  newsTicker: ['Welcome to Airline Empire! Build your airline from the ground up.'],
+  newsTicker: ['Welcome to Mighty Airline Empire! Build your airline from the ground up.'],
   totalMarketPAX: 0,
 
   initWorld: () =>
