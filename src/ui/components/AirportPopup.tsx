@@ -2,6 +2,7 @@ import React from 'react';
 import { useGameStore } from '@/store';
 import { formatCurrency } from '@/utils/format';
 import { airportIcao } from '@/utils/airportSearch';
+import { getAirportCapacity, airportSaturationMod } from '@/engine/demandModel';
 
 export const AirportPopup: React.FC = () => {
   const selectedIata = useGameStore(s => s.selectedAirportIata);
@@ -12,6 +13,7 @@ export const AirportPopup: React.FC = () => {
   const designateHub = useGameStore(s => s.designateHub);
   const removeHub = useGameStore(s => s.removeHub);
   const gameDay = useGameStore(s => s.gameDay);
+  const airportDailyPax = useGameStore(s => s.airportDailyPax);
 
   if (!selectedIata) return null;
   const airport = airports[selectedIata];
@@ -21,6 +23,14 @@ export const AirportPopup: React.FC = () => {
   const isHub = airport.isHub;
   const playerHasHub = playerAirline?.hubIatas.includes(selectedIata);
   const isClosed = airport.closedUntilGameDay !== undefined && airport.closedUntilGameDay >= gameDay;
+
+  const currentYear = 1960 + Math.floor(gameDay / 365);
+  const dailyPax = airportDailyPax[selectedIata] ?? 0;
+  const capacity = getAirportCapacity(airport.size, currentYear);
+  const utilization = dailyPax / capacity;
+  const satMod = airportSaturationMod(utilization);
+  const barPct = Math.min(100, utilization * 100);
+  const barColor = utilization < 0.6 ? 'bg-green-500' : utilization < 1.0 ? 'bg-yellow-500' : 'bg-red-500';
 
   return (
     <div className="absolute bottom-12 left-4 z-[800] glass-panel rounded-xl p-3 w-64">
@@ -60,6 +70,19 @@ export const AirportPopup: React.FC = () => {
             <span className="text-yellow-400">Hub</span>
           </>
         )}
+      </div>
+
+      <div className="mt-3">
+        <div className="flex justify-between items-center text-xs mb-1">
+          <span className="text-gray-400">Market demand</span>
+          <span className={utilization >= 0.5 ? (utilization < 1.0 ? 'text-yellow-400' : 'text-red-400') : 'text-gray-300'}>
+            {(utilization * 100).toFixed(0)}%
+            {utilization >= 0.5 && <span className="text-gray-500 ml-1">({(satMod * 100).toFixed(0)}% eff.)</span>}
+          </span>
+        </div>
+        <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
+          <div className={`h-full rounded-full transition-all ${barColor}`} style={{ width: `${barPct}%` }} />
+        </div>
       </div>
 
       <div className="mt-3 flex gap-2">

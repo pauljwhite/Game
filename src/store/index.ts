@@ -89,6 +89,7 @@ function sanitizePersistedState(state: Partial<GameStore>): Partial<GameStore> {
     airlines,
     aiAirlines,
     aircraft: normalizedAircraft,
+    airportDailyPax: (state.airportDailyPax && typeof state.airportDailyPax === 'object') ? state.airportDailyPax : {},
     speed: VALID_GAME_SPEEDS.has(state.speed as number) ? state.speed : DEFAULT_GAME_SPEED,
     isPaused: false,
   };

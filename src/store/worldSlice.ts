@@ -25,6 +25,8 @@ export interface WorldSlice {
   updateTotalMarketPAX: (pax: number) => void;
   setAirportHub: (iata: string, isHub: boolean) => void;
   setAirportClosure: (iata: string, untilGameDay: number, reason: string) => void;
+  airportDailyPax: Record<string, number>;
+  setAirportDailyPax: (pax: Record<string, number>) => void;
   updateAIAircraftCondition: (aircraftId: string, conditionDelta: number, hoursOwed: number) => void;
   startAIMaintenance: (aircraftId: string, gameDay: number, tier: MaintenanceTier) => void;
   completeAIMaintenance: (aircraftId: string) => void;
@@ -52,6 +54,10 @@ export const createWorldSlice: StateCreator<GameStore, [['zustand/immer', never]
   globalFuelPrice: 0.82,
   newsTicker: ['Welcome to Mighty Airline Empire! Build your airline from the ground up.'],
   totalMarketPAX: 0,
+  airportDailyPax: {},
+
+  setAirportDailyPax: (pax) =>
+    set((state) => { state.airportDailyPax = pax; }),
 
   initWorld: () =>
     set((state) => {

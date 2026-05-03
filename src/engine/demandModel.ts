@@ -1,5 +1,5 @@
 import type { Airport, Route, Airline } from '@/types';
-import { PRICE_ELASTICITY, REP_PRICE_FACTOR } from '@/utils/constants';
+import { PRICE_ELASTICITY, REP_PRICE_FACTOR, AIRPORT_BASE_CAPACITY, AIRPORT_DEMAND_GROWTH_RATE } from '@/utils/constants';
 
 const SIZE_MULTIPLIER: Record<string, number> = {
   small: 0.3, medium: 1.0, large: 2.5, major: 5.0,
@@ -66,6 +66,23 @@ export function getPlayerMarketShare(
   }, 0);
 
   return totalScore > 0 ? playerScore / totalScore : 1;
+}
+
+/** Total daily passengers the airport can absorb across all airlines, growing 1.5%/year from 1960. */
+export function getAirportCapacity(size: string, gameYear: number): number {
+  const base = AIRPORT_BASE_CAPACITY[size] ?? 1_200;
+  return base * Math.pow(1 + AIRPORT_DEMAND_GROWTH_RATE, gameYear - 1960);
+}
+
+/**
+ * Demand multiplier based on how saturated an airport is.
+ * Free zone below 50% utilization. Linear decline from 1.0→0.4 between 50% and 150%.
+ * Floor 0.4 — even a massively over-served airport retains some demand.
+ */
+export function airportSaturationMod(utilization: number): number {
+  if (utilization <= 0.5) return 1.0;
+  if (utilization >= 1.5) return 0.4;
+  return 1.0 - 0.6 * ((utilization - 0.5) / 1.0);
 }
 
 export function getSuggestedEconomyPrice(totalCostPerFlight: number, totalSeats: number): number {

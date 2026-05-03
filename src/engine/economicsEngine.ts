@@ -5,7 +5,7 @@ import {
   REPUTATION_DEMAND_FACTOR, CRASH_DEMAND_PENALTY_PCT, DAY_MS,
   MAINTENANCE_TIERS,
 } from '@/utils/constants';
-import { getBaselineDailyPax, getPlayerMarketShare, conditionDemandMod } from './demandModel';
+import { getBaselineDailyPax, getPlayerMarketShare, conditionDemandMod, getAirportCapacity, airportSaturationMod } from './demandModel';
 import { runRandomEventsTick } from './randomEvents';
 import { AIRCRAFT_TYPES } from '@/data/aircraftTypes';
 
@@ -40,6 +40,19 @@ export function runDailyTick(store: ReturnType<typeof import('@/store/index')['u
 
   const allRoutes = [...Object.values(routes), ...Object.values(aiRoutes)];
   const allAirlines = [...Object.values(airlines), ...Object.values(aiAirlines)];
+
+  // Build airport pax totals from last tick's dailyPassengers (used for saturation this tick)
+  const prevAirportPax = state.airportDailyPax;
+  const currentYear = 1960 + Math.floor(gameDay / 365);
+  const pendingAirportPax: Record<string, number> = {};
+  const accumPax = (iata: string, pax: number) => {
+    pendingAirportPax[iata] = (pendingAirportPax[iata] ?? 0) + pax;
+  };
+  allRoutes.forEach(r => {
+    if (!r.isActive || !r.dailyPassengers) return;
+    accumPax(r.originIata, r.dailyPassengers);
+    accumPax(r.destinationIata, r.dailyPassengers);
+  });
 
   // Player economics
   const playerAirline = airlines['player'];
@@ -106,7 +119,10 @@ export function runDailyTick(store: ReturnType<typeof import('@/store/index')['u
       // Demand calculation — reference price drives solo-route elasticity
       const totalSeats = aircraftType.seatsEconomy + aircraftType.seatsBusiness;
       const referencePrice = totalSeats > 0 ? Math.round(flightCosts.totalCost / totalSeats * 1.4) : 200;
-      const baselinePax = getBaselineDailyPax(origin, dest) * (origin.isHub || dest.isHub ? HUB_DEMAND_BONUS : 1);
+      const originUtil = (prevAirportPax[route.originIata] ?? 0) / getAirportCapacity(origin.size, currentYear);
+      const destUtil   = (prevAirportPax[route.destinationIata] ?? 0) / getAirportCapacity(dest.size, currentYear);
+      const satMod     = airportSaturationMod(originUtil) * airportSaturationMod(destUtil);
+      const baselinePax = getBaselineDailyPax(origin, dest) * (origin.isHub || dest.isHub ? HUB_DEMAND_BONUS : 1) * satMod;
       const repMod = 1 + (playerAirline.reputationScore - 50) * REPUTATION_DEMAND_FACTOR;
       const crashPenalty = playerAirline.crashPenaltyDaysLeft > 0 ? (1 - CRASH_DEMAND_PENALTY_PCT) : 1;
       const condMod = conditionDemandMod(ac.condition);
@@ -192,7 +208,10 @@ export function runDailyTick(store: ReturnType<typeof import('@/store/index')['u
       const totalSeats = aircraftType.seatsEconomy + aircraftType.seatsBusiness;
       const referencePrice = totalSeats > 0 ? Math.round(flightCosts.totalCost / totalSeats * 1.4) : 200;
 
-      const baselinePax = getBaselineDailyPax(origin, dest);
+      const aiOriginUtil = (prevAirportPax[route.originIata] ?? 0) / getAirportCapacity(origin.size, currentYear);
+      const aiDestUtil   = (prevAirportPax[route.destinationIata] ?? 0) / getAirportCapacity(dest.size, currentYear);
+      const aiSatMod     = airportSaturationMod(aiOriginUtil) * airportSaturationMod(aiDestUtil);
+      const baselinePax = getBaselineDailyPax(origin, dest) * aiSatMod;
       const aiRepMod = 1 + (aiAirline.reputationScore - 50) * REPUTATION_DEMAND_FACTOR;
       const aiCondMod = conditionDemandMod(ac.condition);
       const marketShare = getPlayerMarketShare(
@@ -260,6 +279,8 @@ export function runDailyTick(store: ReturnType<typeof import('@/store/index')['u
   void allRoutes;
   void _ac;
   void _r;
+
+  store.setAirportDailyPax(pendingAirportPax);
 
   // Random incidents and scandals
   runRandomEventsTick(store);
