@@ -53,7 +53,7 @@ function AircraftCard({ ac, gameDay }: { ac: Aircraft; gameDay: number }) {
         <span className={`w-2 h-2 rounded-full shrink-0 ${condBg}`} />
 
         {/* Model */}
-        <span className="text-white text-sm font-medium w-24 shrink-0 truncate">{type.model}</span>
+        <span className="text-white text-sm font-medium w-20 sm:w-24 shrink-0 truncate">{type.model}</span>
 
         {/* Badges */}
         <span className="flex gap-1 shrink-0">
@@ -68,8 +68,8 @@ function AircraftCard({ ac, gameDay }: { ac: Aircraft; gameDay: number }) {
         {/* Spacer */}
         <span className="flex-1" />
 
-        {/* Flight hours */}
-        <span className="text-[10px] text-gray-500 shrink-0 w-12 text-right">
+        {/* Flight hours — hidden on mobile, shown on sm+ */}
+        <span className="hidden sm:block text-[10px] text-gray-500 shrink-0 w-12 text-right">
           {Math.round(ac.totalFlightHours).toLocaleString()}h
         </span>
 
@@ -283,7 +283,7 @@ export const FleetPanel: React.FC = () => {
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto overflow-x-hidden">
         {fleetList.length === 0 && (
           <div className="p-4 text-gray-400 text-sm text-center">
             No aircraft yet. Buy your first plane!
