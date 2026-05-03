@@ -21,6 +21,6 @@ export interface Airport {
   region: AirportRegion;
   landingFee: number;
   isHub?: boolean;
-  closedUntilGameDay?: number;
-  closureReason?: string;
+  closedUntilGameDay?: number; // runtime: airport closed for operations
+  closureReason?: string;       // runtime: short description for UI
 }

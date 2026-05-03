@@ -5,6 +5,14 @@ export const HUB_ANNUAL_FEE_USD = 2_000_000;
 export const CREW_COST_PER_FLIGHT_HOUR_USD = 400;
 export const PRICE_ELASTICITY = -1.4;
 export const REPUTATION_DEMAND_FACTOR = 0.005;
+export const AIRPORT_BASE_CAPACITY: Record<string, number> = {
+  small: 300, medium: 1_200, large: 4_000, major: 12_000,
+};
+export const AIRPORT_DEMAND_GROWTH_RATE = 0.015; // 1.5%/game-year from 1960
+// Reputation as price premium: passengers treat your price as (price / premium) where
+// premium = 1 + (reputationScore - 50) * REP_PRICE_FACTOR
+// Rep 100 → 1.2× premium (can charge ~20% more for same share); rep 0 → 0.8× (25% penalty)
+export const REP_PRICE_FACTOR = 0.004;
 export const CRASH_SCALE_FACTOR = 0.0008;
 export const CRASH_REPUTATION_HIT = 25;
 export const CRASH_FINE_USD = 50_000_000;

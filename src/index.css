@@ -6,7 +6,10 @@ html, body, #root {
   height: 100%;
   margin: 0;
   overflow: hidden;
-  background: #0f172a;
+  background:
+    radial-gradient(circle at 18% 12%, rgba(56, 189, 248, 0.12), transparent 28%),
+    radial-gradient(circle at 88% 8%, rgba(34, 197, 94, 0.08), transparent 24%),
+    #05070c;
 }
 
 .leaflet-container {
@@ -21,6 +24,155 @@ html, body, #root {
   pointer-events: none;
 }
 
+@layer components {
+  .glass-nav {
+    border-color: rgba(255, 255, 255, 0.08);
+    background: rgba(2, 6, 23, 0.88);
+    box-shadow: 0 16px 50px rgba(0, 0, 0, 0.35);
+    backdrop-filter: blur(12px) saturate(1.2);
+    -webkit-backdrop-filter: blur(12px) saturate(1.2);
+  }
+
+  .glass-panel {
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(2, 6, 23, 0.92);
+    box-shadow: 0 20px 70px rgba(0, 0, 0, 0.45);
+    backdrop-filter: blur(12px) saturate(1.2);
+    -webkit-backdrop-filter: blur(12px) saturate(1.2);
+  }
+
+  .glass-card {
+    border-radius: 0.5rem;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(255, 255, 255, 0.06);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  }
+
+  .panel-header {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(255, 255, 255, 0.04);
+    padding: 0.75rem;
+  }
+
+  .apple-button {
+    border-radius: 0.375rem;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.08);
+    padding: 0.375rem 0.75rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: rgb(226, 232, 240);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    transition: all 160ms ease;
+  }
+
+  .apple-button:hover {
+    background: rgba(255, 255, 255, 0.13);
+    color: white;
+  }
+
+  .apple-button:active {
+    transform: scale(0.98);
+  }
+
+  .apple-button-primary {
+    border-radius: 0.375rem;
+    border: 1px solid rgba(125, 211, 252, 0.3);
+    background: rgba(14, 165, 233, 0.8);
+    padding: 0.375rem 0.75rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: white;
+    box-shadow: 0 6px 20px rgba(14, 165, 233, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.22);
+    transition: all 160ms ease;
+  }
+
+  .apple-button-primary:hover {
+    background: rgb(56, 189, 248);
+  }
+
+  .apple-button-primary:active {
+    transform: scale(0.98);
+  }
+
+  .apple-button-danger {
+    border-radius: 0.375rem;
+    border: 1px solid rgba(252, 165, 165, 0.2);
+    background: rgba(239, 68, 68, 0.8);
+    padding: 0.375rem 0.75rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: white;
+    box-shadow: 0 6px 20px rgba(239, 68, 68, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.18);
+    transition: all 160ms ease;
+  }
+
+  .apple-button-danger:hover {
+    background: rgb(248, 113, 113);
+  }
+
+  .apple-button-danger:active {
+    transform: scale(0.98);
+  }
+
+  .icon-button {
+    display: flex;
+    height: 1.75rem;
+    width: 1.75rem;
+    align-items: center;
+    justify-content: center;
+    border-radius: 0.375rem;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.06);
+    font-size: 1.125rem;
+    line-height: 1;
+    color: rgb(148, 163, 184);
+    transition: all 160ms ease;
+  }
+
+  .icon-button:hover {
+    background: rgba(255, 255, 255, 0.12);
+    color: white;
+  }
+
+  .icon-button:active {
+    transform: scale(0.95);
+  }
+
+  .nav-pill {
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 0.375rem 0.75rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: rgb(203, 213, 225);
+    transition: all 160ms ease;
+  }
+
+  .nav-pill:hover {
+    background: rgba(255, 255, 255, 0.09);
+    color: white;
+  }
+
+  .nav-pill-active {
+    border-color: rgba(125, 211, 252, 0.3);
+    background: rgba(56, 189, 248, 0.18);
+    color: rgb(224, 242, 254);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  }
+
+  .soft-tag {
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.07);
+    padding: 0.125rem 0.5rem;
+    font-size: 10px;
+    font-weight: 600;
+    line-height: 1.25;
+    color: rgb(203, 213, 225);
+  }
+}
+
 @keyframes route-dash {
   to {
     stroke-dashoffset: -120;
@@ -29,9 +181,9 @@ html, body, #root {
 
 /* Custom scrollbar for dark panels */
 ::-webkit-scrollbar { width: 6px; }
-::-webkit-scrollbar-track { background: #1e293b; }
-::-webkit-scrollbar-thumb { background: #475569; border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: #64748b; }
+::-webkit-scrollbar-track { background: rgba(15, 23, 42, 0.35); }
+::-webkit-scrollbar-thumb { background: rgba(148, 163, 184, 0.42); border-radius: 999px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(203, 213, 225, 0.55); }
 
 /* Hide scrollbar on nav overflow rows */
 .scrollbar-none::-webkit-scrollbar { display: none; }

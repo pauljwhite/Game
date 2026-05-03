@@ -2,6 +2,7 @@ import React from 'react';
 import { useGameStore } from '@/store';
 import { formatCurrency } from '@/utils/format';
 import { airportIcao } from '@/utils/airportSearch';
+import { getAirportCapacity, airportSaturationMod } from '@/engine/demandModel';
 
 export const AirportPopup: React.FC = () => {
   const selectedIata = useGameStore(s => s.selectedAirportIata);
@@ -11,6 +12,9 @@ export const AirportPopup: React.FC = () => {
   const openModalById = useGameStore(s => s.openModalById);
   const designateHub = useGameStore(s => s.designateHub);
   const removeHub = useGameStore(s => s.removeHub);
+  const gameDay = useGameStore(s => s.gameDay);
+  const routes = useGameStore(s => s.routes);
+  const aiRoutes = useGameStore(s => s.aiRoutes);
 
   if (!selectedIata) return null;
   const airport = airports[selectedIata];
@@ -19,9 +23,26 @@ export const AirportPopup: React.FC = () => {
   const playerAirline = airlines['player'];
   const isHub = airport.isHub;
   const playerHasHub = playerAirline?.hubIatas.includes(selectedIata);
+  const isClosed = airport.closedUntilGameDay !== undefined && airport.closedUntilGameDay >= gameDay;
+
+  const currentYear = 1960 + Math.floor(gameDay / 365);
+  const dailyPax = [...Object.values(routes), ...Object.values(aiRoutes)]
+    .filter(r => r.isActive && (r.originIata === selectedIata || r.destinationIata === selectedIata))
+    .reduce((sum, r) => sum + (r.dailyPassengers ?? 0), 0);
+  const capacity = getAirportCapacity(airport.size, currentYear);
+  const utilization = dailyPax / capacity;
+  const satMod = airportSaturationMod(utilization);
+  const demandPct = Math.round(satMod * 100);
+  const barColor = satMod > 0.8 ? 'bg-green-500' : satMod > 0.55 ? 'bg-yellow-500' : 'bg-red-500';
 
   return (
-    <div className="absolute bottom-12 left-4 z-[800] bg-gray-900 border border-gray-700 rounded-lg p-3 w-64 shadow-xl">
+    <div className="absolute bottom-12 left-4 z-[800] glass-panel rounded-xl p-3 w-64">
+      {isClosed && (
+        <div className="mb-2 px-2 py-1.5 bg-red-900/50 border border-red-500/50 rounded-lg flex items-center gap-1.5">
+          <span className="text-red-400 font-bold text-xs">CLOSED</span>
+          <span className="text-red-300 text-xs">{airport.closureReason}</span>
+        </div>
+      )}
       <div className="flex justify-between items-start">
         <div>
           <div className="text-white font-bold text-sm">{airport.name}</div>
@@ -54,24 +75,36 @@ export const AirportPopup: React.FC = () => {
         )}
       </div>
 
+      <div className="mt-3">
+        <div className="flex justify-between items-center text-xs mb-1">
+          <span className="text-gray-400">Market demand</span>
+          <span className={demandPct > 80 ? 'text-green-400' : demandPct > 55 ? 'text-yellow-400' : 'text-red-400'}>
+            {demandPct}%
+          </span>
+        </div>
+        <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
+          <div className={`h-full rounded-full transition-all ${barColor}`} style={{ width: `${demandPct}%` }} />
+        </div>
+      </div>
+
       <div className="mt-3 flex gap-2">
         <button
           onClick={() => openModalById('newRoute', selectedIata)}
-          className="flex-1 py-1 bg-blue-600 hover:bg-blue-500 text-white text-xs rounded"
+          className="apple-button-primary flex-1 py-1"
         >
           + New Route
         </button>
         {!playerHasHub ? (
           <button
             onClick={() => { designateHub(selectedIata); }}
-            className="flex-1 py-1 bg-yellow-700 hover:bg-yellow-600 text-white text-xs rounded"
+            className="apple-button flex-1 py-1 border-yellow-300/20 bg-yellow-500/20 text-yellow-100"
           >
             Set Hub
           </button>
         ) : (
           <button
             onClick={() => { removeHub(selectedIata); }}
-            className="flex-1 py-1 bg-gray-700 hover:bg-gray-600 text-white text-xs rounded"
+            className="apple-button flex-1 py-1"
           >
             Remove Hub
           </button>

@@ -29,8 +29,8 @@ export const CompetitorRouteModal: React.FC = () => {
     : 'bg-red-500';
 
   return (
-    <div className="fixed inset-0 bg-black/80 flex items-end sm:items-center justify-center z-[9999]">
-      <div className="bg-gray-900 border border-gray-700 rounded-t-2xl sm:rounded-xl px-4 sm:px-6 py-4 shadow-2xl w-full max-w-lg relative max-h-[92svh] overflow-y-auto">
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center z-[9999]">
+      <div className="glass-panel rounded-t-2xl sm:rounded-xl px-4 sm:px-6 py-4 w-full max-w-lg relative max-h-[92svh] overflow-y-auto">
         <button
           onClick={closeModal}
           className="absolute top-4 right-4 text-gray-400 hover:text-white transition-colors text-xl leading-none"
@@ -62,19 +62,19 @@ export const CompetitorRouteModal: React.FC = () => {
 
         {/* Stats grid */}
         <div className="grid grid-cols-2 gap-3 mb-4">
-          <div className="bg-gray-800 rounded-lg p-3">
+          <div className="glass-card p-3">
             <div className="text-gray-400 text-xs mb-1">Distance</div>
             <div className="text-white font-semibold">{Math.round(route.distanceKm).toLocaleString()} km</div>
           </div>
-          <div className="bg-gray-800 rounded-lg p-3">
+          <div className="glass-card p-3">
             <div className="text-gray-400 text-xs mb-1">Economy Fare</div>
             <div className="text-white font-semibold">{formatCurrency(route.priceEconomy)}</div>
           </div>
-          <div className="bg-gray-800 rounded-lg p-3">
+          <div className="glass-card p-3">
             <div className="text-gray-400 text-xs mb-1">Daily Revenue</div>
             <div className="text-green-400 font-semibold">{formatCurrency(route.dailyRevenue)}</div>
           </div>
-          <div className="bg-gray-800 rounded-lg p-3">
+          <div className="glass-card p-3">
             <div className="text-gray-400 text-xs mb-1">Daily Profit</div>
             <div className={`font-bold ${route.dailyProfit >= 0 ? 'text-green-400' : 'text-red-400'}`}>
               {route.dailyProfit !== 0 ? formatCurrency(route.dailyProfit) : '—'}
@@ -83,13 +83,13 @@ export const CompetitorRouteModal: React.FC = () => {
         </div>
 
         {/* Load factor */}
-        <div className="bg-gray-800 rounded-lg p-3 mb-4">
+        <div className="glass-card p-3 mb-4">
           <div className="text-gray-400 text-xs mb-2">Load Factor</div>
           <LoadFactorBar value={route.loadFactorEconomy} label="Eco" />
         </div>
 
         {/* Aircraft */}
-        <div className="bg-gray-800 rounded-lg p-3">
+        <div className="glass-card p-3">
           <div className="text-gray-400 text-xs mb-2">Aircraft</div>
           {ac && acType ? (
             <div className="space-y-2">

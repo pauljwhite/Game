@@ -18,17 +18,17 @@ export const BottomBar: React.FC = () => {
   const latestNews = newsTicker[0] ?? 'Welcome to Mighty Airline Empire!';
 
   return (
-    <footer className="h-10 bg-gray-950 border-t border-gray-800 flex items-center px-4 gap-4 shrink-0 z-40 overflow-hidden">
+    <footer className="h-10 glass-nav border-t flex items-center px-4 gap-4 shrink-0 z-40 overflow-hidden">
       {/* Market share bars */}
       <div className="flex items-center gap-2 shrink-0">
-        <span className="text-gray-500 text-xs">Share:</span>
+        <span className="soft-tag">Share</span>
         <div className="flex items-center gap-1 h-4">
           {sorted.slice(0, 6).map(a => {
             const share = totalPax > 0 ? (a.totalPassengersAllTime / totalPax) * 100 : 0;
             return (
               <div key={a.id} className="flex items-center gap-0.5">
                 <div
-                  className="h-4 rounded-sm min-w-[2px] transition-all"
+                  className="h-4 rounded-full min-w-[2px] transition-all shadow-[inset_0_1px_0_rgba(255,255,255,0.2)]"
                   style={{ width: `${Math.max(2, share * 1.5)}px`, backgroundColor: a.color }}
                   title={`${a.name}: ${share.toFixed(1)}%`}
                 />
@@ -41,12 +41,12 @@ export const BottomBar: React.FC = () => {
         </div>
       </div>
 
-      <div className="text-gray-700">|</div>
+      <div className="h-5 w-px bg-white/10" />
 
       {/* News ticker */}
       <div className="flex-1 overflow-hidden">
         <div className="text-gray-300 text-xs whitespace-nowrap overflow-hidden text-ellipsis">
-          <span className="text-yellow-400 mr-2">NEWS</span>
+          <span className="soft-tag mr-2 text-yellow-200">NEWS</span>
           {latestNews}
         </div>
       </div>

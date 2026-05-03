@@ -34,6 +34,7 @@ export function AirportMarkers({ map }: AirportMarkersProps) {
   const airports = useGameStore(s => s.airports);
   const playerAirline = useGameStore(s => s.airlines[s.playerAirlineId]);
   const selectAirport = useGameStore(s => s.selectAirport);
+  const gameDay = useGameStore(s => s.gameDay);
   const entriesRef = useRef<MarkerEntry[]>([]);
   const hubIatas = playerAirline?.hubIatas ?? [];
 
@@ -45,7 +46,8 @@ export function AirportMarkers({ map }: AirportMarkersProps) {
 
     Object.values(airports).forEach(airport => {
       const isHub = airport.isHub || hubIatas.includes(airport.iata);
-      const color = isHub ? '#f59e0b' : '#60a5fa';
+      const isClosed = airport.closedUntilGameDay !== undefined && airport.closedUntilGameDay >= gameDay;
+      const color = isClosed ? '#ef4444' : isHub ? '#f59e0b' : '#60a5fa';
       const visible = zoom >= (MIN_ZOOM[airport.size] ?? 3);
       const latlng: [number, number] = [airport.lat, airport.lon];
 
@@ -71,7 +73,7 @@ export function AirportMarkers({ map }: AirportMarkersProps) {
         interactive: true,
       }).addTo(map);
 
-      hit.on('click', () => { if (zoom >= (MIN_ZOOM[airport.size] ?? 3)) selectAirport(airport.iata); });
+      hit.on('click', () => { if (map.getZoom() >= (MIN_ZOOM[airport.size] ?? 3)) selectAirport(airport.iata); });
       hit.bindTooltip(airport.iata, { direction: 'top', offset: [0, -4], className: 'leaflet-tooltip-airport' });
 
       entriesRef.current.push({ visual, hit, airport });
@@ -82,7 +84,7 @@ export function AirportMarkers({ map }: AirportMarkersProps) {
       entriesRef.current = [];
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [airports, map, selectAirport, hubIatas.join(',')]);
+  }, [airports, map, selectAirport, gameDay, hubIatas.join(',')]);
 
   useEffect(() => {
     function onZoom() {

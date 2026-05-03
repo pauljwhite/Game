@@ -1,11 +1,32 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useGameStore } from '@/store';
 import { formatCurrency } from '@/utils/format';
 import { LoadFactorBar } from '@/ui/components/LoadFactorBar';
 import { PriceInput } from '@/ui/components/PriceInput';
 import { AIRCRAFT_TYPES } from '@/data/aircraftTypes';
 import { computeFlightCost } from '@/engine/economicsEngine';
-import { FUEL_PRICE_USD_PER_LITER } from '@/utils/constants';
+import { getPlayerMarketShare, getBaselineDailyPax, conditionDemandMod } from '@/engine/demandModel';
+import { HUB_DEMAND_BONUS, REPUTATION_DEMAND_FACTOR } from '@/utils/constants';
+
+function LoadFactorPreviewRow({ label, current, predicted }: { label: string; current: number; predicted: number }) {
+  const pct  = Math.round(Math.min(1, Math.max(0, predicted)) * 100);
+  const color = pct >= 70 ? 'bg-green-500' : pct >= 40 ? 'bg-yellow-500' : 'bg-red-500';
+  const delta = Math.round((predicted - current) * 100);
+  const deltaColor = delta > 0 ? 'text-green-400' : delta < 0 ? 'text-red-400' : 'text-gray-500';
+  const deltaStr   = delta > 0 ? `+${delta}` : `${delta}`;
+  return (
+    <div className="flex items-center gap-2">
+      <span className="text-xs text-gray-400 w-8">{label}</span>
+      <div className="flex-1 h-2 bg-gray-700 rounded overflow-hidden">
+        <div className={`h-full ${color} transition-all`} style={{ width: `${pct}%` }} />
+      </div>
+      <span className="text-xs text-gray-300 w-8 text-right">{pct}%</span>
+      {delta !== 0 && (
+        <span className={`text-[10px] w-8 text-right tabular-nums ${deltaColor}`}>{deltaStr}pp</span>
+      )}
+    </div>
+  );
+}
 
 export const RouteDetailModal: React.FC = () => {
   const routes               = useGameStore(s => s.routes);
@@ -37,6 +58,11 @@ export const RouteDetailModal: React.FC = () => {
 
   if (!route) return null;
 
+  const airlines    = useGameStore(s => s.airlines);
+  const aiAirlines  = useGameStore(s => s.aiAirlines);
+  const aiRoutes    = useGameStore(s => s.aiRoutes);
+  const globalFuelPrice = useGameStore(s => s.globalFuelPrice);
+
   const assignedAircraft = route.aircraftId ? aircraft[route.aircraftId] : null;
   const origin      = airports[route.originIata];
   const destination = airports[route.destinationIata];
@@ -45,7 +71,7 @@ export const RouteDetailModal: React.FC = () => {
   const assignedType = assignedAircraft ? AIRCRAFT_TYPES.find(t => t.id === assignedAircraft.typeId) : null;
   const referencePrice = (() => {
     if (assignedAircraft && assignedType && origin && destination) {
-      const costs = computeFlightCost(route, assignedAircraft, assignedType, origin, destination, FUEL_PRICE_USD_PER_LITER);
+      const costs = computeFlightCost(route, assignedAircraft, assignedType, origin, destination, globalFuelPrice);
       const totalSeats = assignedType.seatsEconomy + assignedType.seatsBusiness;
       return totalSeats > 0 ? Math.round(costs.totalCost / totalSeats * 1.4) : Math.round(route.distanceKm * 0.12);
     }
@@ -53,6 +79,35 @@ export const RouteDetailModal: React.FC = () => {
   })();
   const maxEco = referencePrice * 6;
   const maxBiz = referencePrice * 24;
+
+  const preview = useMemo(() => {
+    if (!assignedAircraft || !assignedType || !origin || !destination) return null;
+    const allAirlines = [...Object.values(airlines), ...Object.values(aiAirlines)];
+    const allRoutes   = [...Object.values(routes),   ...Object.values(aiRoutes)];
+    const flightCosts = computeFlightCost(route, assignedAircraft, assignedType, origin, destination, globalFuelPrice);
+    const flightsPerDay = flightsPerWeek / 7;
+    const totalSeats  = assignedType.seatsEconomy + assignedType.seatsBusiness;
+    const ecoRef      = totalSeats > 0 ? Math.round(flightCosts.totalCost / totalSeats * 1.3) : 200;
+    const bizRef      = ecoRef * 4;
+    const playerAirline = airlines['player'];
+    const repMod = playerAirline ? 1 + (playerAirline.reputationScore - 50) * REPUTATION_DEMAND_FACTOR : 1;
+    const condMod = conditionDemandMod(assignedAircraft.condition);
+    const baselinePax = getBaselineDailyPax(origin, destination) * (origin.isHub || destination.isHub ? HUB_DEMAND_BONUS : 1);
+    const ecoShare    = getPlayerMarketShare(route.originIata, route.destinationIata, priceEconomy, allAirlines, allRoutes, ecoRef);
+    const ecoCapacity = assignedType.seatsEconomy * flightsPerDay;
+    const ecoPax      = Math.min(ecoCapacity, Math.floor(baselinePax * 0.90 * ecoShare * repMod * condMod));
+    const lfe         = ecoCapacity > 0 ? ecoPax / ecoCapacity : 0;
+    const bizShare    = assignedType.seatsBusiness > 0
+      ? getPlayerMarketShare(route.originIata, route.destinationIata, priceBusiness, allAirlines, allRoutes, bizRef, 'player', 'business')
+      : 0;
+    const bizCapacity = assignedType.seatsBusiness * flightsPerDay;
+    const bizPax      = Math.min(bizCapacity, Math.floor(baselinePax * 0.10 * bizShare * repMod * condMod));
+    const lfb         = bizCapacity > 0 ? bizPax / bizCapacity : 0;
+    const dailyRevenue = ecoPax * priceEconomy + bizPax * priceBusiness;
+    const dailyCost    = flightCosts.totalCost * flightsPerDay;
+    return { lfe, lfb, dailyRevenue, dailyCost, dailyProfit: dailyRevenue - dailyCost };
+  }, [priceEconomy, priceBusiness, flightsPerWeek, assignedAircraft, assignedType, origin, destination,
+      routes, aiRoutes, airlines, aiAirlines, globalFuelPrice]);
 
   // Aircraft eligible for this route: not in maintenance/crashed, range sufficient
   const eligibleAircraft = Object.values(aircraft).filter(ac => {
@@ -101,8 +156,8 @@ export const RouteDetailModal: React.FC = () => {
   }
 
   return (
-    <div className="fixed inset-0 bg-black/80 flex items-end sm:items-center justify-center z-[9999]">
-      <div className="bg-gray-900 border border-gray-700 rounded-t-2xl sm:rounded-xl px-4 sm:px-6 py-4 shadow-2xl w-full max-w-lg relative max-h-[92svh] sm:max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center z-[9999]">
+      <div className="glass-panel rounded-t-2xl sm:rounded-xl px-4 sm:px-6 py-4 w-full max-w-lg relative max-h-[92svh] sm:max-h-[90vh] overflow-y-auto">
         <button
           onClick={handleClose}
           className="absolute top-4 right-4 text-gray-400 hover:text-white transition-colors text-xl leading-none"
@@ -123,19 +178,19 @@ export const RouteDetailModal: React.FC = () => {
 
         {/* Stats */}
         <div className="grid grid-cols-2 gap-3 mb-4">
-          <div className="bg-gray-800 rounded-lg p-3">
+          <div className="glass-card p-3">
             <div className="text-gray-400 text-xs mb-1">Distance</div>
             <div className="text-white font-semibold">{Math.round(route.distanceKm).toLocaleString()} km</div>
           </div>
-          <div className="bg-gray-800 rounded-lg p-3">
+          <div className="glass-card p-3">
             <div className="text-gray-400 text-xs mb-1">Daily Revenue</div>
             <div className="text-green-400 font-semibold">{formatCurrency(route.dailyRevenue)}</div>
           </div>
-          <div className="bg-gray-800 rounded-lg p-3">
+          <div className="glass-card p-3">
             <div className="text-gray-400 text-xs mb-1">Daily Cost</div>
             <div className="text-red-400 font-semibold">{formatCurrency(route.dailyCost)}</div>
           </div>
-          <div className="bg-gray-800 rounded-lg p-3">
+          <div className="glass-card p-3">
             <div className={`text-xs mb-1 text-gray-400`}>Daily Profit</div>
             <div className={`font-bold ${route.dailyProfit >= 0 ? 'text-green-400' : 'text-red-400'}`}>
               {formatCurrency(route.dailyProfit)}
@@ -144,14 +199,44 @@ export const RouteDetailModal: React.FC = () => {
         </div>
 
         {/* Load factors */}
-        <div className="bg-gray-800 rounded-lg p-3 mb-4 space-y-2">
-          <div className="text-gray-400 text-xs mb-2">Load Factors</div>
-          <LoadFactorBar value={route.loadFactorEconomy}  label="Eco" />
-          <LoadFactorBar value={route.loadFactorBusiness} label="Biz" />
+        <div className="glass-card p-3 mb-4 space-y-2">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-gray-400 text-xs">Load Factors</span>
+            {preview && <span className="text-[10px] text-blue-400">preview</span>}
+          </div>
+          {preview ? (
+            <>
+              <LoadFactorPreviewRow label="Eco" current={route.loadFactorEconomy} predicted={preview.lfe} />
+              {assignedType && assignedType.seatsBusiness > 0 && (
+                <LoadFactorPreviewRow label="Biz" current={route.loadFactorBusiness} predicted={preview.lfb} />
+              )}
+              <div className="border-t border-white/10 mt-2 pt-2 grid grid-cols-3 gap-2 text-xs">
+                <div>
+                  <div className="text-gray-500 text-[10px]">Revenue</div>
+                  <div className="text-green-400">{formatCurrency(preview.dailyRevenue)}</div>
+                </div>
+                <div>
+                  <div className="text-gray-500 text-[10px]">Cost</div>
+                  <div className="text-red-400">{formatCurrency(preview.dailyCost)}</div>
+                </div>
+                <div>
+                  <div className="text-gray-500 text-[10px]">Profit</div>
+                  <div className={preview.dailyProfit >= 0 ? 'text-green-400' : 'text-red-400'}>
+                    {formatCurrency(preview.dailyProfit)}
+                  </div>
+                </div>
+              </div>
+            </>
+          ) : (
+            <>
+              <LoadFactorBar value={route.loadFactorEconomy}  label="Eco" />
+              <LoadFactorBar value={route.loadFactorBusiness} label="Biz" />
+            </>
+          )}
         </div>
 
         {/* Aircraft assignment */}
-        <div className="bg-gray-800 rounded-lg p-3 mb-4">
+        <div className="glass-card p-3 mb-4">
           <div className="text-gray-400 text-xs mb-2">Assigned Aircraft</div>
           {assignedAircraft ? (
             <div className="space-y-2">

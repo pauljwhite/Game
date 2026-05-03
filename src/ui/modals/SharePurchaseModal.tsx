@@ -3,7 +3,7 @@ import { useGameStore } from '@/store';
 import { formatCurrency } from '@/utils/format';
 import { calculateSharePrice, rawCompanyValue } from '@/engine/valuation';
 
-const QUICK_AMOUNTS = [1, 5, 10, 25];
+const QUICK_AMOUNTS = [1, 5, 10, 25, 50];
 
 export const SharePurchaseModal: React.FC = () => {
   const modalPayload  = useGameStore(s => s.modalPayload);
@@ -38,7 +38,7 @@ export const SharePurchaseModal: React.FC = () => {
     ? marketFloat
     : (shareholders[source] ?? 0);
 
-  const percent = Math.min(Math.max(1, percentInput), Math.min(25, maxFromSource));
+  const percent = Math.min(Math.max(1, percentInput), Math.min(50, maxFromSource));
 
   const cost = useMemo(() => {
     if (!target || percent <= 0) return 0;
@@ -187,7 +187,7 @@ export const SharePurchaseModal: React.FC = () => {
             <input
               type="range"
               min={1}
-              max={Math.min(25, maxFromSource)}
+              max={Math.min(50, maxFromSource)}
               step={1}
               value={percentInput}
               onChange={e => setPercentInput(Number(e.target.value))}

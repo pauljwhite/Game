@@ -6,6 +6,7 @@ import { AircraftProfile } from '@/assets/profiles/AircraftProfile';
 import { formatCurrency, formatDuration } from '@/utils/format';
 import { computeMaintenanceCost, MAINTENANCE_TIERS } from '@/utils/constants';
 import { computeAircraftValue } from '@/engine/valuation';
+import { manufacturerFlag } from '@/utils/manufacturerFlags';
 import type { MaintenanceTier } from '@/types/aircraft';
 import type { Aircraft } from '@/types';
 
@@ -43,39 +44,39 @@ function AircraftCard({ ac, gameDay }: { ac: Aircraft; gameDay: number }) {
     : inMaint ? 'In maintenance' : ac.isGrounded ? 'Grounded' : 'Unassigned';
 
   return (
-    <div className={`border-b border-gray-800 ${ac.isGrounded && !inMaint ? 'opacity-60' : ''}`}>
+    <div className={`border-b border-white/10 ${ac.isGrounded && !inMaint ? 'opacity-60' : ''}`}>
       {/* Compact single-line row */}
       <button
-        className="w-full flex items-center gap-2 px-3 py-2 hover:bg-gray-800/50 transition-colors text-left"
+        className="w-full flex items-center gap-1.5 px-2 py-2 hover:bg-white/[0.055] transition-colors text-left"
         onClick={() => { setExpanded(v => !v); setSellConfirm(false); }}
       >
         {/* Condition dot */}
         <span className={`w-2 h-2 rounded-full shrink-0 ${condBg}`} />
 
         {/* Model */}
-        <span className="text-white text-sm font-medium w-24 shrink-0 truncate">{type.model}</span>
+        <span className="text-white text-sm font-medium w-14 shrink-0 truncate">{type.model}</span>
 
-        {/* Badges */}
-        <span className="flex gap-1 shrink-0">
-          {needsMaint && <span className="text-[9px] bg-red-900 text-red-300 px-1 rounded leading-tight">MAINT</span>}
-          {inMaint    && <span className="text-[9px] bg-yellow-900 text-yellow-300 px-1 rounded leading-tight">IN MAINT</span>}
-          {ac.autoMaintenanceEnabled && !inMaint && <span className="text-[9px] bg-blue-900 text-blue-300 px-1 rounded leading-tight">AUTO</span>}
-        </span>
+        {/* Route — absorbs remaining space */}
+        <span className="flex-1 min-w-0 text-gray-400 text-xs truncate">{routeLabel}</span>
 
-        {/* Route — flexible */}
-        <span className="flex-1 text-gray-400 text-xs truncate min-w-0">{routeLabel}</span>
-
-        {/* Flight hours */}
-        <span className="text-[10px] text-gray-500 shrink-0 w-12 text-right">
+        {/* Flight hours — hidden on mobile */}
+        <span className="hidden sm:block text-[10px] text-gray-500 shrink-0 w-10 text-right">
           {Math.round(ac.totalFlightHours).toLocaleString()}h
         </span>
 
-        {/* Condition bar */}
-        <div className="w-16 shrink-0 flex items-center gap-1.5">
-          <div className="flex-1 h-1.5 bg-gray-700 rounded overflow-hidden">
+        {/* Status chips */}
+        {needsMaint && <span className="soft-tag border-red-300/20 bg-red-500/15 text-red-200 shrink-0">MAINT</span>}
+        {inMaint    && <span className="soft-tag border-yellow-300/20 bg-yellow-500/15 text-yellow-200 shrink-0">MAINT</span>}
+        {ac.autoMaintenanceEnabled && !inMaint && !needsMaint && (
+          <span className="soft-tag border-sky-300/20 bg-sky-500/15 text-sky-200 shrink-0">AUTO</span>
+        )}
+
+        {/* Condition bar + % */}
+        <div className="shrink-0 flex items-center gap-1">
+          <div className="w-8 h-1.5 bg-white/10 rounded-full overflow-hidden">
             <div className={`h-full ${condBg}`} style={{ width: `${conditionPct}%` }} />
           </div>
-          <span className={`text-[10px] w-7 text-right ${condText}`}>{conditionPct.toFixed(0)}%</span>
+          <span className={`text-[10px] w-6 text-right tabular-nums ${condText}`}>{conditionPct.toFixed(0)}%</span>
         </div>
 
         {/* Chevron */}
@@ -84,18 +85,31 @@ function AircraftCard({ ac, gameDay }: { ac: Aircraft; gameDay: number }) {
 
       {/* Expanded detail */}
       {expanded && (
-        <div className="px-3 pb-3 bg-gray-900/60 border-t border-gray-800/60">
+        <div className="px-3 pb-3 bg-white/[0.03] border-t border-white/10">
           {/* SVG + stats row */}
           <div className="flex items-center gap-3 pt-2 pb-2">
             <div className="w-32 h-14 shrink-0 flex items-center justify-center">
               <AircraftProfile type={type} color={playerAirline?.color ?? '#60a5fa'} className="w-full h-full" />
             </div>
             <div className="flex-1 text-xs text-gray-400 space-y-0.5">
-              <div>{type.manufacturer} {type.model} · {type.seatsEconomy}Y/{type.seatsBusiness}J seats</div>
+              <div>{manufacturerFlag(type.manufacturer)} {type.manufacturer} {type.model} · {type.seatsEconomy}Y/{type.seatsBusiness}J seats</div>
               <div>{formatDuration(ac.totalFlightHours)} total hrs · Crash risk: {(ac.crashRisk * 100).toFixed(2)}%</div>
               <div className="text-gray-500">{type.rangeKm.toLocaleString()} km range · {type.cruiseSpeedKmh} km/h</div>
             </div>
           </div>
+
+          {/* Grounded reason banner */}
+          {ac.isGrounded && !inMaint && (
+            <div className="mb-2 px-3 py-2 bg-red-900/40 border border-red-500/40 rounded-lg">
+              <div className="flex items-start gap-2">
+                <span className="text-red-400 font-bold text-xs shrink-0">GROUNDED</span>
+                <span className="text-red-300 text-xs">{ac.groundedReason ?? 'Aircraft grounded — maintenance required'}</span>
+              </div>
+              {ac.autoMaintenanceEnabled && (
+                <div className="mt-1 text-xs text-blue-300">Auto-maintenance will begin on the next daily tick.</div>
+              )}
+            </div>
+          )}
 
           {inMaint && (
             <div className="mb-2 text-xs text-yellow-300 text-center">
@@ -123,7 +137,7 @@ function AircraftCard({ ac, gameDay }: { ac: Aircraft; gameDay: number }) {
                   </button>
                   <button
                     onClick={() => setSellConfirm(false)}
-                    className="px-2 py-1 bg-gray-700 hover:bg-gray-600 text-gray-300 text-xs rounded transition-colors"
+                    className="apple-button"
                   >
                     Cancel
                   </button>
@@ -131,7 +145,7 @@ function AircraftCard({ ac, gameDay }: { ac: Aircraft; gameDay: number }) {
               ) : (
                 <button
                   onClick={() => setSellConfirm(true)}
-                  className="px-2 py-1 bg-gray-700 hover:bg-gray-600 text-gray-300 text-xs rounded transition-colors"
+                  className="apple-button"
                 >
                   Sell Aircraft
                 </button>
@@ -141,17 +155,17 @@ function AircraftCard({ ac, gameDay }: { ac: Aircraft; gameDay: number }) {
 
           {/* Maintenance accordion */}
           {canStartMaint && (
-            <div className="border border-gray-800 rounded overflow-hidden text-xs">
+            <div className="glass-card overflow-hidden text-xs">
               <button
                 onClick={() => toggleSection('oneoff')}
-                className="w-full flex items-center justify-between px-3 py-2 bg-gray-800 hover:bg-gray-750 transition-colors"
+                className="w-full flex items-center justify-between px-3 py-2 bg-white/[0.045] hover:bg-white/[0.08] transition-colors"
               >
                 <span className="font-medium text-gray-200">One-off maintenance</span>
                 <span className="text-gray-500">{openSection === 'oneoff' ? '▴' : '▾'}</span>
               </button>
 
               {openSection === 'oneoff' && (
-                <div className="p-2 grid grid-cols-3 gap-1 bg-gray-900">
+                <div className="p-2 grid grid-cols-3 gap-1 bg-slate-950/35">
                   {TIER_ORDER.map(tier => {
                     const cfg  = MAINTENANCE_TIERS[tier];
                     const cost = computeMaintenanceCost(tier, ac.maintenanceHoursOwed, type.maintenanceCostPerHourUSD);
@@ -164,7 +178,7 @@ function AircraftCard({ ac, gameDay }: { ac: Aircraft; gameDay: number }) {
                         key={tier}
                         onClick={() => startMaintenance(ac.id, gameDay, tier)}
                         title={cfg.desc}
-                        className="px-1.5 py-1.5 bg-gray-700 hover:bg-gray-600 text-gray-200 rounded text-center transition-colors"
+                        className="apple-button px-1.5 py-1.5 text-center"
                       >
                         <div className="text-xs font-semibold">{cfg.label}</div>
                         <div className="text-[10px] text-gray-400">{formatCurrency(cost)}</div>
@@ -178,11 +192,11 @@ function AircraftCard({ ac, gameDay }: { ac: Aircraft; gameDay: number }) {
                 </div>
               )}
 
-              <div className="border-t border-gray-800" />
+              <div className="border-t border-white/10" />
 
               <button
                 onClick={() => toggleSection('auto')}
-                className="w-full flex items-center justify-between px-3 py-2 bg-gray-800 hover:bg-gray-750 transition-colors"
+                className="w-full flex items-center justify-between px-3 py-2 bg-white/[0.045] hover:bg-white/[0.08] transition-colors"
               >
                 <span className="font-medium text-gray-200">
                   Auto-maintenance
@@ -196,15 +210,15 @@ function AircraftCard({ ac, gameDay }: { ac: Aircraft; gameDay: number }) {
               </button>
 
               {openSection === 'auto' && (
-                <div className="p-2 space-y-2 bg-gray-900">
+                <div className="p-2 space-y-2 bg-slate-950/35">
                   <div className="flex items-center justify-between">
                     <span className="text-gray-300">Enable auto-maintenance</span>
                     <button
                       onClick={() => setAutoMaintenance(ac.id, !ac.autoMaintenanceEnabled, ac.autoMaintenanceThreshold ?? 40, ac.autoMaintenanceTier ?? 'standard')}
                       className={`px-2 py-0.5 rounded font-semibold transition-colors ${
                         ac.autoMaintenanceEnabled
-                          ? 'bg-blue-600 hover:bg-blue-500 text-white'
-                          : 'bg-gray-600 hover:bg-gray-500 text-gray-300'
+                          ? 'bg-sky-500 text-white'
+                          : 'bg-white/10 hover:bg-white/15 text-gray-300'
                       }`}
                     >
                       {ac.autoMaintenanceEnabled ? 'ON' : 'OFF'}
@@ -236,8 +250,8 @@ function AircraftCard({ ac, gameDay }: { ac: Aircraft; gameDay: number }) {
                               onClick={() => setAutoMaintenance(ac.id, true, ac.autoMaintenanceThreshold ?? 40, tier)}
                               className={`py-1 rounded text-[10px] font-medium transition-colors ${
                                 (ac.autoMaintenanceTier ?? 'standard') === tier
-                                  ? 'bg-blue-600 text-white'
-                                  : 'bg-gray-700 text-gray-400 hover:bg-gray-600'
+                                  ? 'bg-sky-500 text-white'
+                                  : 'bg-white/10 text-gray-400 hover:bg-white/15'
                               }`}
                             >
                               {MAINTENANCE_TIERS[tier].label}
@@ -267,12 +281,12 @@ export const FleetPanel: React.FC = () => {
 
   return (
     <div className="flex flex-col h-full">
-      <div className="flex items-center justify-between p-3 border-b border-gray-700">
+      <div className="panel-header flex items-center justify-between">
         <h2 className="text-white font-bold">Fleet ({fleetList.length})</h2>
         <div className="flex items-center gap-1">
           <button
             onClick={() => openModalById('buyAircraft')}
-            className="px-3 py-1 bg-blue-600 hover:bg-blue-500 text-white text-xs rounded"
+            className="apple-button-primary"
           >
             + Buy Aircraft
           </button>
@@ -280,7 +294,18 @@ export const FleetPanel: React.FC = () => {
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto">
+      {/* Column headers */}
+      {fleetList.length > 0 && (
+        <div className="flex items-center gap-1.5 px-2 py-1 border-b border-white/5 text-[10px] text-gray-500 select-none bg-white/[0.02]">
+          <span className="w-2 shrink-0" />
+          <span className="w-14 shrink-0">Aircraft</span>
+          <span className="flex-1 min-w-0">Route</span>
+          <span className="hidden sm:block w-10 text-right shrink-0">Hrs</span>
+          <span className="shrink-0 pr-1">Cond.</span>
+        </div>
+      )}
+
+      <div className="flex-1 overflow-y-auto overflow-x-hidden">
         {fleetList.length === 0 && (
           <div className="p-4 text-gray-400 text-sm text-center">
             No aircraft yet. Buy your first plane!

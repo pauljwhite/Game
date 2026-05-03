@@ -42,6 +42,7 @@ export interface Aircraft {
   condition: number;
   maintenanceHoursOwed: number;
   isGrounded: boolean;
+  groundedReason?: string;
   lastMaintenanceGameDay: number;
   crashRisk: number;
   assignedRouteId: string | null;
@@ -54,5 +55,5 @@ export interface Aircraft {
   autoMaintenanceEnabled: boolean;
   autoMaintenanceThreshold: number;         // trigger at this condition %
   autoMaintenanceTier: MaintenanceTier;
-  groundedReason?: string;
+  knownFaultRiskMod: number;               // multiplier on crashRisk when flying with an ignored fault (1.0 = normal)
 }

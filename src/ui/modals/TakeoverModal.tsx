@@ -32,11 +32,11 @@ export const TakeoverModal: React.FC = () => {
   const canProceed  = target.isInsolvent || hasMajority;
 
   const val        = calculateBuyoutPrice(target, aiAircraft, aiRoutes);
-  const rawVal     = rawCompanyValue(target, aiAircraft, aiRoutes);
-  const ownedValue = rawVal * (playerStake / 100);
+  const ownedValue = rawCompanyValue(target, aiAircraft, aiRoutes) * (playerStake / 100);
   const adjustedPrice = Math.max(0, val.totalPrice - ownedValue);
   const canAfford  = playerAirline.cashUSD >= adjustedPrice;
 
+  // Fleet summary grouped by type
   const fleetSummary: Record<string, { count: number; model: string }> = {};
   target.fleetIds.forEach(id => {
     const ac = aiAircraft[id];
@@ -96,6 +96,7 @@ export const TakeoverModal: React.FC = () => {
         {/* Valuation breakdown */}
         <div className="glass-card p-4 mb-4 space-y-2 text-sm">
           <div className="text-gray-400 text-xs font-semibold uppercase tracking-wider mb-2">Valuation</div>
+
           <div className="flex justify-between">
             <span className="text-gray-400">Fleet ({target.fleetIds.length} aircraft)</span>
             <span className="text-white">{formatCurrency(val.fleetValue)}</span>
@@ -173,9 +174,7 @@ export const TakeoverModal: React.FC = () => {
         )}
 
         {canProceed && !canAfford && (
-          <p className="text-red-400 text-xs mb-3 text-center">
-            Insufficient funds — need {formatCurrency(adjustedPrice - playerAirline.cashUSD)} more.
-          </p>
+          <p className="text-red-400 text-xs mb-3 text-center">Insufficient funds — need {formatCurrency(adjustedPrice - playerAirline.cashUSD)} more.</p>
         )}
 
         <div className="flex gap-3">

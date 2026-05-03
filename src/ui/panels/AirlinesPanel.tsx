@@ -38,7 +38,7 @@ export const AirlinesPanel: React.FC = () => {
         <button onClick={closePanel} aria-label="Close" className="w-7 h-7 flex items-center justify-center text-gray-400 hover:text-white hover:bg-gray-700 rounded transition-colors text-lg leading-none">×</button>
       </div>
 
-      {/* Player row */}
+      {/* Player row — pinned above the scroll area */}
       {playerAirline && (() => {
         const share = totalPax > 0 ? (playerAirline.totalPassengersAllTime / totalPax) * 100 : 0;
         return (
@@ -80,13 +80,13 @@ export const AirlinesPanel: React.FC = () => {
 
           const fleetEntries = airline.fleetIds.map(id => aiAircraft[id]).filter(Boolean);
           const routeEntries = airline.routeIds.map(id => aiRoutes[id]).filter(Boolean);
-
           const otherShareholders = Object.entries(airline.shareholders ?? {})
             .filter(([id, pct]) => id !== 'player' && pct > 0)
             .map(([id, pct]) => ({ name: aiAirlines[id]?.name ?? id, pct }));
 
           return (
-            <div key={airline.id} className="border-b border-gray-800">
+            <div key={airline.id} className={`border-b border-gray-800 ${airline.isInsolvent ? 'opacity-50' : ''}`}>
+              {/* Main row */}
               <div
                 className="p-3 cursor-pointer hover:bg-gray-800/50 transition-colors"
                 onClick={() => setExpandedId(isExpanded ? null : airline.id)}
@@ -108,7 +108,10 @@ export const AirlinesPanel: React.FC = () => {
                 </div>
 
                 <div className="mt-1 h-1.5 bg-gray-700 rounded overflow-hidden">
-                  <div className="h-full rounded" style={{ width: `${share}%`, backgroundColor: airline.color }} />
+                  <div
+                    className="h-full rounded"
+                    style={{ width: `${share}%`, backgroundColor: airline.color }}
+                  />
                 </div>
 
                 <div className="mt-1.5 grid grid-cols-3 gap-x-2 text-xs text-gray-400">
@@ -124,28 +127,30 @@ export const AirlinesPanel: React.FC = () => {
 
                 {/* Action buttons */}
                 <div className="mt-2 flex gap-1.5">
-                  <button
-                    onClick={e => { e.stopPropagation(); openModalById('sharesPurchase', airline.id); }}
-                    className="flex-1 py-1 bg-teal-900/60 hover:bg-teal-800/80 text-teal-200 text-xs rounded transition-colors"
-                  >
-                    Buy Shares{playerStake > 0 ? ` (${playerStake.toFixed(0)}%)` : ''}
-                  </button>
+                  {!airline.isInsolvent && (
+                    <button
+                      onClick={e => { e.stopPropagation(); openModalById('sharesPurchase', airline.id); }}
+                      className="flex-1 py-1 bg-teal-900/60 hover:bg-teal-800/80 text-teal-200 text-xs rounded transition-colors"
+                    >
+                      Buy Shares{playerStake > 0 ? ` (${playerStake.toFixed(0)}%)` : ''}
+                    </button>
+                  )}
                   <button
                     onClick={e => { e.stopPropagation(); openModalById('takeover', airline.id); }}
-                    disabled={!hasMajority}
-                    title={hasMajority ? 'Acquire airline' : `Need 50% stake (you own ${playerStake.toFixed(0)}%)`}
+                    disabled={!hasMajority && !airline.isInsolvent}
+                    title={hasMajority || airline.isInsolvent ? 'Acquire airline' : `Need 50% stake (you own ${playerStake.toFixed(0)}%)`}
                     className={`flex-1 py-1 text-xs rounded transition-colors ${
-                      hasMajority
+                      hasMajority || airline.isInsolvent
                         ? 'bg-indigo-700 hover:bg-indigo-600 text-indigo-100'
                         : 'bg-gray-800 text-gray-600 cursor-not-allowed'
                     }`}
                   >
-                    Take Over{!hasMajority ? ` (${playerStake.toFixed(0)}/50%)` : ''}
+                    {airline.isInsolvent ? 'Buy Out' : hasMajority ? 'Take Over' : `Take Over (${playerStake.toFixed(0)}/50%)`}
                   </button>
                 </div>
               </div>
 
-              {/* Expanded detail */}
+              {/* Expanded fleet + routes inspector */}
               {isExpanded && (
                 <div className="bg-gray-900/80 border-t border-gray-700/50 px-3 pb-3">
 
@@ -264,7 +269,7 @@ export const AirlinesPanel: React.FC = () => {
           {insolventOpen && (
             <div className="max-h-48 overflow-y-auto">
               {insolventAI.map(airline => (
-                <div key={airline.id} className="px-3 py-2 border-b border-gray-800 opacity-60">
+                <div key={airline.id} className="px-3 py-2 border-b border-gray-800 opacity-50">
                   <div className="flex items-center justify-between text-xs">
                     <div className="flex items-center gap-2 min-w-0">
                       <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: airline.color }} />
@@ -277,7 +282,7 @@ export const AirlinesPanel: React.FC = () => {
                   </div>
                   <button
                     onClick={() => openModalById('takeover', airline.id)}
-                    className="mt-1.5 w-full py-0.5 bg-indigo-900/60 hover:bg-indigo-800 text-indigo-300 text-xs rounded transition-colors"
+                    className="mt-1.5 w-full py-0.5 bg-indigo-900/60 hover:bg-indigo-800 text-indigo-300 text-xs rounded transition-colors opacity-100"
                   >
                     Buy Out (distressed)
                   </button>

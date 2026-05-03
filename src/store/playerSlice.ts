@@ -5,7 +5,7 @@ import { v4 as uuid } from 'uuid';
 import { haversineKm } from '@/utils/geo';
 import { AIRCRAFT_TYPES } from '@/data/aircraftTypes';
 import { computeMaintenanceCost, MAINTENANCE_TIERS } from '@/utils/constants';
-import { computeAircraftValue, calculateBuyoutPrice, calculateSharePrice, rawCompanyValue } from '@/engine/valuation';
+import { computeAircraftValue, calculateBuyoutPrice, rawCompanyValue, calculateSharePrice } from '@/engine/valuation';
 import type { GameStore } from './index';
 
 export interface RouteConfig {
@@ -37,6 +37,7 @@ export interface PlayerSlice {
   updateRouteStats: (routeId: string, stats: Partial<Route>) => void;
   updateAircraftCondition: (aircraftId: string, conditionDelta: number, hoursOwed: number) => void;
   groundAircraft: (aircraftId: string, reason?: string) => void;
+  ignoreGrounding: (aircraftId: string) => void;
   startMaintenance: (aircraftId: string, gameDay: number, tier: MaintenanceTier) => void;
   completeMaintenance: (aircraftId: string) => void;
   setAutoMaintenance: (aircraftId: string, enabled: boolean, threshold: number, tier: MaintenanceTier) => void;
@@ -103,6 +104,7 @@ export const createPlayerSlice: StateCreator<GameStore, [['zustand/immer', never
         autoMaintenanceEnabled: false,
         autoMaintenanceThreshold: 40,
         autoMaintenanceTier: 'standard' as MaintenanceTier,
+        knownFaultRiskMod: 1,
       };
       state.aircraft[id] = ac;
       state.airlines[PLAYER_ID].fleetIds.push(id);
@@ -115,6 +117,7 @@ export const createPlayerSlice: StateCreator<GameStore, [['zustand/immer', never
     set((state) => {
       const ac = state.aircraft[aircraftId];
       if (!ac || ac.airlineId !== PLAYER_ID) return;
+      // Remove from route
       if (ac.assignedRouteId && state.routes[ac.assignedRouteId]) {
         state.routes[ac.assignedRouteId].aircraftId = null;
         state.routes[ac.assignedRouteId].isActive = false;
@@ -195,6 +198,7 @@ export const createPlayerSlice: StateCreator<GameStore, [['zustand/immer', never
       ac.status = routeId ? 'flying' : 'idle';
       if (routeId && state.routes[routeId]) {
         state.routes[routeId].aircraftId = aircraftId;
+        // Only activate if the aircraft is not grounded; completeMaintenance activates it when clear
         state.routes[routeId].isActive = !ac.isGrounded;
       }
     }),
@@ -205,7 +209,6 @@ export const createPlayerSlice: StateCreator<GameStore, [['zustand/immer', never
       if (!airline) return;
       airline.cashUSD += netProfit;
       airline.totalPassengersAllTime += passengers;
-      airline.lastDailyProfit = netProfit;
       airline.dailyStats.push({
         gameDay: state.gameDay,
         revenue: snapshot.revenue,
@@ -223,21 +226,14 @@ export const createPlayerSlice: StateCreator<GameStore, [['zustand/immer', never
     set((state) => {
       const target = aiAirlines[targetAirlineId];
       if (!target) return;
-
-      const playerShares = (target.shareholders ?? {})[PLAYER_ID] ?? 0;
-
-      // Require majority stake unless the airline is insolvent (distressed acquisition)
-      if (!target.isInsolvent && playerShares < 50) return;
-
+      const playerStake = (target.shareholders ?? {})['player'] ?? 0;
+      if (!target.isInsolvent && playerStake < 50) return;
       const { totalPrice } = calculateBuyoutPrice(target, aiAircraft, aiRoutes);
-
-      // Discount for shares already owned
-      const ownedValue = rawCompanyValue(target, aiAircraft, aiRoutes) * (playerShares / 100);
+      const ownedValue = rawCompanyValue(target, aiAircraft, aiRoutes) * (playerStake / 100);
       const adjustedPrice = Math.max(0, totalPrice - ownedValue);
-
       state.airlines[PLAYER_ID].cashUSD -= adjustedPrice;
 
-      // Transfer fleet
+      // Transfer fleet — reset grounding and initialise player-only fields
       target.fleetIds.forEach(id => {
         const ac = aiAircraft[id];
         if (!ac) return;
@@ -247,6 +243,7 @@ export const createPlayerSlice: StateCreator<GameStore, [['zustand/immer', never
           airlineId: PLAYER_ID,
           isGrounded: false,
           status: hasRoute ? 'flying' : 'idle',
+          // Initialise fields that AI aircraft never set
           currentLat: ac.currentLat ?? 0,
           currentLon: ac.currentLon ?? 0,
           flightProgress: ac.flightProgress ?? 0,
@@ -258,7 +255,7 @@ export const createPlayerSlice: StateCreator<GameStore, [['zustand/immer', never
         state.airlines[PLAYER_ID].fleetIds.push(id);
       });
 
-      // Transfer routes
+      // Transfer routes — force active so economics runs on next tick
       target.routeIds.forEach(id => {
         const route = aiRoutes[id];
         if (!route) return;
@@ -267,6 +264,7 @@ export const createPlayerSlice: StateCreator<GameStore, [['zustand/immer', never
           ...route,
           airlineId: PLAYER_ID,
           isActive: hasAircraft,
+          // Reset stale stats so first player tick sets fresh values
           dailyRevenue: 0,
           dailyCost: 0,
           dailyProfit: 0,
@@ -311,6 +309,18 @@ export const createPlayerSlice: StateCreator<GameStore, [['zustand/immer', never
       }
     }),
 
+  ignoreGrounding: (aircraftId) =>
+    set((state) => {
+      const ac = state.aircraft[aircraftId];
+      if (!ac) return;
+      ac.isGrounded = false;
+      ac.groundedReason = undefined;
+      ac.knownFaultRiskMod = 5;
+      if (ac.assignedRouteId && state.routes[ac.assignedRouteId]) {
+        state.routes[ac.assignedRouteId].isActive = true;
+      }
+    }),
+
   startMaintenance: (aircraftId, gameDay, tier) =>
     set((state) => {
       const ac = state.aircraft[aircraftId];
@@ -342,9 +352,14 @@ export const createPlayerSlice: StateCreator<GameStore, [['zustand/immer', never
       ac.activeMaintTier = null;
       ac.status = ac.assignedRouteId ? 'flying' : 'idle';
       ac.crashRisk = 0;
+      ac.knownFaultRiskMod = 1;
       if (ac.assignedRouteId && state.routes[ac.assignedRouteId]) {
         state.routes[ac.assignedRouteId].isActive = true;
       }
+      // Reputation boost for proactive maintenance
+      const repBoost = tier === 'full' ? 3 : tier === 'standard' ? 1.5 : 0.5;
+      const airline = state.airlines[PLAYER_ID];
+      if (airline) airline.reputationScore = Math.min(100, airline.reputationScore + repBoost);
     }),
 
   setAutoMaintenance: (aircraftId, enabled, threshold, tier) =>
@@ -367,8 +382,8 @@ export const createPlayerSlice: StateCreator<GameStore, [['zustand/immer', never
       }
       state.airlines[PLAYER_ID].fleetIds = state.airlines[PLAYER_ID].fleetIds.filter(id => id !== aircraftId);
       state.airlines[PLAYER_ID].cashUSD -= 50_000_000;
-      state.airlines[PLAYER_ID].reputationScore = Math.max(0, state.airlines[PLAYER_ID].reputationScore - 25);
-      state.airlines[PLAYER_ID].crashPenaltyDaysLeft = 30;
+      state.airlines[PLAYER_ID].reputationScore = Math.max(0, state.airlines[PLAYER_ID].reputationScore - 45);
+      state.airlines[PLAYER_ID].crashPenaltyDaysLeft = 60;
       delete state.aircraft[aircraftId];
     }),
 
@@ -383,7 +398,7 @@ export const createPlayerSlice: StateCreator<GameStore, [['zustand/immer', never
     set((state) => {
       const airline = state.airlines[airlineId];
       if (!airline) return;
-      if (airline.reputationScore < 100) airline.reputationScore += 0.1;
+      if (airline.reputationScore < 100) airline.reputationScore = Math.min(100, airline.reputationScore + 0.5);
       if (airline.crashPenaltyDaysLeft > 0) airline.crashPenaltyDaysLeft--;
     }),
 
@@ -414,24 +429,17 @@ export const createPlayerSlice: StateCreator<GameStore, [['zustand/immer', never
     const isSecondary = source !== 'market';
 
     const cost = calculateSharePrice(
-      percent,
-      currentPlayerPct,
-      target,
-      state.aiAircraft,
-      state.aiRoutes,
-      isSecondary,
+      percent, currentPlayerPct, target, state.aiAircraft, state.aiRoutes, isSecondary,
     );
 
     if (player.cashUSD < cost) return;
 
-    // Validate availability
     if (isSecondary) {
       const sellerPct = (target.shareholders ?? {})[source] ?? 0;
       if (sellerPct < percent) return;
     } else {
       const ownedTotal = Object.values(target.shareholders ?? {}).reduce((s, v) => s + v, 0);
-      const floatAvailable = 100 - ownedTotal;
-      if (floatAvailable < percent) return;
+      if (100 - ownedTotal < percent) return;
     }
 
     set((s) => {
@@ -443,11 +451,8 @@ export const createPlayerSlice: StateCreator<GameStore, [['zustand/immer', never
       if (isSecondary) {
         const prev = t.shareholders[source] ?? 0;
         const remaining = prev - percent;
-        if (remaining <= 0) {
-          delete t.shareholders[source];
-        } else {
-          t.shareholders[source] = remaining;
-        }
+        if (remaining <= 0) delete t.shareholders[source];
+        else t.shareholders[source] = remaining;
       }
       p.cashUSD -= cost;
     });
@@ -455,7 +460,7 @@ export const createPlayerSlice: StateCreator<GameStore, [['zustand/immer', never
     get().pushNewsItem(
       `You acquired ${percent}% stake in ${target.name} for ${
         new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(cost)
-      }.`
+      }.`,
     );
   },
 

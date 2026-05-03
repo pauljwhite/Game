@@ -2,6 +2,48 @@ import type { Airline, Aircraft, Route } from '@/types';
 import type { AircraftType } from '@/types/aircraft';
 import { AIRCRAFT_TYPES } from '@/data/aircraftTypes';
 
+const typeMap = Object.fromEntries(AIRCRAFT_TYPES.map(t => [t.id, t]));
+
+export function rawCompanyValue(
+  target: Airline,
+  aiAircraft: Record<string, Aircraft>,
+  aiRoutes: Record<string, Route>,
+): number {
+  const fleetValue = target.fleetIds.reduce((sum, id) => {
+    const ac = aiAircraft[id];
+    const type = ac ? typeMap[ac.typeId] : null;
+    return sum + (type ? type.purchasePrice * (0.3 + 0.7 * (ac!.condition / 100)) : 0);
+  }, 0);
+  const annualProfit = target.routeIds.reduce((sum, id) => {
+    const r = aiRoutes[id];
+    return sum + (r ? Math.max(0, r.dailyProfit * 365) : 0);
+  }, 0);
+  const cashAdj = Math.max(0, target.cashUSD) - Math.abs(Math.min(0, target.cashUSD));
+  return Math.max(1_000_000, fleetValue + annualProfit * 2 + cashAdj);
+}
+
+export function calculateSharePrice(
+  percentToBuy: number,
+  currentPlayerPercent: number,
+  target: Airline,
+  aiAircraft: Record<string, Aircraft>,
+  aiRoutes: Record<string, Route>,
+  fromSecondaryMarket: boolean,
+): number {
+  const companyValue = rawCompanyValue(target, aiAircraft, aiRoutes);
+  const pricePerPct = companyValue / 100;
+
+  const stakeAfter = currentPlayerPercent + percentToBuy;
+  let blockPremium: number;
+  if (stakeAfter >= 50 && currentPlayerPercent < 50) blockPremium = 1.25;
+  else if (percentToBuy > 25) blockPremium = 1.1;
+  else if (percentToBuy > 10) blockPremium = 1.05;
+  else blockPremium = 1.0;
+
+  const secondaryPremium = fromSecondaryMarket ? 1.15 : 1.0;
+  return Math.round(pricePerPct * percentToBuy * blockPremium * secondaryPremium);
+}
+
 /**
  * Current resale value of an owned aircraft.
  * Depreciates with age, condition, and flight hours.
@@ -19,8 +61,6 @@ export function computeAircraftValue(ac: Aircraft, type: AircraftType, currentGa
 
   return Math.round(type.purchasePrice * 0.75 * ageFactor * condFactor * hoursFactor);
 }
-
-const typeMap = Object.fromEntries(AIRCRAFT_TYPES.map(t => [t.id, t]));
 
 export interface BuyoutValuation {
   fleetValue: number;    // residual aircraft value
