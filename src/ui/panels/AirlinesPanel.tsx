@@ -30,11 +30,6 @@ export const AirlinesPanel: React.FC = () => {
     .map(a => ({ ...a, isPlayer: false }))
     .sort((a, b) => b.totalPassengersAllTime - a.totalPassengersAllTime);
 
-  const allAirlines = [
-    ...(playerAirline ? [{ ...playerAirline, isPlayer: true }] : []),
-    ...sortedAI,
-  ];
-
   return (
     <div className="flex flex-col h-full">
       <div className="flex items-center justify-between p-3 border-b border-gray-700">
@@ -42,41 +37,64 @@ export const AirlinesPanel: React.FC = () => {
         <button onClick={closePanel} aria-label="Close" className="w-7 h-7 flex items-center justify-center text-gray-400 hover:text-white hover:bg-gray-700 rounded transition-colors text-lg leading-none">×</button>
       </div>
 
+      {/* Player row — pinned above the scroll area */}
+      {playerAirline && (() => {
+        const share = totalPax > 0 ? (playerAirline.totalPassengersAllTime / totalPax) * 100 : 0;
+        return (
+          <div className="border-b-2 border-blue-800/50 bg-gray-900 shrink-0">
+            <div className="p-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 min-w-0">
+                  <div className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: playerAirline.color }} />
+                  <span className="text-white text-sm font-medium truncate">
+                    {playerAirline.name}
+                    <span className="ml-1 text-xs text-blue-400">(You)</span>
+                  </span>
+                </div>
+                <span className="text-gray-300 text-sm shrink-0">{share.toFixed(1)}%</span>
+              </div>
+              <div className="mt-1 h-1.5 bg-gray-700 rounded overflow-hidden">
+                <div className="h-full rounded" style={{ width: `${share}%`, backgroundColor: playerAirline.color }} />
+              </div>
+              <div className="mt-1.5 grid grid-cols-3 gap-x-2 text-xs text-gray-400">
+                <span>Cash: <span className={playerAirline.cashUSD >= 0 ? 'text-green-400' : 'text-red-400'}>{formatCurrency(playerAirline.cashUSD)}</span></span>
+                <span>Fleet: <span className="text-white">{playerAirline.fleetIds.length}</span></span>
+                <span>Routes: <span className="text-white">{playerAirline.routeIds.length}</span></span>
+              </div>
+              <div className="mt-1 text-xs text-gray-500">
+                Hub: {playerAirline.hubIatas.join(', ')} · Rep: {playerAirline.reputationScore.toFixed(0)}/100
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* AI airlines — scrollable */}
       <div className="flex-1 overflow-y-auto">
-        {allAirlines.map(airline => {
+        {sortedAI.map(airline => {
           const share = totalPax > 0 ? (airline.totalPassengersAllTime / totalPax) * 100 : 0;
 
           const isExpanded = expandedId === airline.id;
-          const isAI = !airline.isPlayer;
+          const isAI = true;
 
-          // Gather aircraft and routes for this competitor
-          const fleetEntries = isAI
-            ? airline.fleetIds.map(id => aiAircraft[id]).filter(Boolean)
-            : [];
-          const routeEntries = isAI
-            ? airline.routeIds.map(id => aiRoutes[id]).filter(Boolean)
-            : [];
+          const fleetEntries = airline.fleetIds.map(id => aiAircraft[id]).filter(Boolean);
+          const routeEntries = airline.routeIds.map(id => aiRoutes[id]).filter(Boolean);
 
           return (
             <div key={airline.id} className={`border-b border-gray-800 ${airline.isInsolvent ? 'opacity-50' : ''}`}>
               {/* Main row */}
               <div
-                className={`p-3 ${isAI ? 'cursor-pointer hover:bg-gray-800/50 transition-colors' : ''}`}
-                onClick={() => isAI && setExpandedId(isExpanded ? null : airline.id)}
+                className="p-3 cursor-pointer hover:bg-gray-800/50 transition-colors"
+                onClick={() => setExpandedId(isExpanded ? null : airline.id)}
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2 min-w-0">
                     <div className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: airline.color }} />
-                    <span className="text-white text-sm font-medium truncate">
-                      {airline.name}
-                      {airline.isPlayer && <span className="ml-1 text-xs text-blue-400">(You)</span>}
-                    </span>
+                    <span className="text-white text-sm font-medium truncate">{airline.name}</span>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
                     <span className="text-gray-300 text-sm">{share.toFixed(1)}%</span>
-                    {isAI && (
-                      <span className="text-gray-600 text-xs">{isExpanded ? '▲' : '▼'}</span>
-                    )}
+                    <span className="text-gray-600 text-xs">{isExpanded ? '▲' : '▼'}</span>
                   </div>
                 </div>
 
@@ -98,7 +116,7 @@ export const AirlinesPanel: React.FC = () => {
                   {airline.personality && <span className="ml-1 capitalize text-gray-600">· {airline.personality}</span>}
                 </div>
 
-                {isAI && !airline.isInsolvent && (
+                {!airline.isInsolvent && (
                   <button
                     onClick={e => { e.stopPropagation(); openModalById('takeover', airline.id); }}
                     className="mt-2 w-full py-1 bg-indigo-900 hover:bg-indigo-800 text-indigo-200 text-xs rounded transition-colors"
