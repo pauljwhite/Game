@@ -48,6 +48,8 @@ export interface PlayerSlice {
   rebrandAirline: (newName: string | null, newColor: string | null, cost: number) => void;
   buyShares: (targetId: string, percent: number, source: 'market' | string) => void;
   applyDividend: (amount: number) => void;
+  setMaintenancePolicy: (policy: Airline['maintenancePolicy']) => void;
+  setAircraftPolicyExclusion: (aircraftId: string, excluded: boolean) => void;
 }
 
 const PLAYER_ID = 'player';
@@ -83,6 +85,7 @@ export const createPlayerSlice: StateCreator<GameStore, [['zustand/immer', never
         crashPenaltyDaysLeft: 0,
         shareholders: {},
         lastDailyProfit: 0,
+        maintenancePolicy: { enabled: false, threshold: 40, tier: 'standard' },
       };
       state.airlines[PLAYER_ID] = airline;
     }),
@@ -91,6 +94,7 @@ export const createPlayerSlice: StateCreator<GameStore, [['zustand/immer', never
     const airline = get().airlines[PLAYER_ID];
     if (!airline || airline.cashUSD < aircraftType.purchasePrice) return null;
     const id = uuid();
+    const policy = airline.maintenancePolicy;
     set((state) => {
       const ac: Aircraft = {
         id, typeId, name: `${aircraftType.model} #${id.slice(0, 4).toUpperCase()}`,
@@ -101,10 +105,11 @@ export const createPlayerSlice: StateCreator<GameStore, [['zustand/immer', never
         assignedRouteId: null, status: 'idle',
         currentLat: 0, currentLon: 0, flightProgress: 0,
         activeMaintTier: null,
-        autoMaintenanceEnabled: false,
-        autoMaintenanceThreshold: 40,
-        autoMaintenanceTier: 'standard' as MaintenanceTier,
+        autoMaintenanceEnabled: policy?.enabled ?? false,
+        autoMaintenanceThreshold: policy?.threshold ?? 40,
+        autoMaintenanceTier: (policy?.tier ?? 'standard') as MaintenanceTier,
         knownFaultRiskMod: 1,
+        excludedFromPolicy: false,
       };
       state.aircraft[id] = ac;
       state.airlines[PLAYER_ID].fleetIds.push(id);
@@ -234,6 +239,7 @@ export const createPlayerSlice: StateCreator<GameStore, [['zustand/immer', never
       state.airlines[PLAYER_ID].cashUSD -= adjustedPrice;
 
       // Transfer fleet — reset grounding and initialise player-only fields
+      const policy = state.airlines[PLAYER_ID]?.maintenancePolicy;
       target.fleetIds.forEach(id => {
         const ac = aiAircraft[id];
         if (!ac) return;
@@ -248,9 +254,10 @@ export const createPlayerSlice: StateCreator<GameStore, [['zustand/immer', never
           currentLon: ac.currentLon ?? 0,
           flightProgress: ac.flightProgress ?? 0,
           activeMaintTier: ac.activeMaintTier ?? null,
-          autoMaintenanceEnabled: false,
-          autoMaintenanceThreshold: 40,
-          autoMaintenanceTier: (ac.autoMaintenanceTier as MaintenanceTier) ?? 'standard',
+          autoMaintenanceEnabled: policy?.enabled ?? false,
+          autoMaintenanceThreshold: policy?.threshold ?? 40,
+          autoMaintenanceTier: (policy?.tier ?? 'standard') as MaintenanceTier,
+          excludedFromPolicy: false,
         };
         state.airlines[PLAYER_ID].fleetIds.push(id);
       });
@@ -468,6 +475,34 @@ export const createPlayerSlice: StateCreator<GameStore, [['zustand/immer', never
     set((state) => {
       if (state.airlines[PLAYER_ID]) {
         state.airlines[PLAYER_ID].cashUSD += amount;
+      }
+    }),
+
+  setMaintenancePolicy: (policy) =>
+    set((state) => {
+      const airline = state.airlines[PLAYER_ID];
+      if (!airline) return;
+      airline.maintenancePolicy = policy;
+      Object.values(state.aircraft).forEach(ac => {
+        if (ac.airlineId !== PLAYER_ID || ac.excludedFromPolicy) return;
+        ac.autoMaintenanceEnabled = policy.enabled;
+        ac.autoMaintenanceThreshold = policy.threshold;
+        ac.autoMaintenanceTier = policy.tier;
+      });
+    }),
+
+  setAircraftPolicyExclusion: (aircraftId, excluded) =>
+    set((state) => {
+      const ac = state.aircraft[aircraftId];
+      if (!ac) return;
+      ac.excludedFromPolicy = excluded;
+      if (!excluded) {
+        const policy = state.airlines[PLAYER_ID]?.maintenancePolicy;
+        if (policy) {
+          ac.autoMaintenanceEnabled = policy.enabled;
+          ac.autoMaintenanceThreshold = policy.threshold;
+          ac.autoMaintenanceTier = policy.tier;
+        }
       }
     }),
 });

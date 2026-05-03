@@ -56,4 +56,5 @@ export interface Aircraft {
   autoMaintenanceThreshold: number;         // trigger at this condition %
   autoMaintenanceTier: MaintenanceTier;
   knownFaultRiskMod: number;               // multiplier on crashRisk when flying with an ignored fault (1.0 = normal)
+  excludedFromPolicy: boolean;             // if true, aircraft uses its own autoMaintenance* fields
 }

@@ -51,9 +51,12 @@ function sanitizePersistedState(state: Partial<GameStore>): Partial<GameStore> {
     }),
   );
 
+  const DEFAULT_MAINT_POLICY = { enabled: false, threshold: 40, tier: 'standard' as const };
+
   const airlines = Object.fromEntries(
     Object.entries(state.airlines ?? {}).map(([id, airline]) => {
       const raw = airline as unknown as Record<string, unknown>;
+      const rawPolicy = raw.maintenancePolicy as { enabled?: boolean; threshold?: number; tier?: string } | undefined;
       return [
         id,
         {
@@ -62,6 +65,13 @@ function sanitizePersistedState(state: Partial<GameStore>): Partial<GameStore> {
           crashPenaltyDaysLeft: typeof raw.crashPenaltyDaysLeft === 'number' ? raw.crashPenaltyDaysLeft : 0,
           shareholders: (raw.shareholders as Record<string, number> | undefined) ?? {},
           lastDailyProfit: typeof raw.lastDailyProfit === 'number' ? raw.lastDailyProfit : 0,
+          maintenancePolicy: rawPolicy
+            ? {
+                enabled: typeof rawPolicy.enabled === 'boolean' ? rawPolicy.enabled : false,
+                threshold: typeof rawPolicy.threshold === 'number' ? rawPolicy.threshold : 40,
+                tier: (['light', 'standard', 'full'].includes(rawPolicy.tier ?? '') ? rawPolicy.tier : 'standard') as 'light' | 'standard' | 'full',
+              }
+            : DEFAULT_MAINT_POLICY,
           routeIds: uniqueExistingIds(airline.routeIds, routeId => routes[routeId]?.airlineId === id),
           fleetIds: uniqueExistingIds(airline.fleetIds, aircraftId => aircraft[aircraftId]?.airlineId === id),
         },
@@ -81,7 +91,8 @@ function sanitizePersistedState(state: Partial<GameStore>): Partial<GameStore> {
         autoMaintenanceTier: ((raw.autoMaintenanceTier as string | undefined) ?? 'standard') as 'light' | 'standard' | 'full',
       };
       const knownFaultRiskMod = typeof raw.knownFaultRiskMod === 'number' ? raw.knownFaultRiskMod : 1;
-      return [id, { ...defaults, ...ac, knownFaultRiskMod }];
+      const excludedFromPolicy = typeof raw.excludedFromPolicy === 'boolean' ? raw.excludedFromPolicy : false;
+      return [id, { ...defaults, ...ac, knownFaultRiskMod, excludedFromPolicy }];
     }),
   );
 

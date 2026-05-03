@@ -13,11 +13,13 @@ import type { Aircraft } from '@/types';
 const TIER_ORDER: MaintenanceTier[] = ['light', 'standard', 'full'];
 
 function AircraftCard({ ac, gameDay }: { ac: Aircraft; gameDay: number }) {
-  const startMaintenance   = useGameStore(s => s.startMaintenance);
-  const setAutoMaintenance = useGameStore(s => s.setAutoMaintenance);
-  const sellAircraft       = useGameStore(s => s.sellAircraft);
-  const airlines           = useGameStore(s => s.airlines);
-  const routes             = useGameStore(s => s.routes);
+  const startMaintenance           = useGameStore(s => s.startMaintenance);
+  const setAutoMaintenance         = useGameStore(s => s.setAutoMaintenance);
+  const setAircraftPolicyExclusion = useGameStore(s => s.setAircraftPolicyExclusion);
+  const sellAircraft               = useGameStore(s => s.sellAircraft);
+  const airlines                   = useGameStore(s => s.airlines);
+  const routes                     = useGameStore(s => s.routes);
+  const policy                     = useGameStore(s => s.airlines['player']?.maintenancePolicy);
 
   const [expanded, setExpanded] = useState(false);
   const [openSection, setOpenSection] = useState<'oneoff' | 'auto' | null>(null);
@@ -198,10 +200,14 @@ function AircraftCard({ ac, gameDay }: { ac: Aircraft; gameDay: number }) {
                 onClick={() => toggleSection('auto')}
                 className="w-full flex items-center justify-between px-3 py-2 bg-white/[0.045] hover:bg-white/[0.08] transition-colors"
               >
-                <span className="font-medium text-gray-200">
+                <span className="font-medium text-gray-200 flex items-center gap-1.5">
                   Auto-maintenance
+                  {ac.excludedFromPolicy
+                    ? <span className="text-[9px] px-1 py-0.5 rounded bg-slate-500/40 text-slate-300 font-normal">Custom</span>
+                    : <span className="text-[9px] px-1 py-0.5 rounded bg-teal-500/30 text-teal-300 font-normal">Fleet policy</span>
+                  }
                   {ac.autoMaintenanceEnabled && (
-                    <span className="ml-2 text-blue-400 font-normal">
+                    <span className="text-blue-400 font-normal text-[10px]">
                       ON · {MAINTENANCE_TIERS[ac.autoMaintenanceTier ?? 'standard'].label} @ {ac.autoMaintenanceThreshold ?? 40}%
                     </span>
                   )}
@@ -211,53 +217,114 @@ function AircraftCard({ ac, gameDay }: { ac: Aircraft; gameDay: number }) {
 
               {openSection === 'auto' && (
                 <div className="p-2 space-y-2 bg-slate-950/35">
-                  <div className="flex items-center justify-between">
-                    <span className="text-gray-300">Enable auto-maintenance</span>
-                    <button
-                      onClick={() => setAutoMaintenance(ac.id, !ac.autoMaintenanceEnabled, ac.autoMaintenanceThreshold ?? 40, ac.autoMaintenanceTier ?? 'standard')}
-                      className={`px-2 py-0.5 rounded font-semibold transition-colors ${
-                        ac.autoMaintenanceEnabled
-                          ? 'bg-sky-500 text-white'
-                          : 'bg-white/10 hover:bg-white/15 text-gray-300'
-                      }`}
-                    >
-                      {ac.autoMaintenanceEnabled ? 'ON' : 'OFF'}
-                    </button>
-                  </div>
-                  {ac.autoMaintenanceEnabled && (
+                  {!ac.excludedFromPolicy ? (
+                    // Controlled by fleet policy — show read-only view
                     <>
-                      <div>
-                        <div className="flex justify-between text-[10px] text-gray-400 mb-1">
-                          <span>Trigger at condition</span>
-                          <span className="text-white">{ac.autoMaintenanceThreshold ?? 40}%</span>
-                        </div>
-                        <input
-                          type="range" min={20} max={80} step={5}
-                          value={ac.autoMaintenanceThreshold ?? 40}
-                          onChange={e => setAutoMaintenance(ac.id, true, Number(e.target.value), ac.autoMaintenanceTier ?? 'standard')}
-                          className="w-full accent-blue-500 h-1"
-                        />
-                        <div className="flex justify-between text-[10px] text-gray-600 mt-0.5">
-                          <span>20%</span><span>80%</span>
-                        </div>
+                      <div className={`flex items-center justify-between ${!policy?.enabled ? 'opacity-50' : ''}`}>
+                        <span className="text-gray-300">Enable auto-maintenance</span>
+                        <span className={`px-2 py-0.5 rounded font-semibold text-xs ${policy?.enabled ? 'bg-sky-500 text-white' : 'bg-white/10 text-gray-400'}`}>
+                          {policy?.enabled ? 'ON' : 'OFF'}
+                        </span>
                       </div>
-                      <div>
-                        <div className="text-[10px] text-gray-400 mb-1">Maintenance tier</div>
-                        <div className="grid grid-cols-3 gap-1">
-                          {TIER_ORDER.map(tier => (
-                            <button
-                              key={tier}
-                              onClick={() => setAutoMaintenance(ac.id, true, ac.autoMaintenanceThreshold ?? 40, tier)}
-                              className={`py-1 rounded text-[10px] font-medium transition-colors ${
-                                (ac.autoMaintenanceTier ?? 'standard') === tier
-                                  ? 'bg-sky-500 text-white'
-                                  : 'bg-white/10 text-gray-400 hover:bg-white/15'
-                              }`}
-                            >
-                              {MAINTENANCE_TIERS[tier].label}
-                            </button>
-                          ))}
-                        </div>
+                      {policy?.enabled && (
+                        <>
+                          <div className="opacity-60">
+                            <div className="flex justify-between text-[10px] text-gray-400 mb-1">
+                              <span>Trigger at condition</span>
+                              <span className="text-white">{policy.threshold}%</span>
+                            </div>
+                            <div className="w-full h-1 bg-white/10 rounded-full">
+                              <div className="h-full bg-blue-500 rounded-full" style={{ width: `${((policy.threshold - 20) / 60) * 100}%` }} />
+                            </div>
+                          </div>
+                          <div className="opacity-60">
+                            <div className="text-[10px] text-gray-400 mb-1">Maintenance tier</div>
+                            <div className="grid grid-cols-3 gap-1">
+                              {TIER_ORDER.map(tier => (
+                                <div
+                                  key={tier}
+                                  className={`py-1 rounded text-[10px] font-medium text-center ${
+                                    policy.tier === tier
+                                      ? 'bg-sky-500 text-white'
+                                      : 'bg-white/10 text-gray-400'
+                                  }`}
+                                >
+                                  {MAINTENANCE_TIERS[tier].label}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        </>
+                      )}
+                      <div className="pt-1 border-t border-white/10">
+                        <button
+                          onClick={() => setAircraftPolicyExclusion(ac.id, true)}
+                          className="w-full text-[10px] text-gray-400 hover:text-white transition-colors py-1"
+                        >
+                          ⊘ Exclude this aircraft from fleet policy
+                        </button>
+                      </div>
+                    </>
+                  ) : (
+                    // Custom per-aircraft settings
+                    <>
+                      <div className="flex items-center justify-between">
+                        <span className="text-gray-300">Enable auto-maintenance</span>
+                        <button
+                          onClick={() => setAutoMaintenance(ac.id, !ac.autoMaintenanceEnabled, ac.autoMaintenanceThreshold ?? 40, ac.autoMaintenanceTier ?? 'standard')}
+                          className={`px-2 py-0.5 rounded font-semibold transition-colors ${
+                            ac.autoMaintenanceEnabled
+                              ? 'bg-sky-500 text-white'
+                              : 'bg-white/10 hover:bg-white/15 text-gray-300'
+                          }`}
+                        >
+                          {ac.autoMaintenanceEnabled ? 'ON' : 'OFF'}
+                        </button>
+                      </div>
+                      {ac.autoMaintenanceEnabled && (
+                        <>
+                          <div>
+                            <div className="flex justify-between text-[10px] text-gray-400 mb-1">
+                              <span>Trigger at condition</span>
+                              <span className="text-white">{ac.autoMaintenanceThreshold ?? 40}%</span>
+                            </div>
+                            <input
+                              type="range" min={20} max={80} step={5}
+                              value={ac.autoMaintenanceThreshold ?? 40}
+                              onChange={e => setAutoMaintenance(ac.id, true, Number(e.target.value), ac.autoMaintenanceTier ?? 'standard')}
+                              className="w-full accent-blue-500 h-1"
+                            />
+                            <div className="flex justify-between text-[10px] text-gray-600 mt-0.5">
+                              <span>20%</span><span>80%</span>
+                            </div>
+                          </div>
+                          <div>
+                            <div className="text-[10px] text-gray-400 mb-1">Maintenance tier</div>
+                            <div className="grid grid-cols-3 gap-1">
+                              {TIER_ORDER.map(tier => (
+                                <button
+                                  key={tier}
+                                  onClick={() => setAutoMaintenance(ac.id, true, ac.autoMaintenanceThreshold ?? 40, tier)}
+                                  className={`py-1 rounded text-[10px] font-medium transition-colors ${
+                                    (ac.autoMaintenanceTier ?? 'standard') === tier
+                                      ? 'bg-sky-500 text-white'
+                                      : 'bg-white/10 text-gray-400 hover:bg-white/15'
+                                  }`}
+                                >
+                                  {MAINTENANCE_TIERS[tier].label}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        </>
+                      )}
+                      <div className="pt-1 border-t border-white/10">
+                        <button
+                          onClick={() => setAircraftPolicyExclusion(ac.id, false)}
+                          className="w-full text-[10px] text-teal-400 hover:text-teal-300 transition-colors py-1"
+                        >
+                          ↩ Follow fleet policy
+                        </button>
                       </div>
                     </>
                   )}
@@ -265,6 +332,95 @@ function AircraftCard({ ac, gameDay }: { ac: Aircraft; gameDay: number }) {
               )}
             </div>
           )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function FleetPolicySection() {
+  const policy               = useGameStore(s => s.airlines['player']?.maintenancePolicy);
+  const setMaintenancePolicy = useGameStore(s => s.setMaintenancePolicy);
+  const [expanded, setExpanded] = useState(false);
+
+  if (!policy) return null;
+
+  const THRESHOLD_OPTIONS = [20, 30, 40, 50, 60];
+
+  return (
+    <div className="border-b border-white/10">
+      <button
+        onClick={() => setExpanded(v => !v)}
+        className="w-full flex items-center justify-between px-3 py-2 bg-white/[0.03] hover:bg-white/[0.06] transition-colors text-left"
+      >
+        <span className="text-xs font-semibold text-gray-200 flex items-center gap-2">
+          Fleet Maintenance Policy
+          <span className={`text-[9px] px-1.5 py-0.5 rounded font-normal ${policy.enabled ? 'bg-teal-500/30 text-teal-300' : 'bg-white/10 text-gray-500'}`}>
+            {policy.enabled ? `ON · ${MAINTENANCE_TIERS[policy.tier].label} @ ${policy.threshold}%` : 'OFF'}
+          </span>
+        </span>
+        <span className="text-gray-500 text-xs">{expanded ? '▴' : '▾'}</span>
+      </button>
+
+      {expanded && (
+        <div className="px-3 pb-3 bg-white/[0.02] space-y-3 text-xs">
+          {/* Enable/disable */}
+          <div className="flex items-center justify-between pt-2">
+            <span className="text-gray-300">Auto-maintenance for all aircraft</span>
+            <button
+              onClick={() => setMaintenancePolicy({ ...policy, enabled: !policy.enabled })}
+              className={`px-2.5 py-0.5 rounded font-semibold transition-colors ${
+                policy.enabled ? 'bg-teal-500 text-white' : 'bg-white/10 hover:bg-white/15 text-gray-300'
+              }`}
+            >
+              {policy.enabled ? 'ON' : 'OFF'}
+            </button>
+          </div>
+
+          {/* Threshold */}
+          <div>
+            <div className="flex justify-between text-[10px] text-gray-400 mb-1">
+              <span>Trigger at condition</span>
+              <span className="text-white">{policy.threshold}%</span>
+            </div>
+            <div className="flex gap-1">
+              {THRESHOLD_OPTIONS.map(val => (
+                <button
+                  key={val}
+                  onClick={() => setMaintenancePolicy({ ...policy, threshold: val })}
+                  className={`flex-1 py-0.5 rounded text-[10px] font-medium transition-colors ${
+                    policy.threshold === val
+                      ? 'bg-sky-500 text-white'
+                      : 'bg-white/10 text-gray-400 hover:bg-white/15'
+                  }`}
+                >
+                  {val}%
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Tier */}
+          <div>
+            <div className="text-[10px] text-gray-400 mb-1">Maintenance tier</div>
+            <div className="grid grid-cols-3 gap-1">
+              {TIER_ORDER.map(tier => (
+                <button
+                  key={tier}
+                  onClick={() => setMaintenancePolicy({ ...policy, tier })}
+                  className={`py-1 rounded text-[10px] font-medium transition-colors ${
+                    policy.tier === tier
+                      ? 'bg-sky-500 text-white'
+                      : 'bg-white/10 text-gray-400 hover:bg-white/15'
+                  }`}
+                >
+                  {MAINTENANCE_TIERS[tier].label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <p className="text-[10px] text-gray-500">Applies to all aircraft not individually excluded.</p>
         </div>
       )}
     </div>
@@ -293,6 +449,8 @@ export const FleetPanel: React.FC = () => {
           <button onClick={closePanel} aria-label="Close" className="w-7 h-7 flex items-center justify-center text-gray-400 hover:text-white hover:bg-gray-700 rounded transition-colors text-lg leading-none">×</button>
         </div>
       </div>
+
+      <FleetPolicySection />
 
       {/* Column headers */}
       {fleetList.length > 0 && (

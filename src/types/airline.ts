@@ -37,4 +37,9 @@ export interface Airline {
   crashPenaltyDaysLeft: number;
   shareholders: Record<string, number>; // ownerId ('player' | aiId) → % owned
   lastDailyProfit: number;
+  maintenancePolicy: {
+    enabled: boolean;
+    threshold: number;
+    tier: 'light' | 'standard' | 'full';
+  };
 }
