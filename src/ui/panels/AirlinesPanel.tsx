@@ -41,7 +41,7 @@ export const AirlinesPanel: React.FC = () => {
       <div className="flex-1 overflow-y-auto">
         {allAirlines.map(airline => {
           const share = totalPax > 0 ? (airline.totalPassengersAllTime / totalPax) * 100 : 0;
-          const canTakeover = !airline.isPlayer && airline.canBeTakenOver;
+
           const isExpanded = expandedId === airline.id;
           const isAI = !airline.isPlayer;
 
@@ -94,12 +94,12 @@ export const AirlinesPanel: React.FC = () => {
                   {airline.personality && <span className="ml-1 capitalize text-gray-600">· {airline.personality}</span>}
                 </div>
 
-                {canTakeover && (
+                {isAI && !airline.isInsolvent && (
                   <button
                     onClick={e => { e.stopPropagation(); openModalById('takeover', airline.id); }}
-                    className="mt-2 w-full py-1 bg-red-900 hover:bg-red-800 text-red-200 text-xs rounded"
+                    className="mt-2 w-full py-1 bg-indigo-900 hover:bg-indigo-800 text-indigo-200 text-xs rounded transition-colors"
                   >
-                    Acquire Airline
+                    Buy Out
                   </button>
                 )}
                 {airline.isInsolvent && (

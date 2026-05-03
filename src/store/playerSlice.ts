@@ -5,6 +5,7 @@ import { v4 as uuid } from 'uuid';
 import { haversineKm } from '@/utils/geo';
 import { AIRCRAFT_TYPES } from '@/data/aircraftTypes';
 import { computeMaintenanceCost, MAINTENANCE_TIERS } from '@/utils/constants';
+import { calculateBuyoutPrice } from '@/engine/valuation';
 import type { GameStore } from './index';
 
 export interface RouteConfig {
@@ -220,8 +221,8 @@ export const createPlayerSlice: StateCreator<GameStore, [['zustand/immer', never
     set((state) => {
       const target = aiAirlines[targetAirlineId];
       if (!target) return;
-      const cost = Math.max(1, target.fleetIds.length * 10_000_000 - Math.abs(Math.min(0, target.cashUSD)));
-      state.airlines[PLAYER_ID].cashUSD -= cost;
+      const { totalPrice } = calculateBuyoutPrice(target, aiAircraft, aiRoutes);
+      state.airlines[PLAYER_ID].cashUSD -= totalPrice;
       // Transfer fleet and routes
       target.fleetIds.forEach(id => {
         const ac = aiAircraft[id];

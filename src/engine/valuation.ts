@@ -1,0 +1,45 @@
+import type { Airline, Aircraft, Route } from '@/types';
+import { AIRCRAFT_TYPES } from '@/data/aircraftTypes';
+
+const typeMap = Object.fromEntries(AIRCRAFT_TYPES.map(t => [t.id, t]));
+
+export interface BuyoutValuation {
+  fleetValue: number;    // residual aircraft value
+  routeValue: number;    // 2× annual profit on profitable routes
+  cashValue: number;     // positive cash held
+  debtValue: number;     // debt to assume (negative)
+  controlPremium: number;
+  totalPrice: number;
+}
+
+export function calculateBuyoutPrice(
+  target: Airline,
+  aiAircraft: Record<string, Aircraft>,
+  aiRoutes: Record<string, Route>,
+): BuyoutValuation {
+  // Fleet: residual value scales with condition (30% floor)
+  const fleetValue = target.fleetIds.reduce((sum, id) => {
+    const ac = aiAircraft[id];
+    if (!ac) return sum;
+    const type = typeMap[ac.typeId];
+    if (!type) return sum;
+    return sum + type.purchasePrice * (0.3 + 0.7 * (ac.condition / 100));
+  }, 0);
+
+  // Route network: 2 years of annual profit (profitable routes only)
+  const annualProfit = target.routeIds.reduce((sum, id) => {
+    const route = aiRoutes[id];
+    if (!route) return sum;
+    return sum + Math.max(0, route.dailyProfit * 365);
+  }, 0);
+  const routeValue = annualProfit * 2;
+
+  const cashValue = Math.max(0, target.cashUSD);
+  const debtValue = Math.abs(Math.min(0, target.cashUSD));
+
+  const raw = fleetValue + routeValue + cashValue - debtValue;
+  const controlPremium = Math.max(0, raw * 0.2);
+  const totalPrice = Math.max(1_000_000, Math.round((raw + controlPremium) / 500_000) * 500_000);
+
+  return { fleetValue, routeValue, cashValue, debtValue, controlPremium, totalPrice };
+}
