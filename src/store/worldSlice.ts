@@ -26,8 +26,14 @@ export interface WorldSlice {
   removeAIAirline: (id: string) => void;
 }
 
+function createAirportMap(): Record<string, Airport> {
+  const airports: Record<string, Airport> = {};
+  AIRPORTS.forEach(ap => { airports[ap.iata] = { ...ap }; });
+  return airports;
+}
+
 export const createWorldSlice: StateCreator<GameStore, [['zustand/immer', never]], [], WorldSlice> = (set) => ({
-  airports: {},
+  airports: createAirportMap(),
   aiAirlines: {},
   aiAircraft: {},
   aiRoutes: {},
@@ -37,9 +43,7 @@ export const createWorldSlice: StateCreator<GameStore, [['zustand/immer', never]
 
   initWorld: () =>
     set((state) => {
-      const airports: Record<string, Airport> = {};
-      AIRPORTS.forEach(ap => { airports[ap.iata] = ap; });
-      state.airports = airports;
+      state.airports = createAirportMap();
     }),
 
   setAIAirlines: (airlines, aircraft, routes) =>

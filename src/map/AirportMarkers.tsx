@@ -13,6 +13,7 @@ interface AirportMarkersProps {
 
 export function AirportMarkers({ map }: AirportMarkersProps) {
   const airports = useGameStore(s => s.airports);
+  const playerAirline = useGameStore(s => s.airlines[s.playerAirlineId]);
   const selectAirport = useGameStore(s => s.selectAirport);
   const markersRef = useRef<L.CircleMarker[]>([]);
 
@@ -23,7 +24,8 @@ export function AirportMarkers({ map }: AirportMarkersProps) {
 
     Object.values(airports).forEach(airport => {
       const radius = SIZE_RADIUS[airport.size] ?? 4;
-      const color = airport.isHub ? '#f59e0b' : '#60a5fa';
+      const isHub = airport.isHub || playerAirline?.hubIatas.includes(airport.iata);
+      const color = isHub ? '#f59e0b' : '#60a5fa';
 
       const marker = L.circleMarker([airport.lat, airport.lon], {
         radius,
@@ -43,7 +45,7 @@ export function AirportMarkers({ map }: AirportMarkersProps) {
       markersRef.current.forEach(m => m.remove());
       markersRef.current = [];
     };
-  }, [airports, map, selectAirport]);
+  }, [airports, map, playerAirline?.hubIatas, selectAirport]);
 
   return null;
 }

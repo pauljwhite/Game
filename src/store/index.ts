@@ -11,7 +11,7 @@ export type GameStore = GameSlice & PlayerSlice & WorldSlice & UISlice;
 
 const VALID_GAME_SPEEDS = new Set([0, 60, 300, 1200, 3600, 14400]);
 const DEFAULT_GAME_SPEED = 300;
-const SAVE_VERSION = 4;
+const SAVE_VERSION = 5;
 
 function uniqueExistingIds(ids: unknown, exists: (id: string) => boolean): string[] {
   if (!Array.isArray(ids)) return [];
@@ -27,6 +27,7 @@ function uniqueExistingIds(ids: unknown, exists: (id: string) => boolean): strin
 }
 
 function sanitizePersistedState(state: Partial<GameStore>): Partial<GameStore> {
+  const { airports: _airports, ...stateWithoutStaticAirports } = state;
   const aiRoutes = state.aiRoutes ?? {};
   const aiAircraft = state.aiAircraft ?? {};
   const routes = state.routes ?? {};
@@ -55,7 +56,7 @@ function sanitizePersistedState(state: Partial<GameStore>): Partial<GameStore> {
   );
 
   const sanitized: Partial<GameStore> = {
-    ...state,
+    ...stateWithoutStaticAirports,
     airlines,
     aiAirlines,
     speed: VALID_GAME_SPEEDS.has(state.speed as number) ? state.speed : DEFAULT_GAME_SPEED,
@@ -88,7 +89,7 @@ export const useGameStore = create<GameStore>()(
       migrate: migratePersistedState,
       partialize: (state) => {
         // Exclude transient UI state from persistence
-        const { selectedAirportIata: _s, selectedRouteId: _r, openPanel: _p, openModal: _m, modalPayload: _mp, ...rest } = state;
+        const { selectedAirportIata: _s, selectedRouteId: _r, openPanel: _p, openModal: _m, modalPayload: _mp, airports: _a, ...rest } = state;
         return sanitizePersistedState(rest);
       },
     },
