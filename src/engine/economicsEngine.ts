@@ -6,6 +6,7 @@ import {
   MAINTENANCE_TIERS,
 } from '@/utils/constants';
 import { getBaselineDailyPax, getPlayerMarketShare, conditionDemandMod } from './demandModel';
+import { runRandomEventsTick } from './randomEvents';
 import { AIRCRAFT_TYPES } from '@/data/aircraftTypes';
 
 export function computeFlightCost(
@@ -219,14 +220,13 @@ export function runDailyTick(store: ReturnType<typeof import('@/store/index')['u
     }
   });
 
-  // Recalculate market shares
-  const totalPax = Object.values(airlines).reduce((s, a) => s + a.totalPassengersAllTime, 0) +
-    Object.values(aiAirlines).reduce((s, a) => s + a.totalPassengersAllTime, 0);
-  void totalPax;
   void gameDay;
   void allRoutes;
   void _ac;
   void _r;
+
+  // Random incidents and scandals
+  runRandomEventsTick(store);
 }
 
 export function msToGameDate(gameTimeMs: number): Date {
