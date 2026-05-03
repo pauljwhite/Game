@@ -77,7 +77,7 @@ export const BuyAircraftModal: React.FC = () => {
         {/* Two-column body */}
         <div className="flex flex-1 min-h-0">
           {/* Manufacturer sidebar */}
-          <div className="w-[4.5rem] sm:w-44 shrink-0 border-r border-white/10 overflow-y-auto py-2 bg-white/[0.025]">
+          <div className="w-max sm:w-44 shrink-0 border-r border-white/10 overflow-y-auto py-2 bg-white/[0.025]">
             {manufacturers.map(mfr => (
               <button
                 key={mfr}
