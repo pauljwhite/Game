@@ -21,7 +21,7 @@ export const AirportPopup: React.FC = () => {
   const playerHasHub = playerAirline?.hubIatas.includes(selectedIata);
 
   return (
-    <div className="absolute bottom-12 left-4 z-[800] bg-gray-900 border border-gray-700 rounded-lg p-3 w-64 shadow-xl">
+    <div className="absolute bottom-12 left-4 z-[800] glass-panel rounded-xl p-3 w-64">
       <div className="flex justify-between items-start">
         <div>
           <div className="text-white font-bold text-sm">{airport.name}</div>
@@ -57,21 +57,21 @@ export const AirportPopup: React.FC = () => {
       <div className="mt-3 flex gap-2">
         <button
           onClick={() => openModalById('newRoute', selectedIata)}
-          className="flex-1 py-1 bg-blue-600 hover:bg-blue-500 text-white text-xs rounded"
+          className="apple-button-primary flex-1 py-1"
         >
           + New Route
         </button>
         {!playerHasHub ? (
           <button
             onClick={() => { designateHub(selectedIata); }}
-            className="flex-1 py-1 bg-yellow-700 hover:bg-yellow-600 text-white text-xs rounded"
+            className="apple-button flex-1 py-1 border-yellow-300/20 bg-yellow-500/20 text-yellow-100"
           >
             Set Hub
           </button>
         ) : (
           <button
             onClick={() => { removeHub(selectedIata); }}
-            className="flex-1 py-1 bg-gray-700 hover:bg-gray-600 text-white text-xs rounded"
+            className="apple-button flex-1 py-1"
           >
             Remove Hub
           </button>

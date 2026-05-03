@@ -62,10 +62,10 @@ const AirlineMenu: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   return (
     <div
       ref={ref}
-      className="absolute top-full left-0 mt-1 w-72 max-w-[calc(100vw-0.5rem)] bg-gray-900 border border-gray-700 rounded-xl shadow-2xl z-[9999] overflow-hidden"
+      className="absolute top-full left-0 mt-2 w-72 max-w-[calc(100vw-0.5rem)] glass-panel rounded-xl z-[9999] overflow-hidden"
     >
       {/* Header */}
-      <div className="px-4 py-3 border-b border-gray-800" style={{ borderLeftColor: player.color, borderLeftWidth: 3 }}>
+      <div className="px-4 py-3 border-b border-white/10 bg-white/[0.035]" style={{ borderLeftColor: player.color, borderLeftWidth: 3 }}>
         <div className="flex items-center gap-2">
           <span className="text-lg">{player.logoEmoji}</span>
           <div>
@@ -76,7 +76,7 @@ const AirlineMenu: React.FC<{ onClose: () => void }> = ({ onClose }) => {
       </div>
 
       {/* Stats grid */}
-      <div className="px-4 py-3 grid grid-cols-2 gap-x-4 gap-y-2 text-xs border-b border-gray-800">
+      <div className="px-4 py-3 grid grid-cols-2 gap-x-4 gap-y-2 text-xs border-b border-white/10">
         <div>
           <div className="text-gray-500">Fleet</div>
           <div className="text-white font-semibold">{fleetCount} aircraft</div>
@@ -147,8 +147,8 @@ const AirlineMenu: React.FC<{ onClose: () => void }> = ({ onClose }) => {
           onMouseLeave={() => setConfirming(false)}
           className={`w-full py-2 rounded text-xs font-semibold transition-colors ${
             confirming
-              ? 'bg-red-600 hover:bg-red-500 text-white'
-              : 'bg-gray-800 hover:bg-gray-700 text-gray-300'
+              ? 'apple-button-danger'
+              : 'apple-button w-full'
           }`}
         >
           {confirming ? 'Click again to confirm — all progress lost' : 'Start Again'}
@@ -175,14 +175,14 @@ export const TopBar: React.FC = () => {
   };
 
   return (
-    <header className="bg-gray-950 border-b border-gray-800 relative z-10 shrink-0">
+    <header className="glass-nav border-b relative z-10 shrink-0">
       {/* Primary row: branding | date | speed | (nav on lg+) */}
       <div className="h-12 flex items-center px-3 gap-2">
         {/* Airline branding — clickable */}
         <div className="relative shrink-0">
           <button
             onClick={() => setMenuOpen(v => !v)}
-            className="flex items-center gap-1.5 min-w-0 hover:bg-gray-800 rounded px-2 py-1 transition-colors"
+            className="flex items-center gap-1.5 min-w-0 rounded-full border border-white/10 bg-white/[0.045] px-2.5 py-1 transition-all hover:bg-white/[0.09]"
           >
             <span className="text-lg">{playerAirline?.logoEmoji ?? '✈'}</span>
             <div className="leading-none min-w-0 text-left">
@@ -217,10 +217,10 @@ export const TopBar: React.FC = () => {
             <button
               key={item.id}
               onClick={() => togglePanel(item.id)}
-              className={`px-3 py-1.5 rounded text-xs font-medium transition-colors ${
+              className={`nav-pill ${
                 openPanel === item.id
-                  ? 'bg-blue-600 text-white'
-                  : 'text-gray-400 hover:text-white hover:bg-gray-800'
+                  ? 'nav-pill-active'
+                  : ''
               }`}
             >
               {item.label}
@@ -235,10 +235,10 @@ export const TopBar: React.FC = () => {
           <button
             key={item.id}
             onClick={() => togglePanel(item.id)}
-            className={`px-3 py-1 rounded text-xs font-medium whitespace-nowrap transition-colors shrink-0 ${
+            className={`nav-pill whitespace-nowrap shrink-0 ${
               openPanel === item.id
-                ? 'bg-blue-600 text-white'
-                : 'text-gray-400 hover:text-white hover:bg-gray-800'
+                ? 'nav-pill-active'
+                : ''
             }`}
           >
             {item.label}

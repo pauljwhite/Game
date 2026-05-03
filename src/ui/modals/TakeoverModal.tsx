@@ -61,8 +61,8 @@ export const TakeoverModal: React.FC = () => {
   }).filter(Boolean) as { label: string; profit: number }[];
 
   return (
-    <div className="fixed inset-0 bg-black/80 flex items-end sm:items-center justify-center z-[9999]">
-      <div className="bg-gray-900 border border-gray-700 rounded-t-2xl sm:rounded-xl px-4 sm:px-6 py-4 shadow-2xl w-full max-w-lg relative max-h-[92svh] overflow-y-auto">
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center z-[9999]">
+      <div className="glass-panel rounded-t-2xl sm:rounded-xl px-4 sm:px-6 py-4 w-full max-w-lg relative max-h-[92svh] overflow-y-auto">
         <button onClick={closeModal} className="absolute top-4 right-4 text-gray-400 hover:text-white text-xl leading-none">×</button>
 
         {/* Header */}
@@ -77,7 +77,7 @@ export const TakeoverModal: React.FC = () => {
         </div>
 
         {/* Valuation breakdown */}
-        <div className="bg-gray-800 rounded-lg p-4 mb-4 space-y-2 text-sm">
+        <div className="glass-card p-4 mb-4 space-y-2 text-sm">
           <div className="text-gray-400 text-xs font-semibold uppercase tracking-wider mb-2">Valuation</div>
 
           <div className="flex justify-between">
@@ -111,7 +111,7 @@ export const TakeoverModal: React.FC = () => {
         </div>
 
         {/* What you gain */}
-        <div className="bg-gray-800 rounded-lg p-4 mb-4">
+        <div className="glass-card p-4 mb-4">
           <div className="text-gray-300 text-sm font-semibold mb-2">You gain</div>
           <div className="space-y-1 text-sm">
             {Object.values(fleetSummary).map(({ count, model }) => (
@@ -141,7 +141,7 @@ export const TakeoverModal: React.FC = () => {
         </div>
 
         {/* Affordability */}
-        <div className="bg-gray-800 rounded-lg px-4 py-3 mb-5 flex justify-between items-center text-sm">
+        <div className="glass-card px-4 py-3 mb-5 flex justify-between items-center text-sm">
           <span className="text-gray-400">Your cash after</span>
           <span className={canAfford ? 'text-green-400 font-semibold' : 'text-red-400 font-semibold'}>
             {formatCurrency(playerAirline.cashUSD - val.totalPrice)}

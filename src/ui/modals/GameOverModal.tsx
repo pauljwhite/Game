@@ -29,8 +29,8 @@ export const GameOverModal: React.FC = () => {
   const currentDate = formatGameDate(gameTimeMs);
 
   return (
-    <div className="fixed inset-0 bg-black/80 flex items-end sm:items-center justify-center z-[9999]">
-      <div className="bg-gray-900 border border-gray-700 rounded-t-2xl sm:rounded-xl px-4 sm:px-6 py-4 shadow-2xl w-full max-w-md relative max-h-[92svh] overflow-y-auto">
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center z-[9999]">
+      <div className="glass-panel rounded-t-2xl sm:rounded-xl px-4 sm:px-6 py-4 w-full max-w-md relative max-h-[92svh] overflow-y-auto">
         {/* Result header */}
         <div className={`text-center mb-6 ${isWin ? 'text-yellow-400' : 'text-red-400'}`}>
           <div className="text-5xl mb-3">{isWin ? '🏆' : '💸'}</div>
@@ -48,7 +48,7 @@ export const GameOverModal: React.FC = () => {
         </div>
 
         {/* Stats */}
-        <div className="bg-gray-800 rounded-lg p-4 mb-6 space-y-3">
+        <div className="glass-card p-4 mb-6 space-y-3">
           <div className="text-gray-400 text-xs font-semibold uppercase tracking-wider mb-1">Final Stats</div>
 
           <div className="flex justify-between items-center text-sm">

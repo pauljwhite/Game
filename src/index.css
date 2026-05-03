@@ -6,7 +6,10 @@ html, body, #root {
   height: 100%;
   margin: 0;
   overflow: hidden;
-  background: #0f172a;
+  background:
+    radial-gradient(circle at 18% 12%, rgba(56, 189, 248, 0.12), transparent 28%),
+    radial-gradient(circle at 88% 8%, rgba(34, 197, 94, 0.08), transparent 24%),
+    #05070c;
 }
 
 .leaflet-container {
@@ -21,6 +24,52 @@ html, body, #root {
   pointer-events: none;
 }
 
+@layer components {
+  .glass-nav {
+    @apply border-white/10 bg-slate-950/72 shadow-[0_16px_50px_rgba(0,0,0,0.35)] backdrop-blur-2xl;
+  }
+
+  .glass-panel {
+    @apply border-white/10 bg-slate-950/66 shadow-[0_20px_70px_rgba(0,0,0,0.45)] backdrop-blur-2xl;
+  }
+
+  .glass-card {
+    @apply rounded-lg border border-white/10 bg-white/[0.055] shadow-[inset_0_1px_0_rgba(255,255,255,0.06)];
+  }
+
+  .panel-header {
+    @apply border-b border-white/10 bg-white/[0.045] px-3 py-3;
+  }
+
+  .apple-button {
+    @apply rounded-md border border-white/10 bg-white/[0.08] px-3 py-1.5 text-xs font-semibold text-slate-200 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] transition-all hover:bg-white/[0.13] hover:text-white active:scale-[0.98];
+  }
+
+  .apple-button-primary {
+    @apply rounded-md border border-sky-300/30 bg-sky-500/80 px-3 py-1.5 text-xs font-semibold text-white shadow-[0_6px_20px_rgba(14,165,233,0.22),inset_0_1px_0_rgba(255,255,255,0.22)] transition-all hover:bg-sky-400 active:scale-[0.98];
+  }
+
+  .apple-button-danger {
+    @apply rounded-md border border-red-300/20 bg-red-500/80 px-3 py-1.5 text-xs font-semibold text-white shadow-[0_6px_20px_rgba(239,68,68,0.18),inset_0_1px_0_rgba(255,255,255,0.18)] transition-all hover:bg-red-400 active:scale-[0.98];
+  }
+
+  .icon-button {
+    @apply flex h-7 w-7 items-center justify-center rounded-md border border-white/10 bg-white/[0.06] text-lg leading-none text-slate-400 transition-all hover:bg-white/[0.12] hover:text-white active:scale-95;
+  }
+
+  .nav-pill {
+    @apply rounded-full border border-white/10 px-3 py-1.5 text-xs font-medium text-slate-300 transition-all hover:bg-white/[0.09] hover:text-white;
+  }
+
+  .nav-pill-active {
+    @apply border-sky-300/30 bg-sky-400/18 text-sky-100 shadow-[inset_0_1px_0_rgba(255,255,255,0.12)];
+  }
+
+  .soft-tag {
+    @apply rounded-full border border-white/10 bg-white/[0.07] px-2 py-0.5 text-[10px] font-semibold leading-tight text-slate-300;
+  }
+}
+
 @keyframes route-dash {
   to {
     stroke-dashoffset: -120;
@@ -29,9 +78,9 @@ html, body, #root {
 
 /* Custom scrollbar for dark panels */
 ::-webkit-scrollbar { width: 6px; }
-::-webkit-scrollbar-track { background: #1e293b; }
-::-webkit-scrollbar-thumb { background: #475569; border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: #64748b; }
+::-webkit-scrollbar-track { background: rgba(15, 23, 42, 0.35); }
+::-webkit-scrollbar-thumb { background: rgba(148, 163, 184, 0.42); border-radius: 999px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(203, 213, 225, 0.55); }
 
 /* Hide scrollbar on nav overflow rows */
 .scrollbar-none::-webkit-scrollbar { display: none; }

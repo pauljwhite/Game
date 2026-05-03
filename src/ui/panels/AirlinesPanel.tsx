@@ -33,7 +33,7 @@ export const AirlinesPanel: React.FC = () => {
 
   return (
     <div className="flex flex-col h-full">
-      <div className="flex items-center justify-between p-3 border-b border-gray-700">
+      <div className="panel-header flex items-center justify-between">
         <h2 className="text-white font-bold">Airlines</h2>
         <button onClick={closePanel} aria-label="Close" className="w-7 h-7 flex items-center justify-center text-gray-400 hover:text-white hover:bg-gray-700 rounded transition-colors text-lg leading-none">×</button>
       </div>
@@ -42,7 +42,7 @@ export const AirlinesPanel: React.FC = () => {
       {playerAirline && (() => {
         const share = totalPax > 0 ? (playerAirline.totalPassengersAllTime / totalPax) * 100 : 0;
         return (
-          <div className="border-b-2 border-blue-800/50 bg-gray-900 shrink-0">
+          <div className="border-b border-sky-300/20 bg-sky-400/[0.055] shrink-0">
             <div className="p-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2 min-w-0">

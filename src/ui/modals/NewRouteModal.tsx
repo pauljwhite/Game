@@ -185,10 +185,10 @@ export const NewRouteModal: React.FC = () => {
   const shopVisible = buyableTypes.filter(t => t.manufacturer === activeBuyMfr);
 
   return (
-    <div className="fixed inset-0 bg-black/80 flex items-end sm:items-center justify-center z-[9999]">
-      <div className="bg-gray-900 border border-gray-700 rounded-t-2xl sm:rounded-xl shadow-2xl w-full max-w-2xl max-h-[92svh] sm:max-h-[90vh] flex flex-col">
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center z-[9999]">
+      <div className="glass-panel rounded-t-2xl sm:rounded-xl w-full max-w-2xl max-h-[92svh] sm:max-h-[90vh] flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-700 flex-shrink-0">
+        <div className="panel-header flex items-center justify-between px-4 sm:px-6 sm:py-4 flex-shrink-0">
           <h2 className="text-xl font-bold text-white">New Route</h2>
           <button
             onClick={closeModal}
@@ -251,8 +251,8 @@ export const NewRouteModal: React.FC = () => {
                   onClick={() => setSelectedAircraftId(null)}
                   className={`w-full text-left px-3 py-2 rounded border text-sm transition-colors ${
                     selectedAircraftId === null
-                      ? 'border-blue-500 bg-blue-900/30 text-blue-300'
-                      : 'border-gray-700 bg-gray-800 text-gray-400 hover:border-gray-500'
+                      ? 'border-sky-300/40 bg-sky-500/15 text-sky-200'
+                      : 'border-white/10 bg-white/[0.055] text-gray-400 hover:border-white/20'
                   }`}
                 >
                   No aircraft (inactive route)
@@ -267,10 +267,10 @@ export const NewRouteModal: React.FC = () => {
                       disabled={!!tooFar}
                       className={`w-full text-left px-3 py-2 rounded border text-sm transition-colors ${
                         selectedAircraftId === ac.id
-                          ? 'border-blue-500 bg-blue-900/30 text-blue-300'
+                          ? 'border-sky-300/40 bg-sky-500/15 text-sky-200'
                           : tooFar
-                          ? 'border-gray-700 bg-gray-800/40 text-gray-600 cursor-not-allowed'
-                          : 'border-gray-700 bg-gray-800 text-gray-300 hover:border-gray-500'
+                          ? 'border-white/10 bg-white/[0.025] text-gray-600 cursor-not-allowed'
+                          : 'border-white/10 bg-white/[0.055] text-gray-300 hover:border-white/20'
                       }`}
                     >
                       <span className="font-mono text-xs text-gray-500 mr-2">{ac.id.slice(0, 8).toUpperCase()}</span>
@@ -299,22 +299,22 @@ export const NewRouteModal: React.FC = () => {
             </button>
 
             {showBuyPanel && (
-              <div className="mt-2 border border-gray-700 rounded-lg overflow-hidden">
-                <div className="px-3 py-2 bg-gray-800 text-xs text-gray-400 border-b border-gray-700">
+              <div className="mt-2 glass-card overflow-hidden">
+                <div className="px-3 py-2 bg-white/[0.05] text-xs text-gray-400 border-b border-white/10">
                   Your cash: <span className="text-white font-semibold">{formatCurrency(playerCash)}</span>
                   {distanceKm && <span className="ml-2">· Route: {distanceKm.toLocaleString()} km</span>}
                 </div>
                 <div className="flex h-52">
                   {/* Manufacturer sidebar */}
-                  <div className="w-28 sm:w-36 shrink-0 border-r border-gray-700 overflow-y-auto py-1 bg-gray-900">
+                  <div className="w-28 sm:w-36 shrink-0 border-r border-white/10 overflow-y-auto py-1 bg-white/[0.025]">
                     {buyMfrs.map(mfr => (
                       <button
                         key={mfr}
                         onClick={() => setBuyMfr(mfr)}
                         className={`w-full text-left px-2 py-1.5 text-xs transition-colors ${
                           activeBuyMfr === mfr
-                            ? 'bg-gray-700 text-white font-semibold'
-                            : 'text-gray-400 hover:text-gray-200 hover:bg-gray-800/60'
+                            ? 'bg-white/[0.12] text-white font-semibold'
+                            : 'text-gray-400 hover:text-gray-200 hover:bg-white/[0.07]'
                         }`}
                       >
                         {mfr}
@@ -322,7 +322,7 @@ export const NewRouteModal: React.FC = () => {
                     ))}
                   </div>
                   {/* Aircraft list */}
-                  <div className="flex-1 overflow-y-auto divide-y divide-gray-800 bg-gray-900">
+                  <div className="flex-1 overflow-y-auto divide-y divide-white/10 bg-slate-950/25">
                     {shopVisible.map(t => {
                       const fits      = distanceKm === null || t.rangeKm >= distanceKm;
                       const canAfford = playerCash >= t.purchasePrice;
@@ -337,7 +337,7 @@ export const NewRouteModal: React.FC = () => {
                               ? 'opacity-40 cursor-not-allowed'
                               : !canAfford
                               ? 'opacity-50 cursor-not-allowed'
-                              : 'hover:bg-gray-800 cursor-pointer'
+                              : 'hover:bg-white/[0.07] cursor-pointer'
                           }`}
                         >
                           <div className="min-w-0">
@@ -429,7 +429,7 @@ export const NewRouteModal: React.FC = () => {
 
           {/* P&L Preview */}
           {pnlPreview && (
-            <div className="bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 space-y-3">
+            <div className="glass-card px-4 py-3 space-y-3">
               <p className="text-xs text-gray-400 uppercase tracking-wider">Estimated Daily P&L</p>
 
               {/* Load factors */}
@@ -480,7 +480,7 @@ export const NewRouteModal: React.FC = () => {
         </div>
 
         {/* Footer */}
-        <div className="px-4 sm:px-6 py-3 sm:py-4 border-t border-gray-700 flex-shrink-0 flex gap-3 justify-end">
+        <div className="px-4 sm:px-6 py-3 sm:py-4 border-t border-white/10 bg-white/[0.025] flex-shrink-0 flex gap-3 justify-end">
           <button
             onClick={closeModal}
             className="px-4 py-2 rounded border border-gray-600 text-gray-300 hover:border-gray-400 text-sm transition-colors"
@@ -490,7 +490,7 @@ export const NewRouteModal: React.FC = () => {
           <button
             onClick={handleSubmit}
             disabled={!canSubmit}
-            className="px-5 py-2 rounded bg-blue-600 hover:bg-blue-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold text-sm transition-colors"
+            className="apple-button-primary px-5 py-2 text-sm disabled:opacity-40 disabled:cursor-not-allowed"
           >
             Create Route
           </button>

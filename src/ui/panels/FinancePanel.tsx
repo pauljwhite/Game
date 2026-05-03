@@ -18,32 +18,32 @@ export const FinancePanel: React.FC = () => {
 
   return (
     <div className="flex flex-col h-full">
-      <div className="flex items-center justify-between p-3 border-b border-gray-700">
+      <div className="panel-header flex items-center justify-between">
         <h2 className="text-white font-bold">Finance</h2>
         <button onClick={closePanel} aria-label="Close" className="w-7 h-7 flex items-center justify-center text-gray-400 hover:text-white hover:bg-gray-700 rounded transition-colors text-lg leading-none">×</button>
       </div>
       <div className="flex-1 overflow-y-auto p-3 flex flex-col gap-4">
 
       <div className="grid grid-cols-2 gap-2">
-        <div className="bg-gray-800 rounded p-2">
+        <div className="glass-card p-2">
           <div className="text-gray-400 text-xs">Cash</div>
           <div className={`text-lg font-bold ${playerAirline.cashUSD >= 0 ? 'text-green-400' : 'text-red-400'}`}>
             {formatCurrency(playerAirline.cashUSD)}
           </div>
         </div>
-        <div className="bg-gray-800 rounded p-2">
+        <div className="glass-card p-2">
           <div className="text-gray-400 text-xs">Daily P&L</div>
           <div className={`text-lg font-bold ${totalDailyProfit >= 0 ? 'text-green-400' : 'text-red-400'}`}>
             {formatCurrency(totalDailyProfit)}
           </div>
         </div>
-        <div className="bg-gray-800 rounded p-2">
+        <div className="glass-card p-2">
           <div className="text-gray-400 text-xs">Total Passengers</div>
           <div className="text-white text-lg font-bold">
             {playerAirline.totalPassengersAllTime.toLocaleString()}
           </div>
         </div>
-        <div className="bg-gray-800 rounded p-2">
+        <div className="glass-card p-2">
           <div className="text-gray-400 text-xs">Reputation</div>
           <div className={`text-lg font-bold ${playerAirline.reputationScore >= 60 ? 'text-green-400' : playerAirline.reputationScore >= 30 ? 'text-yellow-400' : 'text-red-400'}`}>
             {playerAirline.reputationScore.toFixed(0)}/100
@@ -56,7 +56,7 @@ export const FinancePanel: React.FC = () => {
         <PnLChart snapshots={playerAirline.dailyStats.slice(-30)} width={352} height={80} />
       </div>
 
-      <div className="bg-gray-800 rounded p-2">
+      <div className="glass-card p-2">
         <div className="text-gray-400 text-xs mb-2">Daily Cost Breakdown</div>
         <div className="space-y-1 text-xs">
           {[

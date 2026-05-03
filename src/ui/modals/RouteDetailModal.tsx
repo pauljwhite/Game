@@ -101,8 +101,8 @@ export const RouteDetailModal: React.FC = () => {
   }
 
   return (
-    <div className="fixed inset-0 bg-black/80 flex items-end sm:items-center justify-center z-[9999]">
-      <div className="bg-gray-900 border border-gray-700 rounded-t-2xl sm:rounded-xl px-4 sm:px-6 py-4 shadow-2xl w-full max-w-lg relative max-h-[92svh] sm:max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center z-[9999]">
+      <div className="glass-panel rounded-t-2xl sm:rounded-xl px-4 sm:px-6 py-4 w-full max-w-lg relative max-h-[92svh] sm:max-h-[90vh] overflow-y-auto">
         <button
           onClick={handleClose}
           className="absolute top-4 right-4 text-gray-400 hover:text-white transition-colors text-xl leading-none"
@@ -123,19 +123,19 @@ export const RouteDetailModal: React.FC = () => {
 
         {/* Stats */}
         <div className="grid grid-cols-2 gap-3 mb-4">
-          <div className="bg-gray-800 rounded-lg p-3">
+          <div className="glass-card p-3">
             <div className="text-gray-400 text-xs mb-1">Distance</div>
             <div className="text-white font-semibold">{Math.round(route.distanceKm).toLocaleString()} km</div>
           </div>
-          <div className="bg-gray-800 rounded-lg p-3">
+          <div className="glass-card p-3">
             <div className="text-gray-400 text-xs mb-1">Daily Revenue</div>
             <div className="text-green-400 font-semibold">{formatCurrency(route.dailyRevenue)}</div>
           </div>
-          <div className="bg-gray-800 rounded-lg p-3">
+          <div className="glass-card p-3">
             <div className="text-gray-400 text-xs mb-1">Daily Cost</div>
             <div className="text-red-400 font-semibold">{formatCurrency(route.dailyCost)}</div>
           </div>
-          <div className="bg-gray-800 rounded-lg p-3">
+          <div className="glass-card p-3">
             <div className={`text-xs mb-1 text-gray-400`}>Daily Profit</div>
             <div className={`font-bold ${route.dailyProfit >= 0 ? 'text-green-400' : 'text-red-400'}`}>
               {formatCurrency(route.dailyProfit)}
@@ -144,14 +144,14 @@ export const RouteDetailModal: React.FC = () => {
         </div>
 
         {/* Load factors */}
-        <div className="bg-gray-800 rounded-lg p-3 mb-4 space-y-2">
+        <div className="glass-card p-3 mb-4 space-y-2">
           <div className="text-gray-400 text-xs mb-2">Load Factors</div>
           <LoadFactorBar value={route.loadFactorEconomy}  label="Eco" />
           <LoadFactorBar value={route.loadFactorBusiness} label="Biz" />
         </div>
 
         {/* Aircraft assignment */}
-        <div className="bg-gray-800 rounded-lg p-3 mb-4">
+        <div className="glass-card p-3 mb-4">
           <div className="text-gray-400 text-xs mb-2">Assigned Aircraft</div>
           {assignedAircraft ? (
             <div className="space-y-2">

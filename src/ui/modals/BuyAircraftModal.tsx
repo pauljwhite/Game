@@ -54,10 +54,10 @@ export const BuyAircraftModal: React.FC = () => {
   }
 
   return (
-    <div className="fixed inset-0 bg-black/80 flex items-end sm:items-center justify-center z-[9999]">
-      <div className="bg-gray-900 border border-gray-700 rounded-t-2xl sm:rounded-xl shadow-2xl w-full max-w-4xl h-[92svh] sm:h-[85vh] flex flex-col">
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center z-[9999]">
+      <div className="glass-panel rounded-t-2xl sm:rounded-xl w-full max-w-4xl h-[92svh] sm:h-[85vh] flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-700 flex-shrink-0">
+        <div className="panel-header flex items-center justify-between px-4 sm:px-6 sm:py-4 flex-shrink-0">
           <div>
             <h2 className="text-xl font-bold text-white">Buy Aircraft</h2>
             <p className="text-sm text-gray-400 mt-0.5">
@@ -77,15 +77,15 @@ export const BuyAircraftModal: React.FC = () => {
         {/* Two-column body */}
         <div className="flex flex-1 min-h-0">
           {/* Manufacturer sidebar */}
-          <div className="w-36 sm:w-44 shrink-0 border-r border-gray-700 overflow-y-auto py-2">
+          <div className="w-36 sm:w-44 shrink-0 border-r border-white/10 overflow-y-auto py-2 bg-white/[0.025]">
             {manufacturers.map(mfr => (
               <button
                 key={mfr}
                 onClick={() => { setActiveTab(mfr); setPurchaseError(null); }}
                 className={`w-full text-left px-3 py-2 text-sm transition-colors ${
                   activeTab === mfr
-                    ? 'bg-gray-700 text-white font-semibold'
-                    : 'text-gray-400 hover:text-gray-200 hover:bg-gray-800/60'
+                    ? 'bg-white/[0.12] text-white font-semibold'
+                    : 'text-gray-400 hover:text-gray-200 hover:bg-white/[0.07]'
                 }`}
               >
                 {mfr}
@@ -111,8 +111,8 @@ export const BuyAircraftModal: React.FC = () => {
                   key={type.id}
                   className={`flex items-center gap-4 rounded-lg border px-4 py-3 transition-colors ${
                     unavailable
-                      ? 'border-gray-700 bg-gray-800/30 opacity-50'
-                      : 'border-gray-700 bg-gray-800 hover:border-gray-500'
+                      ? 'border-white/10 bg-white/[0.025] opacity-50'
+                      : 'border-white/10 bg-white/[0.055] hover:border-white/20 hover:bg-white/[0.075]'
                   }`}
                 >
                   {/* Profile SVG */}
@@ -155,8 +155,8 @@ export const BuyAircraftModal: React.FC = () => {
                         disabled={!canAfford}
                         className={`px-3 py-1 rounded text-xs font-semibold transition-colors ${
                           canAfford
-                            ? 'bg-blue-600 hover:bg-blue-500 text-white'
-                            : 'bg-gray-700 text-gray-500 cursor-not-allowed'
+                            ? 'apple-button-primary'
+                            : 'bg-white/10 text-gray-500 cursor-not-allowed'
                         }`}
                       >
                         {canAfford ? 'Buy' : 'Insufficient funds'}

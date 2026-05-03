@@ -17,7 +17,7 @@ export const HubsPanel: React.FC = () => {
 
   return (
     <div className="flex flex-col h-full">
-      <div className="p-3 border-b border-gray-700">
+      <div className="panel-header">
         <div className="flex items-center justify-between">
           <h2 className="text-white font-bold">Hubs ({hubAirports.length})</h2>
           <button onClick={closePanel} aria-label="Close" className="w-7 h-7 flex items-center justify-center text-gray-400 hover:text-white hover:bg-gray-700 rounded transition-colors text-lg leading-none">×</button>
@@ -34,7 +34,7 @@ export const HubsPanel: React.FC = () => {
           </div>
         )}
         {hubAirports.map(airport => (
-          <div key={airport.iata} className="p-3 border-b border-gray-800">
+          <div key={airport.iata} className="p-3 border-b border-white/10">
             <div className="flex items-center justify-between">
               <div>
                 <div className="text-white text-sm font-medium">{airport.name}</div>
@@ -45,7 +45,7 @@ export const HubsPanel: React.FC = () => {
               </div>
               <button
                 onClick={() => removeHub(airport.iata)}
-                className="px-2 py-1 bg-gray-700 hover:bg-gray-600 text-gray-300 text-xs rounded"
+                className="apple-button"
               >
                 Remove
               </button>
@@ -60,7 +60,7 @@ export const HubsPanel: React.FC = () => {
         <div className="p-3">
           <button
             onClick={() => openModalById('newRoute')}
-            className="w-full py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-xs rounded"
+            className="apple-button-primary w-full"
           >
             Click airports on map to set hubs
           </button>

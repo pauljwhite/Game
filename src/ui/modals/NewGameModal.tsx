@@ -111,8 +111,8 @@ export const NewGameModal: React.FC = () => {
   }
 
   return (
-    <div className="fixed inset-0 bg-black/80 flex items-end sm:items-center justify-center z-[9999]">
-      <div className="bg-gray-900 border border-gray-700 rounded-t-2xl sm:rounded-xl w-full max-w-lg px-4 sm:px-6 py-5 shadow-2xl max-h-[92svh] overflow-y-auto">
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center z-[9999]">
+      <div className="glass-panel rounded-t-2xl sm:rounded-xl w-full max-w-lg px-4 sm:px-6 py-5 max-h-[92svh] overflow-y-auto">
         <h1 className="text-2xl font-bold text-white mb-1">Mighty Airline Empire</h1>
         <p className="text-gray-400 text-sm mb-5">Build your airline from the ground up.</p>
 
@@ -120,7 +120,7 @@ export const NewGameModal: React.FC = () => {
           <div>
             <label className="text-gray-300 text-sm block mb-1">Airline Name</label>
             <input
-              className="w-full bg-gray-800 border border-gray-600 rounded px-3 py-2 text-white text-sm focus:outline-none focus:border-blue-500"
+              className="w-full rounded-md border border-white/10 bg-white/[0.07] px-3 py-2 text-white text-sm focus:outline-none focus:border-sky-400"
               value={airlineName}
               onChange={e => setAirlineName(e.target.value)}
               maxLength={30}
@@ -159,7 +159,7 @@ export const NewGameModal: React.FC = () => {
                   className={`py-2 px-1 rounded border text-center transition-colors ${
                     startingYear === era.year
                       ? 'border-blue-500 bg-blue-900/40 text-blue-300'
-                      : 'border-gray-700 bg-gray-800 text-gray-400 hover:border-gray-500'
+                      : 'border-white/10 bg-white/[0.055] text-gray-400 hover:border-white/20'
                   }`}
                 >
                   <div className="font-bold text-sm">{era.year}</div>
@@ -184,7 +184,7 @@ export const NewGameModal: React.FC = () => {
                   className={`py-2 rounded border text-sm transition-colors ${
                     difficulty === d.id
                       ? 'border-blue-500 bg-blue-900/40 text-blue-300'
-                      : 'border-gray-700 bg-gray-800 text-gray-400 hover:border-gray-500'
+                      : 'border-white/10 bg-white/[0.055] text-gray-400 hover:border-white/20'
                   }`}
                 >
                   <div className="font-bold">{d.label}</div>

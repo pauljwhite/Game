@@ -43,7 +43,7 @@ export const Layout: React.FC = () => {
   const PanelComponent = openPanel ? PANELS[openPanel] : null;
 
   return (
-    <div className="flex flex-col h-[100svh] bg-gray-950 text-white overflow-hidden">
+    <div className="flex flex-col h-[100svh] bg-slate-950 text-white overflow-hidden">
       <TopBar />
 
       <div className="flex-1 flex relative overflow-hidden z-0">
@@ -53,7 +53,7 @@ export const Layout: React.FC = () => {
         </div>
 
         {PanelComponent && (
-          <div className="absolute inset-0 z-20 md:relative md:inset-auto md:z-auto md:w-96 w-full bg-gray-900 md:border-l border-gray-800 flex flex-col overflow-hidden shrink-0">
+          <div className="absolute inset-0 z-20 md:relative md:inset-auto md:z-auto md:w-96 w-full glass-panel md:border-l flex flex-col overflow-hidden shrink-0">
             <PanelComponent />
           </div>
         )}

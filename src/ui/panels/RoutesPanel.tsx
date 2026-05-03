@@ -17,12 +17,12 @@ export const RoutesPanel: React.FC = () => {
 
   return (
     <div className="flex flex-col h-full">
-      <div className="flex items-center justify-between p-3 border-b border-gray-700">
+      <div className="panel-header flex items-center justify-between">
         <h2 className="text-white font-bold">Routes ({playerRoutes.length})</h2>
         <div className="flex items-center gap-1">
           <button
             onClick={() => openModalById('newRoute')}
-            className="px-3 py-1 bg-blue-600 hover:bg-blue-500 text-white text-xs rounded"
+            className="apple-button-primary"
           >
             + New Route
           </button>
@@ -42,7 +42,7 @@ export const RoutesPanel: React.FC = () => {
           return (
             <div
               key={route.id}
-              className="p-3 border-b border-gray-800 hover:bg-gray-800/50 cursor-pointer"
+              className="p-3 border-b border-white/10 hover:bg-white/[0.055] cursor-pointer transition-colors"
               onClick={() => { selectRoute(route.id); openModalById('routeDetail', route.id); }}
             >
               <div className="flex items-center justify-between">
