@@ -7,16 +7,34 @@ import { AIRCRAFT_TYPES } from '@/data/aircraftTypes';
 let rafHandle = 0;
 let lastRealTimeMs = 0;
 let lastStoreCommitRealMs = 0;
+let lastPlaneCacheRealMs = 0;
 let loopGameTimeMs = 0;
 
 const MAX_DELTA_REAL_MS = 500; // cap to prevent runaway on tab refocus
 const STORE_COMMIT_INTERVAL_MS = 1000;
+const PLANE_CACHE_INTERVAL_MS = 1000;
+
+type PlaneRouteData = Record<string, {
+  originLat: number; originLon: number;
+  destLat: number; destLon: number;
+  distanceKm: number; aircraftId: string | null;
+  isActive: boolean; flightsPerWeek: number;
+}>;
+
+const AIRCRAFT_SPEED_BY_TYPE_ID = Object.fromEntries(
+  AIRCRAFT_TYPES.map(type => [type.id, type.cruiseSpeedKmh]),
+);
+
+let cachedRoutePositionData: PlaneRouteData = {};
+let cachedAircraftSpeeds: Record<string, number> = {};
 
 export function startGameLoop(): void {
   if (rafHandle) return; // already running
   loopGameTimeMs = useGameStore.getState().gameTimeMs;
   lastRealTimeMs = performance.now();
   lastStoreCommitRealMs = lastRealTimeMs;
+  lastPlaneCacheRealMs = 0;
+  rebuildPlaneCache(useGameStore.getState());
   rafHandle = requestAnimationFrame(tick);
 }
 
@@ -60,36 +78,43 @@ function tick(nowMs: number): void {
     runAITick(newState, newDay);
   }
 
-  // Update plane positions (cheap interpolation, no React)
-  const { routes, aiRoutes, aircraft, aiAircraft } = newState;
+  if (newDay > prevDay || nowMs - lastPlaneCacheRealMs >= PLANE_CACHE_INTERVAL_MS) {
+    rebuildPlaneCache(useGameStore.getState());
+    lastPlaneCacheRealMs = nowMs;
+  }
 
-  const routePositionData: Record<string, {
-    originLat: number; originLon: number;
-    destLat: number; destLon: number;
-    distanceKm: number; aircraftId: string | null;
-    isActive: boolean; flightsPerWeek: number;
-  }> = {};
+  updatePlanePositions(deltaGame, cachedRoutePositionData, cachedAircraftSpeeds);
+}
 
+function rebuildPlaneCache(state: ReturnType<typeof useGameStore.getState>): void {
+  const routePositionData: PlaneRouteData = {};
   const aircraftSpeeds: Record<string, number> = {};
 
-  [...Object.values(routes), ...Object.values(aiRoutes)].forEach(r => {
-    const origin = newState.airports[r.originIata];
-    const dest = newState.airports[r.destinationIata];
+  const addRoute = (route: typeof state.routes[string]) => {
+    if (!route.aircraftId) return;
+    const origin = state.airports[route.originIata];
+    const dest = state.airports[route.destinationIata];
     if (!origin || !dest) return;
-    routePositionData[r.id] = {
+    routePositionData[route.id] = {
       originLat: origin.lat, originLon: origin.lon,
       destLat: dest.lat, destLon: dest.lon,
-      distanceKm: r.distanceKm,
-      aircraftId: r.aircraftId,
-      isActive: r.isActive,
-      flightsPerWeek: r.flightsPerWeek,
+      distanceKm: route.distanceKm,
+      aircraftId: route.aircraftId,
+      isActive: route.isActive,
+      flightsPerWeek: route.flightsPerWeek,
     };
-  });
+  };
 
-  [...Object.values(aircraft), ...Object.values(aiAircraft)].forEach(ac => {
-    const type = AIRCRAFT_TYPES.find(t => t.id === ac.typeId);
-    if (type) aircraftSpeeds[ac.id] = type.cruiseSpeedKmh;
-  });
+  const addAircraftSpeed = (aircraft: typeof state.aircraft[string]) => {
+    const speed = AIRCRAFT_SPEED_BY_TYPE_ID[aircraft.typeId];
+    if (speed) aircraftSpeeds[aircraft.id] = speed;
+  };
 
-  updatePlanePositions(deltaGame, routePositionData, aircraftSpeeds);
+  Object.values(state.routes).forEach(addRoute);
+  Object.values(state.aiRoutes).forEach(addRoute);
+  Object.values(state.aircraft).forEach(addAircraftSpeed);
+  Object.values(state.aiAircraft).forEach(addAircraftSpeed);
+
+  cachedRoutePositionData = routePositionData;
+  cachedAircraftSpeeds = aircraftSpeeds;
 }

@@ -32,6 +32,7 @@ export function PlaneLayer({ map, svgOverlay }: PlaneLayerProps) {
 
   const rafRef = useRef(0);
   const planeGroupRef = useRef<SVGGElement | null>(null);
+  const planeElementsRef = useRef<Map<string, SVGGElement>>(new Map());
 
   // Initialize/sync plane DOM nodes when routes change
   useEffect(() => {
@@ -75,7 +76,8 @@ export function PlaneLayer({ map, svgOverlay }: PlaneLayerProps) {
         initPlanePosition(ac.id, route.id, ac.airlineId, color, origin.lat, origin.lon, cycleOffsetMs);
       }
 
-      if (!document.getElementById(`plane-${ac.id}`)) {
+      let planeG = planeElementsRef.current.get(ac.id);
+      if (!planeG) {
         const planeG = document.createElementNS('http://www.w3.org/2000/svg', 'g');
         planeG.id = `plane-${ac.id}`;
         planeG.setAttribute('class', 'route-plane');
@@ -94,10 +96,10 @@ export function PlaneLayer({ map, svgOverlay }: PlaneLayerProps) {
         planeG.appendChild(halo);
         planeG.appendChild(path);
         g.appendChild(planeG);
+        planeElementsRef.current.set(ac.id, planeG);
       } else {
-        const el = document.getElementById(`plane-${ac.id}`);
-        el?.querySelector('circle')?.setAttribute('fill', color);
-        el?.querySelector('path')?.setAttribute('fill', color);
+        planeG.querySelector('circle')?.setAttribute('fill', color);
+        planeG.querySelector('path')?.setAttribute('fill', color);
       }
     });
 
@@ -112,8 +114,9 @@ export function PlaneLayer({ map, svgOverlay }: PlaneLayerProps) {
       const ac = allAircraft[aircraftId];
       if (!ac || ac.isGrounded || !ac.assignedRouteId || !activeAircraftIds.has(aircraftId)) {
         removePlanePosition(aircraftId);
-        const el = document.getElementById(`plane-${aircraftId}`);
+        const el = planeElementsRef.current.get(aircraftId);
         if (el) el.remove();
+        planeElementsRef.current.delete(aircraftId);
       }
     });
 
@@ -124,6 +127,7 @@ export function PlaneLayer({ map, svgOverlay }: PlaneLayerProps) {
     return () => {
       group?.remove();
       planeGroupRef.current = null;
+      planeElementsRef.current.clear();
     };
   }, []);
 
@@ -133,7 +137,7 @@ export function PlaneLayer({ map, svgOverlay }: PlaneLayerProps) {
       rafRef.current = requestAnimationFrame(animate);
       const positions = getPlanePositions();
       positions.forEach((state, aircraftId) => {
-        const el = document.getElementById(`plane-${aircraftId}`);
+        const el = planeElementsRef.current.get(aircraftId);
         if (!el) return;
         const pt = latLonToSvgPoint(state.lat, state.lon, map);
         el.setAttribute('transform', `translate(${pt.x.toFixed(1)},${pt.y.toFixed(1)}) rotate(${state.bearing.toFixed(1)})`);

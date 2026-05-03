@@ -18,8 +18,8 @@ interface RouteArc {
   isSelected: boolean;
 }
 
-const MAX_AI_ROUTE_ARCS = 250;
-const ARC_POINT_COUNT = 48;
+const MAX_AI_ROUTE_ARCS = 120;
+const ARC_POINT_COUNT = 32;
 
 export const RouteLayer: React.FC<RouteLayerProps> = ({ map, mapVersion }) => {
   const routes = useGameStore(s => s.routes);
@@ -33,17 +33,19 @@ export const RouteLayer: React.FC<RouteLayerProps> = ({ map, mapVersion }) => {
 
   const arcs: RouteArc[] = useMemo(() => {
     const result: RouteArc[] = [];
+    const bounds = map.getBounds().pad(0.35);
 
-    const processRoute = (route: Route, isPlayer: boolean) => {
-      if (!route.isActive) return;
+    const processRoute = (route: Route, isPlayer: boolean): boolean => {
+      if (!route.isActive) return false;
       const origin = airports[route.originIata];
       const dest = airports[route.destinationIata];
-      if (!origin || !dest) return;
+      if (!origin || !dest) return false;
+      if (!isPlayer && !bounds.contains([origin.lat, origin.lon]) && !bounds.contains([dest.lat, dest.lon])) return false;
 
       const airline = isPlayer
         ? airlines[route.airlineId]
         : aiAirlines[route.airlineId];
-      if (!isPlayer && airline?.isInsolvent) return;
+      if (!isPlayer && airline?.isInsolvent) return false;
       const color = airline?.color ?? '#888';
 
       const segments = computeArcSegments(origin.lat, origin.lon, dest.lat, dest.lon, ARC_POINT_COUNT);
@@ -53,10 +55,15 @@ export const RouteLayer: React.FC<RouteLayerProps> = ({ map, mapVersion }) => {
       }).filter(Boolean);
 
       result.push({ routeId: route.id, color, isPlayer, paths, isSelected: route.id === selectedRouteId });
+      return true;
     };
 
     Object.values(routes).forEach(r => processRoute(r, true));
-    Object.values(aiRoutes).slice(0, MAX_AI_ROUTE_ARCS).forEach(r => processRoute(r, false));
+    let aiArcCount = 0;
+    for (const route of Object.values(aiRoutes)) {
+      if (aiArcCount >= MAX_AI_ROUTE_ARCS) break;
+      if (processRoute(route, false)) aiArcCount += 1;
+    }
 
     return result;
     // eslint-disable-next-line react-hooks/exhaustive-deps

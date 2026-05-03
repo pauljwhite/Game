@@ -12,7 +12,8 @@ const MIN_ZOOM: Record<string, number> = {
   small: 5, medium: 4, large: 2, major: 2,
 };
 
-const HIT_RADIUS = 14; // invisible hit-area radius in px (makes small dots easy to tap)
+const HIT_RADIUS = 14;
+const BOUNDS_PADDING = 0.35;
 
 function getVisualRadius(size: string, zoom: number): number {
   const base = BASE_RADIUS[size] ?? 4;
@@ -35,73 +36,123 @@ export function AirportMarkers({ map }: AirportMarkersProps) {
   const playerAirline = useGameStore(s => s.airlines[s.playerAirlineId]);
   const selectAirport = useGameStore(s => s.selectAirport);
   const gameDay = useGameStore(s => s.gameDay);
-  const entriesRef = useRef<MarkerEntry[]>([]);
+  const entriesRef = useRef<Map<string, MarkerEntry>>(new Map());
   const hubIatas = playerAirline?.hubIatas ?? [];
+  const hubKey = hubIatas.join(',');
+  const gameDayRef = useRef(gameDay);
+  const hubIatasRef = useRef(hubIatas);
+
+  gameDayRef.current = gameDay;
+  hubIatasRef.current = hubIatas;
+
+  const applyMarkerStyle = (entry: MarkerEntry, zoom: number) => {
+    const airport = entry.airport;
+    const isHub = airport.isHub || hubIatasRef.current.includes(airport.iata);
+    const isClosed = airport.closedUntilGameDay !== undefined && airport.closedUntilGameDay >= gameDayRef.current;
+    const color = isClosed ? '#ef4444' : isHub ? '#f59e0b' : '#60a5fa';
+
+    entry.visual.setRadius(getVisualRadius(airport.size, zoom));
+    entry.visual.setStyle({
+      color,
+      fillColor: color,
+      fillOpacity: 0.9,
+      opacity: 1,
+    });
+  };
 
   useEffect(() => {
-    entriesRef.current.forEach(e => { e.visual.remove(); e.hit.remove(); });
-    entriesRef.current = [];
+    const removeMarker = (iata: string) => {
+      const entry = entriesRef.current.get(iata);
+      if (!entry) return;
+      entry.visual.remove();
+      entry.hit.remove();
+      entriesRef.current.delete(iata);
+    };
 
-    const zoom = map.getZoom();
+    const syncVisibleMarkers = () => {
+      const zoom = map.getZoom();
+      const bounds = map.getBounds().pad(BOUNDS_PADDING);
+      const wanted = new Set<string>();
 
-    Object.values(airports).forEach(airport => {
-      const isHub = airport.isHub || hubIatas.includes(airport.iata);
-      const isClosed = airport.closedUntilGameDay !== undefined && airport.closedUntilGameDay >= gameDay;
-      const color = isClosed ? '#ef4444' : isHub ? '#f59e0b' : '#60a5fa';
-      const visible = zoom >= (MIN_ZOOM[airport.size] ?? 3);
-      const latlng: [number, number] = [airport.lat, airport.lon];
+      Object.values(airports).forEach(airport => {
+        if (zoom < (MIN_ZOOM[airport.size] ?? 3)) return;
+        if (!bounds.contains([airport.lat, airport.lon])) return;
 
-      // Visible dot (non-interactive, purely cosmetic)
-      const visual = L.circleMarker(latlng, {
-        radius: getVisualRadius(airport.size, zoom),
-        color,
-        fillColor: color,
-        fillOpacity: visible ? 0.9 : 0,
-        opacity: visible ? 1 : 0,
-        weight: 1,
-        interactive: false,
-      }).addTo(map);
+        wanted.add(airport.iata);
+        const latlng: [number, number] = [airport.lat, airport.lon];
+        const existing = entriesRef.current.get(airport.iata);
+        if (existing) {
+          existing.airport = airport;
+          existing.visual.setLatLng(latlng);
+          existing.hit.setLatLng(latlng);
+          applyMarkerStyle(existing, zoom);
+          return;
+        }
 
-      // Invisible hit area — always large enough to tap
-      const hit = L.circleMarker(latlng, {
-        radius: HIT_RADIUS,
-        color: 'transparent',
-        fillColor: 'transparent',
-        fillOpacity: 0,
-        opacity: 0,
-        weight: 0,
-        interactive: true,
-      }).addTo(map);
+        const visual = L.circleMarker(latlng, {
+          radius: getVisualRadius(airport.size, zoom),
+          color: '#60a5fa',
+          fillColor: '#60a5fa',
+          fillOpacity: 0.9,
+          opacity: 1,
+          weight: 1,
+          interactive: false,
+        }).addTo(map);
 
-      hit.on('click', () => { if (map.getZoom() >= (MIN_ZOOM[airport.size] ?? 3)) selectAirport(airport.iata); });
-      hit.bindTooltip(airport.iata, { direction: 'top', offset: [0, -4], className: 'leaflet-tooltip-airport' });
+        const hit = L.circleMarker(latlng, {
+          radius: HIT_RADIUS,
+          color: 'transparent',
+          fillColor: 'transparent',
+          fillOpacity: 0,
+          opacity: 0,
+          weight: 0,
+          interactive: true,
+        }).addTo(map);
 
-      entriesRef.current.push({ visual, hit, airport });
-    });
+        hit.on('click', () => selectAirport(airport.iata));
+        hit.bindTooltip(airport.iata, { direction: 'top', offset: [0, -4], className: 'leaflet-tooltip-airport' });
+
+        const entry = { visual, hit, airport };
+        entriesRef.current.set(airport.iata, entry);
+        applyMarkerStyle(entry, zoom);
+      });
+
+      Array.from(entriesRef.current.keys()).forEach(iata => {
+        if (!wanted.has(iata)) removeMarker(iata);
+      });
+    };
+
+    let raf = 0;
+    const scheduleSync = () => {
+      if (raf) return;
+      raf = requestAnimationFrame(() => {
+        raf = 0;
+        syncVisibleMarkers();
+      });
+    };
+
+    syncVisibleMarkers();
+    map.on('moveend', scheduleSync);
+    map.on('zoomend', scheduleSync);
 
     return () => {
-      entriesRef.current.forEach(e => { e.visual.remove(); e.hit.remove(); });
-      entriesRef.current = [];
+      if (raf) cancelAnimationFrame(raf);
+      map.off('moveend', scheduleSync);
+      map.off('zoomend', scheduleSync);
+      entriesRef.current.forEach(entry => {
+        entry.visual.remove();
+        entry.hit.remove();
+      });
+      entriesRef.current.clear();
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [airports, map, selectAirport, gameDay, hubIatas.join(',')]);
+  }, [airports, map, selectAirport]);
 
   useEffect(() => {
-    function onZoom() {
-      const zoom = map.getZoom();
-      entriesRef.current.forEach(({ visual, airport }) => {
-        const visible = zoom >= (MIN_ZOOM[airport.size] ?? 3);
-        visual.setRadius(getVisualRadius(airport.size, zoom));
-        visual.setStyle({
-          fillOpacity: visible ? 0.9 : 0,
-          opacity: visible ? 1 : 0,
-        });
-      });
-    }
-
-    map.on('zoomend', onZoom);
-    return () => { map.off('zoomend', onZoom); };
-  }, [map]);
+    const zoom = map.getZoom();
+    entriesRef.current.forEach(entry => applyMarkerStyle(entry, zoom));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [gameDay, hubKey, map]);
 
   return null;
 }

@@ -29,6 +29,7 @@ export function useLeafletMap(containerId: string): LeafletMapHandle {
       maxZoom: 10,
       zoomControl: false,
       attributionControl: false,
+      preferCanvas: true,
     });
 
     L.tileLayer(
@@ -49,15 +50,28 @@ export function useLeafletMap(containerId: string): LeafletMapHandle {
     container.style.position = 'relative';
     container.appendChild(svg);
 
+    let sizeRaf = 0;
+    const scheduleSvgSizeSync = () => {
+      if (sizeRaf) return;
+      sizeRaf = requestAnimationFrame(() => {
+        sizeRaf = 0;
+        syncSvgSize(m, svg);
+      });
+    };
+
     syncSvgSize(m, svg);
-    m.on('resize', () => syncSvgSize(m, svg));
-    m.on('move', () => syncSvgSize(m, svg));
-    m.on('zoom', () => syncSvgSize(m, svg));
+    m.on('resize', scheduleSvgSizeSync);
+    m.on('move', scheduleSvgSizeSync);
+    m.on('zoom', scheduleSvgSizeSync);
 
     setMap(m);
     setSvgOverlay(svg);
 
     return () => {
+      if (sizeRaf) cancelAnimationFrame(sizeRaf);
+      m.off('resize', scheduleSvgSizeSync);
+      m.off('move', scheduleSvgSizeSync);
+      m.off('zoom', scheduleSvgSizeSync);
       m.remove();
       if (svg.parentNode) svg.parentNode.removeChild(svg);
       setMap(null);

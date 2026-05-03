@@ -15,9 +15,15 @@ export const GameMap: React.FC = () => {
     if (!map || listenerRef.current) return;
     listenerRef.current = true;
     const bump = () => setMapVersion(v => v + 1);
-    map.on('move', bump);
-    map.on('zoom', bump);
+    map.on('moveend', bump);
+    map.on('zoomend', bump);
     map.on('resize', bump);
+    return () => {
+      listenerRef.current = false;
+      map.off('moveend', bump);
+      map.off('zoomend', bump);
+      map.off('resize', bump);
+    };
   }, [map]);
 
   return (
