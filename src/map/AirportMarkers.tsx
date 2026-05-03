@@ -71,7 +71,7 @@ export function AirportMarkers({ map }: AirportMarkersProps) {
         interactive: true,
       }).addTo(map);
 
-      hit.on('click', () => { if (zoom >= (MIN_ZOOM[airport.size] ?? 3)) selectAirport(airport.iata); });
+      hit.on('click', () => { if (map.getZoom() >= (MIN_ZOOM[airport.size] ?? 3)) selectAirport(airport.iata); });
       hit.bindTooltip(airport.iata, { direction: 'top', offset: [0, -4], className: 'leaflet-tooltip-airport' });
 
       entriesRef.current.push({ visual, hit, airport });
