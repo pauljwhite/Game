@@ -4,8 +4,9 @@ import { formatCurrency } from '@/utils/format';
 import { PnLChart } from '@/ui/components/PnLChart';
 
 export const FinancePanel: React.FC = () => {
-  const airlines = useGameStore(s => s.airlines);
-  const routes = useGameStore(s => s.routes);
+  const airlines   = useGameStore(s => s.airlines);
+  const routes     = useGameStore(s => s.routes);
+  const aiAirlines = useGameStore(s => s.aiAirlines);
 
   const closePanel = useGameStore(s => s.closePanel);
   const playerAirline = airlines['player'];
@@ -15,6 +16,20 @@ export const FinancePanel: React.FC = () => {
   const totalDailyRevenue = playerRoutes.reduce((s, r) => s + r.dailyRevenue, 0);
   const totalDailyCost = playerRoutes.reduce((s, r) => s + r.dailyCost, 0);
   const totalDailyProfit = totalDailyRevenue - totalDailyCost;
+
+  const dailyDividends = Object.values(aiAirlines).reduce((sum, ai) => {
+    const stake = (ai.shareholders ?? {})['player'] ?? 0;
+    return sum + (stake > 0 ? (stake / 100) * Math.max(0, ai.lastDailyProfit ?? 0) : 0);
+  }, 0);
+
+  const dividendSources = Object.values(aiAirlines)
+    .filter(ai => ((ai.shareholders ?? {})['player'] ?? 0) > 0 && (ai.lastDailyProfit ?? 0) > 0)
+    .map(ai => ({
+      name: ai.name,
+      stake: (ai.shareholders ?? {})['player'] ?? 0,
+      dividend: ((ai.shareholders ?? {})['player'] ?? 0) / 100 * Math.max(0, ai.lastDailyProfit ?? 0),
+    }))
+    .sort((a, b) => b.dividend - a.dividend);
 
   return (
     <div className="flex flex-col h-full">
@@ -33,8 +48,8 @@ export const FinancePanel: React.FC = () => {
         </div>
         <div className="glass-card p-2">
           <div className="text-gray-400 text-xs">Daily P&L</div>
-          <div className={`text-lg font-bold ${totalDailyProfit >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-            {formatCurrency(totalDailyProfit)}
+          <div className={`text-lg font-bold ${(totalDailyProfit + dailyDividends) >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+            {formatCurrency(totalDailyProfit + dailyDividends)}
           </div>
         </div>
         <div className="glass-card p-2">
@@ -49,6 +64,12 @@ export const FinancePanel: React.FC = () => {
             {playerAirline.reputationScore.toFixed(0)}/100
           </div>
         </div>
+        {dailyDividends > 0 && (
+          <div className="col-span-2 glass-card p-2 border border-teal-500/20">
+            <div className="text-teal-400 text-xs">Daily Dividend Income</div>
+            <div className="text-teal-300 text-lg font-bold">+{formatCurrency(dailyDividends)}</div>
+          </div>
+        )}
       </div>
 
       <div>
@@ -57,7 +78,7 @@ export const FinancePanel: React.FC = () => {
       </div>
 
       <div className="glass-card p-2">
-        <div className="text-gray-400 text-xs mb-2">Daily Cost Breakdown</div>
+        <div className="text-gray-400 text-xs mb-2">Daily Breakdown</div>
         <div className="space-y-1 text-xs">
           {[
             { label: 'Revenue', value: totalDailyRevenue, color: 'text-green-400' },
@@ -71,14 +92,34 @@ export const FinancePanel: React.FC = () => {
               <span className={color}>{formatCurrency(value)}</span>
             </div>
           ))}
+          {dailyDividends > 0 && (
+            <div className="flex justify-between">
+              <span className="text-teal-400">Dividends</span>
+              <span className="text-teal-300">+{formatCurrency(dailyDividends)}</span>
+            </div>
+          )}
           <div className="border-t border-gray-700 pt-1 flex justify-between font-bold">
-            <span className="text-gray-300">Net Profit</span>
-            <span className={totalDailyProfit >= 0 ? 'text-green-400' : 'text-red-400'}>
-              {formatCurrency(totalDailyProfit)}
+            <span className="text-gray-300">Net</span>
+            <span className={(totalDailyProfit + dailyDividends) >= 0 ? 'text-green-400' : 'text-red-400'}>
+              {formatCurrency(totalDailyProfit + dailyDividends)}
             </span>
           </div>
         </div>
       </div>
+
+      {dividendSources.length > 0 && (
+        <div className="glass-card p-2">
+          <div className="text-gray-400 text-xs mb-2">Dividend Sources</div>
+          <div className="space-y-1 text-xs">
+            {dividendSources.map(s => (
+              <div key={s.name} className="flex justify-between items-center">
+                <span className="text-gray-300 truncate">{s.name} <span className="text-gray-500">({s.stake.toFixed(0)}%)</span></span>
+                <span className="text-teal-300 shrink-0 ml-2">+{formatCurrency(s.dividend)}/d</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
       </div>
     </div>
   );
