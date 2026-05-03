@@ -3,20 +3,37 @@ import { useGameStore } from '@/store';
 import type { GameSettings, Airline } from '@/types';
 import { AI_AIRLINES_INIT } from '@/data/airlinesInit';
 import { AIRPORTS } from '@/data/airports';
+import { AIRCRAFT_TYPES } from '@/data/aircraftTypes';
 import { AirportSearchInput } from '@/ui/components/AirportSearchInput';
 import { findAirportByQuery } from '@/utils/airportSearch';
 
 const DIFFICULTIES = [
-  { id: 'easy', label: 'Easy', cash: 50_000_000, desc: '$50M starting cash' },
+  { id: 'easy',   label: 'Easy',   cash: 50_000_000, desc: '$50M starting cash' },
   { id: 'normal', label: 'Normal', cash: 30_000_000, desc: '$30M starting cash' },
-  { id: 'hard', label: 'Hard', cash: 15_000_000, desc: '$15M starting cash' },
+  { id: 'hard',   label: 'Hard',   cash: 15_000_000, desc: '$15M starting cash' },
 ] as const;
+
+const ERAS = [
+  { year: 1960, label: 'Jet Age',       flagship: '707, DC-8, Il-18' },
+  { year: 1970, label: 'Wide-body',     flagship: '747, DC-10, Il-62' },
+  { year: 1980, label: 'Glass cockpit', flagship: '757, 767, A300' },
+  { year: 1990, label: 'FBW era',       flagship: 'A320, 777, A330' },
+  { year: 2000, label: 'Low-cost boom', flagship: '737NG, A319/320/321' },
+  { year: 2010, label: 'Composite',     flagship: '787, A380, A350' },
+  { year: 2020, label: 'New gen',       flagship: 'MAX, NEO, 777X' },
+] as const;
+
+function yearToGameTimeMs(year: number): number {
+  const epoch = new Date(1960, 0, 1).getTime();
+  return new Date(year, 0, 1).getTime() - epoch;
+}
 
 export const NewGameModal: React.FC = () => {
   const [airlineName, setAirlineName] = useState('My Airline');
   const [airlineColor, setAirlineColor] = useState('#3b82f6');
   const [hubQuery, setHubQuery] = useState('JFK');
   const [difficulty, setDifficulty] = useState<'easy' | 'normal' | 'hard'>('normal');
+  const [startingYear, setStartingYear] = useState(1960);
 
   const airportOptions = useMemo(
     () => AIRPORTS.reduce<Record<string, (typeof AIRPORTS)[number]>>((acc, airport) => {
@@ -26,32 +43,39 @@ export const NewGameModal: React.FC = () => {
     [],
   );
 
-  const initWorld = useGameStore(s => s.initWorld);
+  const initWorld        = useGameStore(s => s.initWorld);
   const initGameSettings = useGameStore(s => s.initGameSettings);
-  const initPlayer = useGameStore(s => s.initPlayer);
-  const setAIAirlines = useGameStore(s => s.setAIAirlines);
-  const setAirportHub = useGameStore(s => s.setAirportHub);
-  const designateHub = useGameStore(s => s.designateHub);
-  const closeModal = useGameStore(s => s.closeModal);
+  const initPlayer       = useGameStore(s => s.initPlayer);
+  const setAIAirlines    = useGameStore(s => s.setAIAirlines);
+  const setAirportHub    = useGameStore(s => s.setAirportHub);
+  const designateHub     = useGameStore(s => s.designateHub);
+  const advanceTime      = useGameStore(s => s.advanceTime);
+  const closeModal       = useGameStore(s => s.closeModal);
 
-  const startCash = DIFFICULTIES.find(d => d.id === difficulty)?.cash ?? 30_000_000;
-  const startingHub = findAirportByQuery(hubQuery, airportOptions);
+  const startingCash  = DIFFICULTIES.find(d => d.id === difficulty)?.cash ?? 30_000_000;
+  const startingHub   = findAirportByQuery(hubQuery, airportOptions);
+  const unlockedCount = AIRCRAFT_TYPES.filter(t => t.yearIntroduced <= startingYear).length;
 
   function handleStart() {
     if (!startingHub) return;
 
+    const startingGameTimeMs = yearToGameTimeMs(startingYear);
+    const startingGameDay    = Math.floor(startingGameTimeMs / 86_400_000);
+
     const settings: GameSettings = {
-      playerAirlineName: airlineName,
+      playerAirlineName:  airlineName,
       playerAirlineColor: airlineColor,
       playerAirlineEmoji: '✈',
-      startingCash: startCash,
+      startingCash,
       difficulty,
-      aiCount: 6,
+      aiCount:            6,
+      startingYear,
     };
 
     initWorld();
     initGameSettings(settings);
-    initPlayer({ name: airlineName, color: airlineColor, emoji: '✈', startingCash: startCash, gameDay: 0 });
+    advanceTime(startingGameTimeMs, startingGameDay);
+    initPlayer({ name: airlineName, color: airlineColor, emoji: '✈', startingCash, gameDay: startingGameDay });
     setAirportHub(startingHub.iata, true);
     designateHub(startingHub.iata);
 
@@ -60,25 +84,25 @@ export const NewGameModal: React.FC = () => {
       const id = `ai-${i}`;
       aiAirlines[id] = {
         id,
-        name: config.name,
-        iataPrefix: config.iataPrefix,
-        isPlayer: false,
-        color: config.color,
-        logoEmoji: config.logoEmoji,
-        cashUSD: config.startCash,
-        totalDebt: 0,
-        hubIatas: [config.startHub, config.secondHub],
-        fleetIds: [],
-        routeIds: [],
-        personality: config.personality,
-        foundedGameDay: 0,
-        isInsolvent: false,
-        canBeTakenOver: false,
-        marketSharePercent: 0,
-        reputationScore: 60,
+        name:                   config.name,
+        iataPrefix:             config.iataPrefix,
+        isPlayer:               false,
+        color:                  config.color,
+        logoEmoji:              config.logoEmoji,
+        cashUSD:                config.startCash,
+        totalDebt:              0,
+        hubIatas:               [config.startHub, config.secondHub],
+        fleetIds:               [],
+        routeIds:               [],
+        personality:            config.personality,
+        foundedGameDay:         startingGameDay,
+        isInsolvent:            false,
+        canBeTakenOver:         false,
+        marketSharePercent:     0,
+        reputationScore:        60,
         totalPassengersAllTime: 0,
-        dailyStats: [],
-        crashPenaltyDaysLeft: 0,
+        dailyStats:             [],
+        crashPenaltyDaysLeft:   0,
       };
     });
 
@@ -88,9 +112,9 @@ export const NewGameModal: React.FC = () => {
 
   return (
     <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-[9999]">
-      <div className="bg-gray-900 border border-gray-700 rounded-xl w-full max-w-md p-6 shadow-2xl">
+      <div className="bg-gray-900 border border-gray-700 rounded-xl w-full max-w-lg p-6 shadow-2xl">
         <h1 className="text-2xl font-bold text-white mb-1">Airline Empire</h1>
-        <p className="text-gray-400 text-sm mb-5">Build your airline from the ground up. Start in 1960.</p>
+        <p className="text-gray-400 text-sm mb-5">Build your airline from the ground up.</p>
 
         <div className="space-y-4">
           <div>
@@ -126,6 +150,31 @@ export const NewGameModal: React.FC = () => {
           />
 
           <div>
+            <label className="text-gray-300 text-sm block mb-2">Starting Era</label>
+            <div className="grid grid-cols-4 gap-1.5 mb-2">
+              {ERAS.map(era => (
+                <button
+                  key={era.year}
+                  onClick={() => setStartingYear(era.year)}
+                  className={`py-2 px-1 rounded border text-center transition-colors ${
+                    startingYear === era.year
+                      ? 'border-blue-500 bg-blue-900/40 text-blue-300'
+                      : 'border-gray-700 bg-gray-800 text-gray-400 hover:border-gray-500'
+                  }`}
+                >
+                  <div className="font-bold text-sm">{era.year}</div>
+                  <div className="text-[10px] mt-0.5 opacity-75 leading-tight">{era.label}</div>
+                </button>
+              ))}
+            </div>
+            <p className="text-xs text-gray-500">
+              <span className="text-gray-300 font-medium">{unlockedCount} aircraft</span> available
+              <span className="mx-1.5">·</span>
+              <span className="italic">{ERAS.find(e => e.year === startingYear)?.flagship}</span>
+            </p>
+          </div>
+
+          <div>
             <label className="text-gray-300 text-sm block mb-2">Difficulty</label>
             <div className="grid grid-cols-3 gap-2">
               {DIFFICULTIES.map(d => (
@@ -151,7 +200,7 @@ export const NewGameModal: React.FC = () => {
           disabled={airlineName.trim().length === 0 || !startingHub}
           className="mt-6 w-full py-3 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-lg transition-colors"
         >
-          Start Game
+          Start in {startingYear}
         </button>
       </div>
     </div>

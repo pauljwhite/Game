@@ -8,6 +8,7 @@ export interface GameSettings {
   startingCash: number;
   difficulty: Difficulty;
   aiCount: number;
+  startingYear: number;
 }
 
 export interface GameState {

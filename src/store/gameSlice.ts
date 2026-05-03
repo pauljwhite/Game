@@ -26,6 +26,7 @@ const DEFAULT_SETTINGS: GameSettings = {
   startingCash: 30_000_000,
   difficulty: 'normal',
   aiCount: 6,
+  startingYear: 1960,
 };
 
 const DEFAULT_SPEED: GameSpeed = 300;
