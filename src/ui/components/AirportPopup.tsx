@@ -13,7 +13,8 @@ export const AirportPopup: React.FC = () => {
   const designateHub = useGameStore(s => s.designateHub);
   const removeHub = useGameStore(s => s.removeHub);
   const gameDay = useGameStore(s => s.gameDay);
-  const airportDailyPax = useGameStore(s => s.airportDailyPax);
+  const routes = useGameStore(s => s.routes);
+  const aiRoutes = useGameStore(s => s.aiRoutes);
 
   if (!selectedIata) return null;
   const airport = airports[selectedIata];
@@ -25,7 +26,9 @@ export const AirportPopup: React.FC = () => {
   const isClosed = airport.closedUntilGameDay !== undefined && airport.closedUntilGameDay >= gameDay;
 
   const currentYear = 1960 + Math.floor(gameDay / 365);
-  const dailyPax = airportDailyPax[selectedIata] ?? 0;
+  const dailyPax = [...Object.values(routes), ...Object.values(aiRoutes)]
+    .filter(r => r.isActive && (r.originIata === selectedIata || r.destinationIata === selectedIata))
+    .reduce((sum, r) => sum + (r.dailyPassengers ?? 0), 0);
   const capacity = getAirportCapacity(airport.size, currentYear);
   const utilization = dailyPax / capacity;
   const satMod = airportSaturationMod(utilization);
