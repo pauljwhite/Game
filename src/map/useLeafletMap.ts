@@ -42,6 +42,7 @@ export function useLeafletMap(containerId: string): LeafletMapHandle {
     svg.style.position = 'absolute';
     svg.style.top = '0';
     svg.style.left = '0';
+    svg.style.zIndex = '650';
     svg.style.pointerEvents = 'none';
     svg.style.overflow = 'visible';
     svg.id = 'route-svg-overlay';
