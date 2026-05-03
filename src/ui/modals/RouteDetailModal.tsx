@@ -65,19 +65,19 @@ export const RouteDetailModal: React.FC = () => {
           className="absolute top-4 right-4 text-gray-400 hover:text-white transition-colors text-xl leading-none"
           aria-label="Close"
         >
-          ×
+          x
         </button>
 
         <h2 className="text-xl font-bold text-white mb-1">Route Detail</h2>
 
-        {/* Origin → Destination */}
+        {/* Origin -> Destination */}
         <div className="flex items-center gap-2 mb-4">
           <span className="text-blue-400 font-mono font-bold text-lg">{route.originIata}</span>
-          <span className="text-gray-400">→</span>
+          <span className="text-gray-400">-></span>
           <span className="text-blue-400 font-mono font-bold text-lg">{route.destinationIata}</span>
           {origin && destination && (
             <span className="text-gray-500 text-sm ml-1">
-              {origin.name} → {destination.name}
+              {origin.name} -> {destination.name}
             </span>
           )}
         </div>

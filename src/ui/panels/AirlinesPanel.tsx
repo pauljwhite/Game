@@ -54,7 +54,7 @@ export const AirlinesPanel: React.FC = () => {
               </div>
 
               <div className="mt-1 text-xs text-gray-500">
-                Hub: {airline.hubIatas.join(', ')} · Rep: {airline.reputationScore.toFixed(0)}/100
+                Hub: {airline.hubIatas.join(', ')} - Rep: {airline.reputationScore.toFixed(0)}/100
               </div>
 
               {canTakeover && !airline.isPlayer && (

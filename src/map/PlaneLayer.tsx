@@ -88,7 +88,7 @@ export function PlaneLayer({ map, svgOverlay }: PlaneLayerProps) {
     });
   }, [routes, aiRoutes, aircraft, aiAircraft, airlines, aiAirlines, airports, svgOverlay]);
 
-  // Animation loop — direct DOM, no React
+  // Animation loop - direct DOM, no React
   useEffect(() => {
     const animate = () => {
       rafRef.current = requestAnimationFrame(animate);

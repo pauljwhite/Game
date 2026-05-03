@@ -6,7 +6,7 @@ import { HUB_ANNUAL_FEE_USD } from '@/utils/constants';
 export const HubsPanel: React.FC = () => {
   const airlines = useGameStore(s => s.airlines);
   const airports = useGameStore(s => s.airports);
-  const designateHub = useGameStore(s => s.designateHub);
+  const removeHub = useGameStore(s => s.removeHub);
   const openModalById = useGameStore(s => s.openModalById);
 
   const playerAirline = airlines['player'];
@@ -19,7 +19,7 @@ export const HubsPanel: React.FC = () => {
       <div className="p-3 border-b border-gray-700">
         <h2 className="text-white font-bold">Hubs ({hubAirports.length})</h2>
         <p className="text-gray-400 text-xs mt-0.5">
-          Annual fee: {formatCurrency(HUB_ANNUAL_FEE_USD)}/hub · Benefits: −15% airport fees, +20% demand
+          Annual fee: {formatCurrency(HUB_ANNUAL_FEE_USD)}/hub - Benefits: −15% airport fees, +20% demand
         </p>
       </div>
 
@@ -34,13 +34,13 @@ export const HubsPanel: React.FC = () => {
             <div className="flex items-center justify-between">
               <div>
                 <div className="text-white text-sm font-medium">{airport.name}</div>
-                <div className="text-gray-400 text-xs">{airport.city}, {airport.country} · {airport.iata}</div>
+                <div className="text-gray-400 text-xs">{airport.city}, {airport.country} - {airport.iata}</div>
                 <div className="text-yellow-400 text-xs mt-0.5">
                   {formatCurrency(HUB_ANNUAL_FEE_USD / 365)}/day
                 </div>
               </div>
               <button
-                onClick={() => designateHub(airport.iata)}
+                onClick={() => removeHub(airport.iata)}
                 className="px-2 py-1 bg-gray-700 hover:bg-gray-600 text-gray-300 text-xs rounded"
               >
                 Remove

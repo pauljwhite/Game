@@ -51,7 +51,7 @@ export const TakeoverModal: React.FC = () => {
           className="absolute top-4 right-4 text-gray-400 hover:text-white transition-colors text-xl leading-none"
           aria-label="Close"
         >
-          ×
+          x
         </button>
 
         <h2 className="text-xl font-bold text-white mb-1">Acquisition Opportunity</h2>
@@ -65,7 +65,7 @@ export const TakeoverModal: React.FC = () => {
             <span className="text-2xl">{target.logoEmoji}</span>
             <div>
               <div className="text-white font-bold">{target.name}</div>
-              <div className="text-gray-400 text-xs">Hub: {target.hubIatas[0] ?? '—'}</div>
+              <div className="text-gray-400 text-xs">Hub: {target.hubIatas[0] ?? '-'}</div>
             </div>
           </div>
 
@@ -94,7 +94,7 @@ export const TakeoverModal: React.FC = () => {
               Object.entries(fleetTypeMap).map(([typeId, count]) => (
                 <li key={typeId} className="flex items-center gap-2 text-gray-300">
                   <span className="w-1.5 h-1.5 rounded-full bg-blue-400 flex-shrink-0" />
-                  {count}× {typeId.toUpperCase()}
+                  {count}x {typeId.toUpperCase()}
                 </li>
               ))
             ) : (

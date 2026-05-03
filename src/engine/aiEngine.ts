@@ -4,6 +4,7 @@ import { getBaselineDailyPax, getPlayerMarketShare } from './demandModel';
 import { computeFlightCost } from './economicsEngine';
 import { haversineKm } from '@/utils/geo';
 import { v4 as uuidv4 } from 'uuid';
+import { FUEL_PRICE_USD_PER_LITER } from '@/utils/constants';
 
 type StoreState = ReturnType<typeof import('@/store/index')['useGameStore']['getState']>;
 
@@ -161,6 +162,7 @@ function tryExpand(
     chosenType,
     hubAirport,
     destAirport,
+    store.globalFuelPrice || FUEL_PRICE_USD_PER_LITER,
   ).totalCost / chosenType.seatsEconomy) * 1.4);
 
   const priceMultiplier = AI_PRICE_MULTIPLIER[airline.personality] ?? 1.0;
@@ -236,7 +238,7 @@ function adjustPrices(
     if (priceDelta !== 0) {
       const newPrice = Math.max(50, Math.round(route.priceEconomy * (1 + priceDelta)));
       store.updateAIAirline(airline.id, {}); // trigger re-render
-      // Directly mutate via store's internal mechanism — we update through the route
+      // Directly mutate via store's internal mechanism - we update through the route
       const updatedRoute: Route = { ...route, priceEconomy: newPrice, priceBusiness: Math.round(newPrice * 4 * targetMultiplier) };
       store.addAIRoute(updatedRoute); // addAIRoute overwrites if same id
     }

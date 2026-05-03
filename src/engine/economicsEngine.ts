@@ -1,6 +1,6 @@
 import type { Route, Aircraft, AircraftType, Airport } from '@/types';
 import {
-  FUEL_PRICE_USD_PER_LITER, HUB_COST_DISCOUNT, HUB_DEMAND_BONUS,
+  HUB_COST_DISCOUNT, HUB_DEMAND_BONUS,
   HUB_ANNUAL_FEE_USD, CREW_COST_PER_FLIGHT_HOUR_USD,
   REPUTATION_DEMAND_FACTOR, CRASH_DEMAND_PENALTY_PCT, DAY_MS,
 } from '@/utils/constants';
@@ -13,10 +13,11 @@ export function computeFlightCost(
   aircraftType: AircraftType,
   origin: Airport,
   dest: Airport,
+  fuelPriceUSDPerLiter: number,
 ): { fuelCost: number; maintenanceCost: number; airportFees: number; crewCost: number; totalCost: number; flightDurationHours: number } {
   const flightDurationHours = route.distanceKm / aircraftType.cruiseSpeedKmh;
   const fuelLiters = (route.distanceKm / 100) * aircraftType.fuelBurnLPer100Km;
-  const fuelCost = fuelLiters * FUEL_PRICE_USD_PER_LITER;
+  const fuelCost = fuelLiters * fuelPriceUSDPerLiter;
   const conditionFactor = 1 + (100 - aircraft.condition) / 200;
   const maintenanceCost = aircraftType.maintenanceCostPerHourUSD * flightDurationHours * conditionFactor;
   const crewCost = CREW_COST_PER_FLIGHT_HOUR_USD * flightDurationHours;
@@ -30,7 +31,7 @@ export function runDailyTick(store: ReturnType<typeof import('@/store/index')['u
   const state = store;
   const {
     gameDay, aircraft, routes, airlines, airports, aiAirlines, aiRoutes, aiAircraft,
-    globalFuelPrice: _fuel,
+    globalFuelPrice,
   } = state;
   const { aircraft: _ac, routes: _r, ...rest } = state;
   void rest;
@@ -41,6 +42,13 @@ export function runDailyTick(store: ReturnType<typeof import('@/store/index')['u
   // Player economics
   const playerAirline = airlines['player'];
   if (playerAirline && !playerAirline.isInsolvent) {
+    Object.values(aircraft).forEach(ac => {
+      if (ac.airlineId === 'player' && ac.status === 'maintenance' && gameDay - ac.lastMaintenanceGameDay >= 3) {
+        store.completeMaintenance(ac.id, true);
+        store.pushNewsItem(`${ac.name} has completed maintenance and returned to service.`);
+      }
+    });
+
     let totalRevenue = 0;
     let totalFuelCost = 0;
     let totalMaintenanceCost = 0;
@@ -62,7 +70,7 @@ export function runDailyTick(store: ReturnType<typeof import('@/store/index')['u
       const aircraftType: AircraftType | undefined = AIRCRAFT_TYPES.find(t => t.id === ac.typeId);
       if (!aircraftType) return;
 
-      const flightCosts = computeFlightCost(route, ac, aircraftType, origin, dest);
+      const flightCosts = computeFlightCost(route, ac, aircraftType, origin, dest, globalFuelPrice);
       const flightsPerDay = route.flightsPerWeek / 7;
 
       // Demand calculation
@@ -101,12 +109,12 @@ export function runDailyTick(store: ReturnType<typeof import('@/store/index')['u
 
       // Condition degradation
       const conditionLoss = flightsPerDay * flightCosts.flightDurationHours * 0.08;
-      store.updateAircraftCondition(routeId, -conditionLoss, flightsPerDay * flightCosts.flightDurationHours);
+      store.updateAircraftCondition(ac.id, -conditionLoss, flightsPerDay * flightCosts.flightDurationHours);
 
       // Crash check
       if (ac.crashRisk > 0.001 && Math.random() < ac.crashRisk * flightsPerDay * 0.0008) {
         store.triggerCrash(ac.id);
-        store.pushNewsItem(`BREAKING: ${playerAirline.name} ${aircraftType.model} crashes on ${route.originIata}→${route.destinationIata} route!`);
+        store.pushNewsItem(`BREAKING: ${playerAirline.name} ${aircraftType.model} crashes on ${route.originIata}->${route.destinationIata} route!`);
       }
     });
 
@@ -137,7 +145,7 @@ export function runDailyTick(store: ReturnType<typeof import('@/store/index')['u
       const aircraftType: AircraftType | undefined = AIRCRAFT_TYPES.find(t => t.id === ac.typeId);
       if (!aircraftType) return;
 
-      const flightCosts = computeFlightCost(route, ac, aircraftType, origin, dest);
+      const flightCosts = computeFlightCost(route, ac, aircraftType, origin, dest, globalFuelPrice);
       const flightsPerDay = route.flightsPerWeek / 7;
       const baselinePax = getBaselineDailyPax(origin, dest);
       const marketShare = getPlayerMarketShare(route.originIata, route.destinationIata, route.priceEconomy, allAirlines, allRoutes);

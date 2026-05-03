@@ -1,7 +1,10 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useGameStore } from '@/store';
 import type { GameSettings, Airline } from '@/types';
 import { AI_AIRLINES_INIT } from '@/data/airlinesInit';
+import { AIRPORTS } from '@/data/airports';
+import { AirportSearchInput } from '@/ui/components/AirportSearchInput';
+import { findAirportByQuery } from '@/utils/airportSearch';
 
 const DIFFICULTIES = [
   { id: 'easy', label: 'Easy', cash: 50_000_000, desc: '$50M starting cash' },
@@ -12,8 +15,16 @@ const DIFFICULTIES = [
 export const NewGameModal: React.FC = () => {
   const [airlineName, setAirlineName] = useState('My Airline');
   const [airlineColor, setAirlineColor] = useState('#3b82f6');
-  const [hubIata, setHubIata] = useState('JFK');
+  const [hubQuery, setHubQuery] = useState('JFK');
   const [difficulty, setDifficulty] = useState<'easy' | 'normal' | 'hard'>('normal');
+
+  const airportOptions = useMemo(
+    () => AIRPORTS.reduce<Record<string, (typeof AIRPORTS)[number]>>((acc, airport) => {
+      acc[airport.iata] = airport;
+      return acc;
+    }, {}),
+    [],
+  );
 
   const initWorld = useGameStore(s => s.initWorld);
   const initGameSettings = useGameStore(s => s.initGameSettings);
@@ -24,8 +35,11 @@ export const NewGameModal: React.FC = () => {
   const closeModal = useGameStore(s => s.closeModal);
 
   const startCash = DIFFICULTIES.find(d => d.id === difficulty)?.cash ?? 30_000_000;
+  const startingHub = findAirportByQuery(hubQuery, airportOptions);
 
   function handleStart() {
+    if (!startingHub) return;
+
     const settings: GameSettings = {
       playerAirlineName: airlineName,
       playerAirlineColor: airlineColor,
@@ -38,10 +52,9 @@ export const NewGameModal: React.FC = () => {
     initWorld();
     initGameSettings(settings);
     initPlayer({ name: airlineName, color: airlineColor, emoji: '✈', startingCash: startCash, gameDay: 0 });
-    setAirportHub(hubIata, true);
-    designateHub(hubIata);
+    setAirportHub(startingHub.iata, true);
+    designateHub(startingHub.iata);
 
-    // Build AI airline records
     const aiAirlines: Record<string, Airline> = {};
     AI_AIRLINES_INIT.forEach((config, i) => {
       const id = `ai-${i}`;
@@ -103,15 +116,14 @@ export const NewGameModal: React.FC = () => {
             </div>
           </div>
 
-          <div>
-            <label className="text-gray-300 text-sm block mb-1">Starting Hub (IATA code)</label>
-            <input
-              className="w-full bg-gray-800 border border-gray-600 rounded px-3 py-2 text-white text-sm font-mono uppercase focus:outline-none focus:border-blue-500"
-              value={hubIata}
-              onChange={e => setHubIata(e.target.value.toUpperCase().slice(0, 3))}
-              maxLength={3}
-            />
-          </div>
+          <AirportSearchInput
+            label="Starting Hub"
+            value={hubQuery}
+            airports={airportOptions}
+            placeholder="JFK, KJFK, New York"
+            onChange={setHubQuery}
+            onSelect={airport => setHubQuery(airport.iata)}
+          />
 
           <div>
             <label className="text-gray-300 text-sm block mb-2">Difficulty</label>
@@ -136,7 +148,7 @@ export const NewGameModal: React.FC = () => {
 
         <button
           onClick={handleStart}
-          disabled={airlineName.trim().length === 0 || hubIata.length !== 3}
+          disabled={airlineName.trim().length === 0 || !startingHub}
           className="mt-6 w-full py-3 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-lg transition-colors"
         >
           Start Game

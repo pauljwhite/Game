@@ -11,6 +11,7 @@ export type AirportRegion =
 
 export interface Airport {
   iata: string;
+  icao?: string;
   name: string;
   city: string;
   country: string;

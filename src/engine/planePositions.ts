@@ -10,7 +10,7 @@ export interface PlaneState {
   color: string;
 }
 
-// Module-level map — lives outside React/Zustand for 60fps direct DOM updates
+// Module-level map - lives outside React/Zustand for 60fps direct DOM updates
 const planePositions = new Map<string, PlaneState>();
 
 export function getPlanePositions(): Map<string, PlaneState> {

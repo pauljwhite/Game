@@ -1,6 +1,7 @@
 import React from 'react';
 import { useGameStore } from '@/store';
 import { formatCurrency } from '@/utils/format';
+import { airportIcao } from '@/utils/airportSearch';
 
 export const AirportPopup: React.FC = () => {
   const selectedIata = useGameStore(s => s.selectedAirportIata);
@@ -30,13 +31,15 @@ export const AirportPopup: React.FC = () => {
           onClick={() => selectAirport(null)}
           className="text-gray-500 hover:text-white text-xs ml-2"
         >
-          ✕
+          x
         </button>
       </div>
 
       <div className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
         <span className="text-gray-400">IATA</span>
         <span className="text-white font-mono">{airport.iata}</span>
+        <span className="text-gray-400">ICAO</span>
+        <span className="text-white font-mono">{airportIcao(airport) ?? '-'}</span>
         <span className="text-gray-400">Size</span>
         <span className="text-white capitalize">{airport.size}</span>
         <span className="text-gray-400">Landing fee</span>

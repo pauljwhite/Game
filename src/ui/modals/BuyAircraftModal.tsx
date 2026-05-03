@@ -70,7 +70,7 @@ export const BuyAircraftModal: React.FC = () => {
             className="text-gray-400 hover:text-white text-2xl leading-none transition-colors"
             aria-label="Close"
           >
-            ✕
+            x
           </button>
         </div>
 

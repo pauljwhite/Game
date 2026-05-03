@@ -2,6 +2,7 @@ import type { StateCreator } from 'zustand';
 import type { Airline, Aircraft, Route, AircraftType } from '@/types';
 import { v4 as uuid } from 'uuid';
 import { haversineKm } from '@/utils/geo';
+import { AIRCRAFT_TYPES } from '@/data/aircraftTypes';
 import type { GameStore } from './index';
 
 export interface RouteConfig {
@@ -106,8 +107,12 @@ export const createPlayerSlice: StateCreator<GameStore, [['zustand/immer', never
         state.routes[ac.assignedRouteId].aircraftId = null;
         state.routes[ac.assignedRouteId].isActive = false;
       }
-      // Sell at 30% of base value (simplified)
-      state.airlines[PLAYER_ID].cashUSD += 0; // sell price handled by caller
+      const aircraftType = AIRCRAFT_TYPES.find(type => type.id === ac.typeId);
+      const ageDays = Math.max(0, state.gameDay - ac.purchasedGameDay);
+      const ageDepreciation = Math.max(0.2, 1 - ageDays / (365 * 25));
+      const conditionFactor = Math.max(0.2, ac.condition / 100);
+      const salePrice = aircraftType ? aircraftType.purchasePrice * 0.5 * ageDepreciation * conditionFactor : 0;
+      state.airlines[PLAYER_ID].cashUSD += salePrice;
       state.airlines[PLAYER_ID].fleetIds = state.airlines[PLAYER_ID].fleetIds.filter(id => id !== aircraftId);
       delete state.aircraft[aircraftId];
     }),
@@ -160,11 +165,13 @@ export const createPlayerSlice: StateCreator<GameStore, [['zustand/immer', never
       if (!state.airlines[PLAYER_ID].hubIatas.includes(iata)) {
         state.airlines[PLAYER_ID].hubIatas.push(iata);
       }
+      if (state.airports[iata]) state.airports[iata].isHub = true;
     }),
 
   removeHub: (iata) =>
     set((state) => {
       state.airlines[PLAYER_ID].hubIatas = state.airlines[PLAYER_ID].hubIatas.filter(h => h !== iata);
+      if (state.airports[iata]) state.airports[iata].isHub = false;
     }),
 
   assignAircraftToRoute: (aircraftId, routeId) =>
@@ -263,6 +270,9 @@ export const createPlayerSlice: StateCreator<GameStore, [['zustand/immer', never
       ac.status = 'maintenance';
       ac.isGrounded = true;
       ac.lastMaintenanceGameDay = gameDay;
+      const aircraftType = AIRCRAFT_TYPES.find(type => type.id === ac.typeId);
+      const maintenanceCost = aircraftType ? aircraftType.maintenanceCostPerHourUSD * Math.max(8, ac.maintenanceHoursOwed) * 1.5 : 0;
+      state.airlines[PLAYER_ID].cashUSD -= maintenanceCost;
       if (ac.assignedRouteId && state.routes[ac.assignedRouteId]) {
         state.routes[ac.assignedRouteId].isActive = false;
       }
