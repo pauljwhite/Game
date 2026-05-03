@@ -234,7 +234,7 @@ function AircraftCard({ ac, gameDay }: { ac: Aircraft; gameDay: number }) {
                               <span className="text-white">{policy.threshold}%</span>
                             </div>
                             <div className="w-full h-1 bg-white/10 rounded-full">
-                              <div className="h-full bg-blue-500 rounded-full" style={{ width: `${((policy.threshold - 20) / 60) * 100}%` }} />
+                              <div className="h-full bg-blue-500 rounded-full" style={{ width: `${((policy.threshold - 20) / 60) * 100}%` /* 20–80 range */} />
                             </div>
                           </div>
                           <div className="opacity-60">
@@ -345,7 +345,7 @@ function FleetPolicySection() {
 
   if (!policy) return null;
 
-  const THRESHOLD_OPTIONS = [20, 30, 40, 50, 60];
+  const THRESHOLD_OPTIONS = [20, 30, 40, 50, 60, 70, 80];
 
   return (
     <div className="border-b border-white/10">
