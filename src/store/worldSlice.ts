@@ -58,7 +58,8 @@ export const createWorldSlice: StateCreator<GameStore, [['zustand/immer', never]
     set((state) => {
       state.aiRoutes[route.id] = route;
       if (state.aiAirlines[route.airlineId]) {
-        state.aiAirlines[route.airlineId].routeIds.push(route.id);
+        const routeIds = state.aiAirlines[route.airlineId].routeIds;
+        if (!routeIds.includes(route.id)) routeIds.push(route.id);
       }
     }),
 

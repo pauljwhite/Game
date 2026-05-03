@@ -13,12 +13,11 @@ html, body, #root {
   background: #0f172a !important;
 }
 
-.route-arc-line {
+.route-arc-line--animated {
   animation: route-dash 18s linear infinite;
 }
 
 .route-plane {
-  filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.55));
   pointer-events: none;
 }
 

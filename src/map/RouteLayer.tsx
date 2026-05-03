@@ -18,6 +18,9 @@ interface RouteArc {
   isSelected: boolean;
 }
 
+const MAX_AI_ROUTE_ARCS = 250;
+const ARC_POINT_COUNT = 48;
+
 export const RouteLayer: React.FC<RouteLayerProps> = ({ map, mapVersion }) => {
   const routes = useGameStore(s => s.routes);
   const aiRoutes = useGameStore(s => s.aiRoutes);
@@ -42,7 +45,7 @@ export const RouteLayer: React.FC<RouteLayerProps> = ({ map, mapVersion }) => {
         : aiAirlines[route.airlineId];
       const color = airline?.color ?? '#888';
 
-      const segments = computeArcSegments(origin.lat, origin.lon, dest.lat, dest.lon, 80);
+      const segments = computeArcSegments(origin.lat, origin.lon, dest.lat, dest.lon, ARC_POINT_COUNT);
       const paths = segments.map(seg => {
         const svgPts = seg.points.map(p => latLonToSvgPoint(p.lat, p.lon, map));
         return buildSvgPathD(svgPts);
@@ -52,7 +55,7 @@ export const RouteLayer: React.FC<RouteLayerProps> = ({ map, mapVersion }) => {
     };
 
     Object.values(routes).forEach(r => processRoute(r, true));
-    Object.values(aiRoutes).forEach(r => processRoute(r, false));
+    Object.values(aiRoutes).slice(0, MAX_AI_ROUTE_ARCS).forEach(r => processRoute(r, false));
 
     return result;
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -62,15 +65,6 @@ export const RouteLayer: React.FC<RouteLayerProps> = ({ map, mapVersion }) => {
 
   return (
     <>
-      <defs>
-        <filter id="route-glow" x="-20%" y="-20%" width="140%" height="140%">
-          <feGaussianBlur stdDeviation="2.5" result="blur" />
-          <feMerge>
-            <feMergeNode in="blur" />
-            <feMergeNode in="SourceGraphic" />
-          </feMerge>
-        </filter>
-      </defs>
       {arcs.map(arc =>
         arc.paths.map((d, i) => {
           const routeKey = `${arc.routeId}-${i}`;
@@ -87,7 +81,6 @@ export const RouteLayer: React.FC<RouteLayerProps> = ({ map, mapVersion }) => {
                 strokeWidth={arc.isSelected ? 7 : arc.isPlayer ? 5 : 3}
                 strokeOpacity={arc.isSelected ? 0.35 : arc.isPlayer ? 0.22 : 0.12}
                 fill="none"
-                filter="url(#route-glow)"
                 pointerEvents="none"
               />
               <path
@@ -98,7 +91,7 @@ export const RouteLayer: React.FC<RouteLayerProps> = ({ map, mapVersion }) => {
                 strokeLinecap="round"
                 strokeDasharray={arc.isPlayer ? '10 9' : '5 10'}
                 fill="none"
-                className="route-arc-line"
+                className={arc.isPlayer ? 'route-arc-line route-arc-line--animated' : 'route-arc-line'}
                 style={{ cursor: arc.isPlayer ? 'pointer' : 'default' }}
                 pointerEvents={arc.isPlayer ? 'stroke' : 'none'}
                 onClick={clickHandler}

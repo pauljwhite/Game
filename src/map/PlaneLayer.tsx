@@ -11,6 +11,7 @@ interface PlaneLayerProps {
 }
 
 const PLANE_PATH = 'M0,-8 L3,3 L0,1 L-3,3 Z';
+const MAX_RENDERED_PLANES = 300;
 
 function hashString(value: string): number {
   let hash = 0;
@@ -45,7 +46,10 @@ export function PlaneLayer({ map, svgOverlay }: PlaneLayerProps) {
     const positions = getPlanePositions();
 
     // Add planes for active routes
-    const allRoutes = [...Object.values(routes), ...Object.values(aiRoutes)];
+    const allRoutes = [
+      ...Object.values(routes),
+      ...Object.values(aiRoutes).slice(0, Math.max(0, MAX_RENDERED_PLANES - Object.keys(routes).length)),
+    ];
     const allAircraft = { ...aircraft, ...aiAircraft };
     const allAirlines = { ...airlines, ...aiAirlines };
 
@@ -113,6 +117,14 @@ export function PlaneLayer({ map, svgOverlay }: PlaneLayerProps) {
     });
 
   }, [routes, aiRoutes, aircraft, aiAircraft, airlines, aiAirlines, airports, svgOverlay]);
+
+  useEffect(() => {
+    const group = planeGroupRef.current;
+    return () => {
+      group?.remove();
+      planeGroupRef.current = null;
+    };
+  }, []);
 
   // Animation loop - direct DOM, no React
   useEffect(() => {

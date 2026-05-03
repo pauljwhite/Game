@@ -11,18 +11,67 @@ export type GameStore = GameSlice & PlayerSlice & WorldSlice & UISlice;
 
 const VALID_GAME_SPEEDS = new Set([0, 60, 300, 1200, 3600, 14400]);
 const DEFAULT_GAME_SPEED = 300;
+const SAVE_VERSION = 4;
+
+function uniqueExistingIds(ids: unknown, exists: (id: string) => boolean): string[] {
+  if (!Array.isArray(ids)) return [];
+
+  const result: string[] = [];
+  const seen = new Set<string>();
+  ids.forEach(id => {
+    if (typeof id !== 'string' || seen.has(id) || !exists(id)) return;
+    seen.add(id);
+    result.push(id);
+  });
+  return result;
+}
+
+function sanitizePersistedState(state: Partial<GameStore>): Partial<GameStore> {
+  const aiRoutes = state.aiRoutes ?? {};
+  const aiAircraft = state.aiAircraft ?? {};
+  const routes = state.routes ?? {};
+  const aircraft = state.aircraft ?? {};
+
+  const aiAirlines = Object.fromEntries(
+    Object.entries(state.aiAirlines ?? {}).map(([id, airline]) => [
+      id,
+      {
+        ...airline,
+        routeIds: uniqueExistingIds(airline.routeIds, routeId => aiRoutes[routeId]?.airlineId === id),
+        fleetIds: uniqueExistingIds(airline.fleetIds, aircraftId => aiAircraft[aircraftId]?.airlineId === id),
+      },
+    ]),
+  );
+
+  const airlines = Object.fromEntries(
+    Object.entries(state.airlines ?? {}).map(([id, airline]) => [
+      id,
+      {
+        ...airline,
+        routeIds: uniqueExistingIds(airline.routeIds, routeId => routes[routeId]?.airlineId === id),
+        fleetIds: uniqueExistingIds(airline.fleetIds, aircraftId => aircraft[aircraftId]?.airlineId === id),
+      },
+    ]),
+  );
+
+  const sanitized: Partial<GameStore> = {
+    ...state,
+    airlines,
+    aiAirlines,
+    speed: VALID_GAME_SPEEDS.has(state.speed as number) ? state.speed : DEFAULT_GAME_SPEED,
+    isPaused: false,
+  };
+
+  if (Array.isArray(state.newsTicker)) sanitized.newsTicker = state.newsTicker.slice(0, 20);
+
+  return sanitized;
+}
 
 function migratePersistedState(persistedState: unknown): unknown {
   if (!persistedState || typeof persistedState !== 'object') return persistedState;
 
   const state = persistedState as Partial<GameStore>;
-  if (VALID_GAME_SPEEDS.has(state.speed as number)) return state;
-
-  return {
-    ...state,
-    speed: DEFAULT_GAME_SPEED,
-    isPaused: false,
-  };
+  return sanitizePersistedState(state);
 }
 
 export const useGameStore = create<GameStore>()(
@@ -35,12 +84,12 @@ export const useGameStore = create<GameStore>()(
     })),
     {
       name: 'airline-empire-save',
-      version: 3,
+      version: SAVE_VERSION,
       migrate: migratePersistedState,
       partialize: (state) => {
         // Exclude transient UI state from persistence
         const { selectedAirportIata: _s, selectedRouteId: _r, openPanel: _p, openModal: _m, modalPayload: _mp, ...rest } = state;
-        return rest;
+        return sanitizePersistedState(rest);
       },
     },
   ),
