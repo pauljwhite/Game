@@ -207,6 +207,7 @@ export const FleetPanel: React.FC = () => {
   const aircraft    = useGameStore(s => s.aircraft);
   const gameTimeMs  = useGameStore(s => s.gameTimeMs);
   const openModalById = useGameStore(s => s.openModalById);
+  const closePanel    = useGameStore(s => s.closePanel);
   const gameDay     = gameDayFromMs(gameTimeMs);
   const fleetList   = Object.values(aircraft).filter(ac => ac.airlineId === 'player');
 
@@ -214,12 +215,15 @@ export const FleetPanel: React.FC = () => {
     <div className="flex flex-col h-full">
       <div className="flex items-center justify-between p-3 border-b border-gray-700">
         <h2 className="text-white font-bold">Fleet ({fleetList.length})</h2>
-        <button
-          onClick={() => openModalById('buyAircraft')}
-          className="px-3 py-1 bg-blue-600 hover:bg-blue-500 text-white text-xs rounded"
-        >
-          + Buy Aircraft
-        </button>
+        <div className="flex items-center gap-1">
+          <button
+            onClick={() => openModalById('buyAircraft')}
+            className="px-3 py-1 bg-blue-600 hover:bg-blue-500 text-white text-xs rounded"
+          >
+            + Buy Aircraft
+          </button>
+          <button onClick={closePanel} aria-label="Close" className="w-7 h-7 flex items-center justify-center text-gray-400 hover:text-white hover:bg-gray-700 rounded transition-colors text-lg leading-none">×</button>
+        </div>
       </div>
 
       <div className="flex-1 overflow-y-auto">

@@ -18,6 +18,7 @@ export const AirlinesPanel: React.FC = () => {
   const airports    = useGameStore(s => s.airports);
   const airlines    = useGameStore(s => s.airlines);
   const openModalById = useGameStore(s => s.openModalById);
+  const closePanel    = useGameStore(s => s.closePanel);
 
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
@@ -32,8 +33,9 @@ export const AirlinesPanel: React.FC = () => {
 
   return (
     <div className="flex flex-col h-full">
-      <div className="p-3 border-b border-gray-700">
+      <div className="flex items-center justify-between p-3 border-b border-gray-700">
         <h2 className="text-white font-bold">Airlines</h2>
+        <button onClick={closePanel} aria-label="Close" className="w-7 h-7 flex items-center justify-center text-gray-400 hover:text-white hover:bg-gray-700 rounded transition-colors text-lg leading-none">×</button>
       </div>
 
       <div className="flex-1 overflow-y-auto">
