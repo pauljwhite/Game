@@ -59,13 +59,13 @@ export function runDailyTick(store: ReturnType<typeof import('@/store/index')['u
       if (
         ac.airlineId === 'player' &&
         ac.status !== 'maintenance' && ac.status !== 'crashed' &&
-        !ac.isGrounded &&
         ac.autoMaintenanceEnabled &&
         ac.condition <= ac.autoMaintenanceThreshold &&
         maintCooldownElapsed
       ) {
         store.startMaintenance(ac.id, gameDay, ac.autoMaintenanceTier ?? 'standard');
-        store.pushNewsItem(`Auto-maintenance triggered for ${ac.name} (condition ${ac.condition.toFixed(0)}%).`);
+        const reason = ac.isGrounded ? 'grounded — auto-maintenance triggered' : `condition ${ac.condition.toFixed(0)}%`;
+        store.pushNewsItem(`Auto-maintenance triggered for ${ac.name} (${reason}).`);
       }
     });
 
