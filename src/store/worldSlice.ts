@@ -39,6 +39,8 @@ export interface WorldSlice {
   setShareholding: (targetId: string, ownerId: string, newPercent: number) => void;
   applyAIDividend: (airlineId: string, amount: number) => void;
   payDividend: (payerAirlineId: string, receiverOwnerId: string, amount: number) => void;
+  ignoreAIGrounding: (aircraftId: string) => void;
+  triggerAICrash: (aircraftId: string) => void;
 }
 
 function createAirportMap(): Record<string, Airport> {
@@ -128,13 +130,47 @@ export const createWorldSlice: StateCreator<GameStore, [['zustand/immer', never]
       ac.condition = Math.max(0, Math.min(100, ac.condition + conditionDelta));
       ac.maintenanceHoursOwed += hoursOwed;
       ac.totalFlightHours += hoursOwed;
-      // Emergency grounding at critically low condition (maintenance tick will handle restoration)
+      const baseCrashRisk = Math.max(0, (40 - ac.condition) / 40) ** 2;
+      const agePenalty = Math.max(0, ((state.gameDay - ac.purchasedGameDay) / 365 - 15) * 0.01);
+      ac.crashRisk = Math.min(0.95, baseCrashRisk + agePenalty);
+      // Emergency grounding at critically low condition
       if (ac.condition < 15 && !ac.isGrounded && ac.status !== 'maintenance') {
         ac.isGrounded = true;
+        ac.knownFaultRiskMod = 1; // reset when force-grounded
         if (ac.assignedRouteId && state.aiRoutes[ac.assignedRouteId]) {
           state.aiRoutes[ac.assignedRouteId].isActive = false;
         }
       }
+    }),
+
+  ignoreAIGrounding: (aircraftId) =>
+    set((state) => {
+      const ac = state.aiAircraft[aircraftId];
+      if (!ac) return;
+      ac.isGrounded = false;
+      ac.groundedReason = undefined;
+      ac.knownFaultRiskMod = 5;
+      if (ac.assignedRouteId && state.aiRoutes[ac.assignedRouteId]) {
+        state.aiRoutes[ac.assignedRouteId].isActive = true;
+      }
+    }),
+
+  triggerAICrash: (aircraftId) =>
+    set((state) => {
+      const ac = state.aiAircraft[aircraftId];
+      if (!ac) return;
+      const airline = state.aiAirlines[ac.airlineId];
+      ac.status = 'crashed';
+      if (ac.assignedRouteId && state.aiRoutes[ac.assignedRouteId]) {
+        state.aiRoutes[ac.assignedRouteId].aircraftId = null;
+        state.aiRoutes[ac.assignedRouteId].isActive = false;
+      }
+      if (airline) {
+        airline.fleetIds = airline.fleetIds.filter(id => id !== aircraftId);
+        airline.reputationScore = Math.max(0, airline.reputationScore - 40);
+        airline.cashUSD -= 25_000_000;
+      }
+      delete state.aiAircraft[aircraftId];
     }),
 
   startAIMaintenance: (aircraftId, gameDay, tier) =>
@@ -168,6 +204,7 @@ export const createWorldSlice: StateCreator<GameStore, [['zustand/immer', never]
       ac.activeMaintTier = null;
       ac.status = ac.assignedRouteId ? 'flying' : 'idle';
       ac.crashRisk = 0;
+      ac.knownFaultRiskMod = 1;
       if (ac.assignedRouteId && state.aiRoutes[ac.assignedRouteId]) {
         state.aiRoutes[ac.assignedRouteId].isActive = true;
       }

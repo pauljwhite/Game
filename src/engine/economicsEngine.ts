@@ -167,8 +167,9 @@ export function runDailyTick(store: ReturnType<typeof import('@/store/index')['u
       const conditionLoss = flightsPerDay * flightCosts.flightDurationHours * 0.08;
       store.updateAircraftCondition(ac.id, -conditionLoss, flightsPerDay * flightCosts.flightDurationHours);
 
-      // Crash check
-      if (ac.crashRisk > 0.001 && Math.random() < ac.crashRisk * flightsPerDay * 0.0008) {
+      // Crash check — knownFaultRiskMod drastically raises risk when flying with ignored fault
+      const riskMod = ac.knownFaultRiskMod ?? 1;
+      if (ac.crashRisk > 0.001 && Math.random() < ac.crashRisk * riskMod * flightsPerDay * 0.0008) {
         store.triggerCrash(ac.id);
         const crashRoute = `${route.originIata}–${route.destinationIata}`;
         store.pushNewsItem(`BREAKING: ${playerAirline.name} ${aircraftType.model} crashes on ${route.originIata}->${route.destinationIata} route!`);
@@ -264,6 +265,27 @@ export function runDailyTick(store: ReturnType<typeof import('@/store/index')['u
         -(flightsPerDay * flightCosts.flightDurationHours * 0.08),
         flightsPerDay * flightCosts.flightDurationHours,
       );
+
+      // AI crash check — higher risk when flying with a known ignored fault
+      const aiRiskMod = ac.knownFaultRiskMod ?? 1;
+      if (ac.crashRisk > 0.001 && Math.random() < ac.crashRisk * aiRiskMod * flightsPerDay * 0.0008) {
+        const crashRoute = route ? `${route.originIata}–${route.destinationIata}` : 'unknown route';
+        const acModel = AIRCRAFT_TYPES.find(t => t.id === ac.typeId)?.model ?? 'aircraft';
+        store.triggerAICrash(ac.id);
+        store.pushNewsItem(`CRASH: ${aiAirline.name} ${acModel} lost on ${crashRoute}.`);
+        store.pushNewspaper({
+          id: `ai_crash_${store.gameDay}_${ac.id}`,
+          headline: `${aiAirline.name} ${acModel} lost`,
+          subheadline: `Investigators launch inquiry after ${aiAirline.name} aircraft is lost on the ${crashRoute} corridor`,
+          paragraphs: [
+            `An aircraft operated by ${aiAirline.name} has been lost while operating on the ${crashRoute} route. The ${acModel} suffered a catastrophic in-flight failure under circumstances that remain under investigation by aviation authorities.`,
+            `${aiAirline.name} has suspended services on the affected route and its board is convening an emergency session. Investigators have been dispatched to the scene and the carrier's entire fleet faces a precautionary safety audit in the coming days.`,
+            `"We are deeply shocked by this tragic event," said a spokesperson for ${aiAirline.name}. The airline faces significant financial penalties and a severe reputational crisis. Market observers expect load factors across ${aiAirline.name}'s network to suffer as passenger confidence falls.`,
+          ],
+          severity: 'crash',
+          gameDay: store.gameDay,
+        });
+      }
     });
 
     const netProfit = aiRevenue - aiCost;

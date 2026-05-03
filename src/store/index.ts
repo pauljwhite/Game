@@ -80,7 +80,17 @@ function sanitizePersistedState(state: Partial<GameStore>): Partial<GameStore> {
         autoMaintenanceThreshold: (raw.autoMaintenanceThreshold as number | undefined) ?? 40,
         autoMaintenanceTier: ((raw.autoMaintenanceTier as string | undefined) ?? 'standard') as 'light' | 'standard' | 'full',
       };
-      return [id, { ...defaults, ...ac }];
+      const knownFaultRiskMod = typeof raw.knownFaultRiskMod === 'number' ? raw.knownFaultRiskMod : 1;
+      return [id, { ...defaults, ...ac, knownFaultRiskMod }];
+    }),
+  );
+
+  // Backfill knownFaultRiskMod on AI aircraft from older saves
+  const normalizedAIAircraft: Record<string, typeof aiAircraft[string]> = Object.fromEntries(
+    Object.entries(aiAircraft).map(([id, ac]) => {
+      const raw = ac as unknown as Record<string, unknown>;
+      const knownFaultRiskMod = typeof raw.knownFaultRiskMod === 'number' ? raw.knownFaultRiskMod : 1;
+      return [id, { ...ac, knownFaultRiskMod }];
     }),
   );
 
@@ -89,6 +99,7 @@ function sanitizePersistedState(state: Partial<GameStore>): Partial<GameStore> {
     airlines,
     aiAirlines,
     aircraft: normalizedAircraft,
+    aiAircraft: normalizedAIAircraft,
     airportDailyPax: (state.airportDailyPax && typeof state.airportDailyPax === 'object') ? state.airportDailyPax : {},
     speed: VALID_GAME_SPEEDS.has(state.speed as number) ? state.speed : DEFAULT_GAME_SPEED,
     isPaused: false,

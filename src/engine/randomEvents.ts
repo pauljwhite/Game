@@ -1,4 +1,18 @@
 import type { NewsArticle } from '@/store/uiSlice';
+import { AIRCRAFT_TYPES } from '@/data/aircraftTypes';
+import { computeMaintenanceCost } from '@/utils/constants';
+
+function aiIgnoreGroundingChance(airline: { cashUSD: number; personality: string }): boolean {
+  let chance = 0.15;
+  if (airline.cashUSD < 5_000_000)  chance = 0.85;
+  else if (airline.cashUSD < 15_000_000) chance = 0.55;
+  else if (airline.cashUSD < 30_000_000) chance = 0.30;
+  if (airline.personality === 'aggressive') chance += 0.15;
+  if (airline.personality === 'budget')     chance += 0.20;
+  if (airline.personality === 'conservative') chance -= 0.25;
+  if (airline.personality === 'premium')    chance -= 0.15;
+  return Math.random() < Math.max(0.05, Math.min(0.95, chance));
+}
 
 function buildGroundingArticle(
   evt: { id: string; newsTemplate: string },
@@ -7,6 +21,8 @@ function buildGroundingArticle(
   airportCity: string,
   routeLabel: string,
   gameDay: number,
+  aircraftId: string,
+  maintenanceCost: number,
 ): NewsArticle {
   const newsText = evt.newsTemplate
     .replace('{airline}', airlineName)
@@ -19,11 +35,13 @@ function buildGroundingArticle(
     subheadline: newsText,
     paragraphs: [
       newsText,
-      `The aircraft has been withdrawn from scheduled services pending a full technical inspection by engineering crews. Passengers booked on ${routeLabel} services have been informed and the airline is working to find alternative capacity. The affected route will face disruption until the aircraft is cleared to return to service.`,
-      `A spokesperson for ${airlineName} confirmed they are cooperating fully with the relevant airworthiness authorities. "The safety of our passengers and crew is our absolute priority," the spokesperson said. No injuries have been reported in connection with the incident.`,
+      `The aircraft has been withdrawn from scheduled services pending a full technical inspection. Passengers booked on ${routeLabel} services have been informed and the airline is seeking alternative capacity. The affected route will face disruption until the aircraft is cleared or replaced.`,
+      `Regulators have been notified as required by airworthiness procedures. Your operations team awaits instruction — send the aircraft for maintenance immediately, or return it to service and accept the elevated risk of further incidents.`,
     ],
     severity: 'grounding',
     gameDay,
+    actionAircraftId: aircraftId,
+    actionMaintenanceCost: maintenanceCost,
   };
 }
 
@@ -483,7 +501,9 @@ export function runRandomEventsTick(
           const reason = evt.groundReason ?? evt.id.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
           store.groundAircraft(ac.id, reason);
           const routeLabel = route ? `${route.originIata}–${route.destinationIata}` : 'operated';
-          store.pushNewspaper(buildGroundingArticle(evt, playerAirline.name, ac.name, airportCity, routeLabel, store.gameDay));
+          const acType = AIRCRAFT_TYPES.find(t => t.id === ac.typeId);
+          const maintCost = acType ? computeMaintenanceCost('standard', ac.maintenanceHoursOwed, acType.maintenanceCostPerHourUSD) : 0;
+          store.pushNewspaper(buildGroundingArticle(evt, playerAirline.name, ac.name, airportCity, routeLabel, store.gameDay, ac.id, maintCost));
         }
         if (evt.reputationDelta !== 0) {
           store.applyReputationHit('player', evt.reputationDelta);
@@ -517,7 +537,6 @@ export function runRandomEventsTick(
 
         store.pushNewsItem(msg);
 
-        // For AI, a large enough delta will trigger auto-grounding via updateAIAircraftCondition
         const delta = evt.ground ? Math.min(evt.conditionDelta, -(ac.condition - 15)) : evt.conditionDelta;
         store.updateAIAircraftCondition(ac.id, delta, 0);
 
@@ -525,6 +544,17 @@ export function runRandomEventsTick(
           store.updateAIAirline(aiAirline.id, {
             reputationScore: Math.max(0, aiAirline.reputationScore + evt.reputationDelta),
           });
+        }
+
+        // Grounding decision: keep flying (risk mod) or send to maintenance
+        if (evt.ground) {
+          if (aiIgnoreGroundingChance(aiAirline)) {
+            // Keep flying — unground with high crash risk multiplier
+            store.ignoreAIGrounding(ac.id);
+            store.pushNewsItem(`${aiAirline.name} continues operations despite technical fault — safety concerns raised.`);
+          } else {
+            // Send to maintenance via AI engine's next maintenance tick (aircraft stays grounded)
+          }
         }
 
         break; // one event per aircraft per day

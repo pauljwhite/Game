@@ -11,6 +11,9 @@ export interface NewsArticle {
   paragraphs: string[];
   severity: 'incident' | 'grounding' | 'crash';
   gameDay: number;
+  // When set, the modal shows maintenance/ignore action buttons for a player aircraft
+  actionAircraftId?: string;
+  actionMaintenanceCost?: number;
 }
 
 export interface UISlice {

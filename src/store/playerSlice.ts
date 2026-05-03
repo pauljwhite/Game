@@ -37,6 +37,7 @@ export interface PlayerSlice {
   updateRouteStats: (routeId: string, stats: Partial<Route>) => void;
   updateAircraftCondition: (aircraftId: string, conditionDelta: number, hoursOwed: number) => void;
   groundAircraft: (aircraftId: string, reason?: string) => void;
+  ignoreGrounding: (aircraftId: string) => void;
   startMaintenance: (aircraftId: string, gameDay: number, tier: MaintenanceTier) => void;
   completeMaintenance: (aircraftId: string) => void;
   setAutoMaintenance: (aircraftId: string, enabled: boolean, threshold: number, tier: MaintenanceTier) => void;
@@ -103,6 +104,7 @@ export const createPlayerSlice: StateCreator<GameStore, [['zustand/immer', never
         autoMaintenanceEnabled: false,
         autoMaintenanceThreshold: 40,
         autoMaintenanceTier: 'standard' as MaintenanceTier,
+        knownFaultRiskMod: 1,
       };
       state.aircraft[id] = ac;
       state.airlines[PLAYER_ID].fleetIds.push(id);
@@ -307,6 +309,18 @@ export const createPlayerSlice: StateCreator<GameStore, [['zustand/immer', never
       }
     }),
 
+  ignoreGrounding: (aircraftId) =>
+    set((state) => {
+      const ac = state.aircraft[aircraftId];
+      if (!ac) return;
+      ac.isGrounded = false;
+      ac.groundedReason = undefined;
+      ac.knownFaultRiskMod = 5;
+      if (ac.assignedRouteId && state.routes[ac.assignedRouteId]) {
+        state.routes[ac.assignedRouteId].isActive = true;
+      }
+    }),
+
   startMaintenance: (aircraftId, gameDay, tier) =>
     set((state) => {
       const ac = state.aircraft[aircraftId];
@@ -338,6 +352,7 @@ export const createPlayerSlice: StateCreator<GameStore, [['zustand/immer', never
       ac.activeMaintTier = null;
       ac.status = ac.assignedRouteId ? 'flying' : 'idle';
       ac.crashRisk = 0;
+      ac.knownFaultRiskMod = 1;
       if (ac.assignedRouteId && state.routes[ac.assignedRouteId]) {
         state.routes[ac.assignedRouteId].isActive = true;
       }
@@ -367,8 +382,8 @@ export const createPlayerSlice: StateCreator<GameStore, [['zustand/immer', never
       }
       state.airlines[PLAYER_ID].fleetIds = state.airlines[PLAYER_ID].fleetIds.filter(id => id !== aircraftId);
       state.airlines[PLAYER_ID].cashUSD -= 50_000_000;
-      state.airlines[PLAYER_ID].reputationScore = Math.max(0, state.airlines[PLAYER_ID].reputationScore - 25);
-      state.airlines[PLAYER_ID].crashPenaltyDaysLeft = 30;
+      state.airlines[PLAYER_ID].reputationScore = Math.max(0, state.airlines[PLAYER_ID].reputationScore - 45);
+      state.airlines[PLAYER_ID].crashPenaltyDaysLeft = 60;
       delete state.aircraft[aircraftId];
     }),
 

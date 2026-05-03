@@ -365,6 +365,7 @@ function tryExpand(
     autoMaintenanceEnabled: false,
     autoMaintenanceThreshold: 40,
     autoMaintenanceTier: 'standard',
+    knownFaultRiskMod: 1,
   };
 
   // Create route
