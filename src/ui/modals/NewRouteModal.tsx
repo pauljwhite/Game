@@ -180,7 +180,7 @@ export const NewRouteModal: React.FC = () => {
     return a.purchasePrice - b.purchasePrice;
   });
   const [buyMfr, setBuyMfr] = useState<string | null>(null);
-  const buyMfrs = useMemo(() => Array.from(new Set(buyableTypes.map(t => t.manufacturer))).sort(), [buyableTypes]);
+  const buyMfrs = useMemo(() => Array.from(new Set(buyableTypes.map(t => t.manufacturer))).sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' })), [buyableTypes]);
   const activeBuyMfr = buyMfr ?? buyMfrs[0] ?? '';
   const shopVisible = buyableTypes.filter(t => t.manufacturer === activeBuyMfr);
 

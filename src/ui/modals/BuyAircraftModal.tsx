@@ -28,7 +28,7 @@ export const BuyAircraftModal: React.FC = () => {
 
   const manufacturers = useMemo(() => {
     const set = new Set(AIRCRAFT_TYPES.map(t => t.manufacturer));
-    return Array.from(set).sort();
+    return Array.from(set).sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
   }, []);
 
   const [activeTab, setActiveTab] = useState(manufacturers[0] ?? '');
