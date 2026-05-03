@@ -3,6 +3,7 @@ import {
   HUB_COST_DISCOUNT, HUB_DEMAND_BONUS,
   HUB_ANNUAL_FEE_USD, CREW_COST_PER_FLIGHT_HOUR_USD,
   REPUTATION_DEMAND_FACTOR, CRASH_DEMAND_PENALTY_PCT, DAY_MS,
+  MAINTENANCE_TIERS,
 } from '@/utils/constants';
 import { getBaselineDailyPax, getPlayerMarketShare } from './demandModel';
 import { AIRCRAFT_TYPES } from '@/data/aircraftTypes';
@@ -43,9 +44,24 @@ export function runDailyTick(store: ReturnType<typeof import('@/store/index')['u
   const playerAirline = airlines['player'];
   if (playerAirline && !playerAirline.isInsolvent) {
     Object.values(aircraft).forEach(ac => {
-      if (ac.airlineId === 'player' && ac.status === 'maintenance' && gameDay - ac.lastMaintenanceGameDay >= 3) {
-        store.completeMaintenance(ac.id, true);
-        store.pushNewsItem(`${ac.name} has completed maintenance and returned to service.`);
+      if (ac.airlineId === 'player' && ac.status === 'maintenance') {
+        const tier = ac.activeMaintTier ?? 'standard';
+        const durationDays = MAINTENANCE_TIERS[tier].durationDays;
+        if (gameDay - ac.lastMaintenanceGameDay >= durationDays) {
+          store.completeMaintenance(ac.id);
+          store.pushNewsItem(`${ac.name} has completed ${MAINTENANCE_TIERS[tier].label.toLowerCase()} maintenance and returned to service.`);
+        }
+      }
+      // Auto-maintenance trigger
+      if (
+        ac.airlineId === 'player' &&
+        ac.status !== 'maintenance' && ac.status !== 'crashed' &&
+        !ac.isGrounded &&
+        ac.autoMaintenanceEnabled &&
+        ac.condition <= ac.autoMaintenanceThreshold
+      ) {
+        store.startMaintenance(ac.id, gameDay, ac.autoMaintenanceTier ?? 'standard');
+        store.pushNewsItem(`Auto-maintenance triggered for ${ac.name} (condition ${ac.condition.toFixed(0)}%).`);
       }
     });
 

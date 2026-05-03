@@ -152,6 +152,10 @@ function tryExpand(
     currentLat: hubAirport.lat,
     currentLon: hubAirport.lon,
     flightProgress: 0,
+    activeMaintTier: null,
+    autoMaintenanceEnabled: false,
+    autoMaintenanceThreshold: 40,
+    autoMaintenanceTier: 'standard',
   };
 
   // Create route

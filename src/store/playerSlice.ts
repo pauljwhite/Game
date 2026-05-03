@@ -1,8 +1,10 @@
 import type { StateCreator } from 'zustand';
 import type { Airline, Aircraft, Route, AircraftType } from '@/types';
+import type { MaintenanceTier } from '@/types/aircraft';
 import { v4 as uuid } from 'uuid';
 import { haversineKm } from '@/utils/geo';
 import { AIRCRAFT_TYPES } from '@/data/aircraftTypes';
+import { computeMaintenanceCost, MAINTENANCE_TIERS } from '@/utils/constants';
 import type { GameStore } from './index';
 
 export interface RouteConfig {
@@ -34,8 +36,9 @@ export interface PlayerSlice {
   updateRouteStats: (routeId: string, stats: Partial<Route>) => void;
   updateAircraftCondition: (aircraftId: string, conditionDelta: number, hoursOwed: number) => void;
   groundAircraft: (aircraftId: string) => void;
-  startMaintenance: (aircraftId: string, gameDay: number) => void;
-  completeMaintenance: (aircraftId: string, full: boolean) => void;
+  startMaintenance: (aircraftId: string, gameDay: number, tier: MaintenanceTier) => void;
+  completeMaintenance: (aircraftId: string) => void;
+  setAutoMaintenance: (aircraftId: string, enabled: boolean, threshold: number, tier: MaintenanceTier) => void;
   triggerCrash: (aircraftId: string) => void;
   applyReputationHit: (airlineId: string, delta: number) => void;
   recoverReputation: (airlineId: string) => void;
@@ -90,6 +93,10 @@ export const createPlayerSlice: StateCreator<GameStore, [['zustand/immer', never
         lastMaintenanceGameDay: gameDay, crashRisk: 0,
         assignedRouteId: null, status: 'idle',
         currentLat: 0, currentLon: 0, flightProgress: 0,
+        activeMaintTier: null,
+        autoMaintenanceEnabled: false,
+        autoMaintenanceThreshold: 40,
+        autoMaintenanceTier: 'standard' as MaintenanceTier,
       };
       state.aircraft[id] = ac;
       state.airlines[PLAYER_ID].fleetIds.push(id);
@@ -263,33 +270,48 @@ export const createPlayerSlice: StateCreator<GameStore, [['zustand/immer', never
       }
     }),
 
-  startMaintenance: (aircraftId, gameDay) =>
+  startMaintenance: (aircraftId, gameDay, tier) =>
     set((state) => {
       const ac = state.aircraft[aircraftId];
       if (!ac) return;
       ac.status = 'maintenance';
       ac.isGrounded = true;
       ac.lastMaintenanceGameDay = gameDay;
+      ac.activeMaintTier = tier;
       const aircraftType = AIRCRAFT_TYPES.find(type => type.id === ac.typeId);
-      const maintenanceCost = aircraftType ? aircraftType.maintenanceCostPerHourUSD * Math.max(8, ac.maintenanceHoursOwed) * 1.5 : 0;
-      state.airlines[PLAYER_ID].cashUSD -= maintenanceCost;
+      const cost = aircraftType
+        ? computeMaintenanceCost(tier, ac.maintenanceHoursOwed, aircraftType.maintenanceCostPerHourUSD)
+        : 0;
+      state.airlines[PLAYER_ID].cashUSD -= cost;
       if (ac.assignedRouteId && state.routes[ac.assignedRouteId]) {
         state.routes[ac.assignedRouteId].isActive = false;
       }
     }),
 
-  completeMaintenance: (aircraftId, full) =>
+  completeMaintenance: (aircraftId) =>
     set((state) => {
       const ac = state.aircraft[aircraftId];
       if (!ac) return;
-      ac.condition = full ? 100 : Math.min(100, ac.condition + 40);
+      const tier = ac.activeMaintTier ?? 'standard';
+      const gain = MAINTENANCE_TIERS[tier].conditionGain;
+      ac.condition = gain >= 999 ? 100 : Math.min(100, ac.condition + gain);
       ac.maintenanceHoursOwed = 0;
       ac.isGrounded = false;
+      ac.activeMaintTier = null;
       ac.status = ac.assignedRouteId ? 'flying' : 'idle';
       ac.crashRisk = 0;
       if (ac.assignedRouteId && state.routes[ac.assignedRouteId]) {
         state.routes[ac.assignedRouteId].isActive = true;
       }
+    }),
+
+  setAutoMaintenance: (aircraftId, enabled, threshold, tier) =>
+    set((state) => {
+      const ac = state.aircraft[aircraftId];
+      if (!ac) return;
+      ac.autoMaintenanceEnabled = enabled;
+      ac.autoMaintenanceThreshold = threshold;
+      ac.autoMaintenanceTier = tier;
     }),
 
   triggerCrash: (aircraftId) =>

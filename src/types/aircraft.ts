@@ -30,6 +30,7 @@ export interface AircraftType {
 }
 
 export type AircraftStatus = 'idle' | 'flying' | 'maintenance' | 'crashed';
+export type MaintenanceTier = 'light' | 'standard' | 'full';
 
 export interface Aircraft {
   id: string;
@@ -48,4 +49,9 @@ export interface Aircraft {
   currentLat: number;
   currentLon: number;
   flightProgress: number;
+  // Maintenance settings
+  activeMaintTier: MaintenanceTier | null;  // tier currently being serviced
+  autoMaintenanceEnabled: boolean;
+  autoMaintenanceThreshold: number;         // trigger at this condition %
+  autoMaintenanceTier: MaintenanceTier;
 }
