@@ -26,6 +26,7 @@ const PANELS = {
 
 export const Layout: React.FC = () => {
   const openPanel = useGameStore(s => s.openPanel);
+  const closePanel = useGameStore(s => s.closePanel);
   const openModal = useGameStore(s => s.openModal);
   const isInitialized = useGameStore(s => s.isInitialized);
   const hydrated = useHydrated();
@@ -52,7 +53,14 @@ export const Layout: React.FC = () => {
         </div>
 
         {PanelComponent && (
-          <div className="absolute inset-0 z-20 md:relative md:inset-auto md:z-auto md:w-96 w-full bg-gray-900 md:border-l border-gray-800 flex flex-col overflow-hidden shrink-0">
+          <div className="absolute inset-0 z-20 md:relative md:inset-auto md:z-auto md:w-96 w-full bg-gray-900 md:border-l border-gray-800 flex flex-col overflow-hidden shrink-0 relative">
+            <button
+              onClick={closePanel}
+              aria-label="Close panel"
+              className="absolute top-2.5 right-2.5 z-10 w-7 h-7 flex items-center justify-center text-gray-400 hover:text-white hover:bg-gray-700 rounded transition-colors text-lg leading-none"
+            >
+              ×
+            </button>
             <PanelComponent />
           </div>
         )}
