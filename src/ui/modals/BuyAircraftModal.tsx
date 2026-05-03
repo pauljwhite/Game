@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { useGameStore } from '@/store';
 import { AIRCRAFT_TYPES } from '@/data/aircraftTypes';
-import { PROFILE_MAP } from '@/assets/profiles';
+import { AircraftProfile } from '@/assets/profiles/AircraftProfile';
 import { gameDayFromMs } from '@/engine/economicsEngine';
 
 const EPOCH_YEAR = 1960;
@@ -103,7 +103,6 @@ export const BuyAircraftModal: React.FC = () => {
 
           <div className="grid grid-cols-1 gap-3">
             {visibleTypes.map(type => {
-              const ProfileSvg = PROFILE_MAP[type.profileId];
               const unavailable = type.yearIntroduced > gameYear;
               const canAfford = cashUSD >= type.purchasePrice;
 
@@ -118,7 +117,8 @@ export const BuyAircraftModal: React.FC = () => {
                 >
                   {/* Profile SVG */}
                   <div className="flex-shrink-0 w-24 flex items-center justify-center">
-                    <ProfileSvg
+                    <AircraftProfile
+                      type={type}
                       color={unavailable ? '#6b7280' : '#60a5fa'}
                       className="w-24 h-10"
                     />

@@ -10,6 +10,7 @@ import { RegionalJet } from './RegionalJet';
 import { WideTwin } from './WideTwin';
 import { WideQuad } from './WideQuad';
 import { WideA380 } from './WideA380';
+export { AircraftProfile } from './AircraftProfile';
 
 interface ProfileProps { color?: string; className?: string }
 

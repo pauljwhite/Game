@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useGameStore } from '@/store';
 import { gameDayFromMs } from '@/engine/economicsEngine';
 import { AIRCRAFT_TYPES } from '@/data/aircraftTypes';
-import { PROFILE_MAP } from '@/assets/profiles';
+import { AircraftProfile } from '@/assets/profiles/AircraftProfile';
 import { formatCurrency, formatDuration } from '@/utils/format';
 import { computeMaintenanceCost, MAINTENANCE_TIERS } from '@/utils/constants';
 import { computeAircraftValue } from '@/engine/valuation';
@@ -31,7 +31,6 @@ function AircraftCard({ ac, gameDay }: { ac: Aircraft; gameDay: number }) {
 
   if (!type) return null;
 
-  const ProfileSvg     = PROFILE_MAP[type.profileId];
   const conditionPct   = ac.condition;
   const condBg         = conditionPct >= 60 ? 'bg-green-500' : conditionPct >= 30 ? 'bg-yellow-500' : 'bg-red-500';
   const condText       = conditionPct >= 60 ? 'text-green-400' : conditionPct >= 30 ? 'text-yellow-400' : 'text-red-400';
@@ -89,7 +88,7 @@ function AircraftCard({ ac, gameDay }: { ac: Aircraft; gameDay: number }) {
           {/* SVG + stats row */}
           <div className="flex items-center gap-3 pt-2 pb-2">
             <div className="w-20 h-10 shrink-0 flex items-center justify-center">
-              <ProfileSvg color={playerAirline?.color ?? '#60a5fa'} className="w-full h-full" />
+              <AircraftProfile type={type} color={playerAirline?.color ?? '#60a5fa'} className="w-full h-full" />
             </div>
             <div className="flex-1 text-xs text-gray-400 space-y-0.5">
               <div>{type.manufacturer} {type.model} · {type.seatsEconomy}Y/{type.seatsBusiness}J seats</div>
