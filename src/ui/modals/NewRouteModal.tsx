@@ -4,13 +4,14 @@ import { haversineKm } from '@/utils/geo';
 import { computeFlightCost, gameDayFromMs, msToGameDate } from '@/engine/economicsEngine';
 import { getSuggestedEconomyPrice, getBaselineDailyPax, conditionDemandMod } from '@/engine/demandModel';
 import { AIRCRAFT_TYPES } from '@/data/aircraftTypes';
-import type { Route } from '@/types';
+import type { Aircraft, Route } from '@/types';
 import { FUEL_PRICE_USD_PER_LITER, PRICE_ELASTICITY } from '@/utils/constants';
 import { AirportSearchInput } from '@/ui/components/AirportSearchInput';
 import { findAirportByQuery } from '@/utils/airportSearch';
 import { LoadFactorBar } from '@/ui/components/LoadFactorBar';
 import { PriceInput } from '@/ui/components/PriceInput';
 import { formatCurrency } from '@/utils/format';
+import { manufacturerFlag } from '@/utils/manufacturerFlags';
 
 function formatUSD(n: number): string {
   if (Math.abs(n) >= 1_000_000) return `$${(n / 1_000_000).toFixed(2)}M`;
@@ -41,7 +42,8 @@ export const NewRouteModal: React.FC = () => {
   const [priceBusiness, setPriceBusiness] = useState(800);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [showBuyPanel, setShowBuyPanel] = useState(false);
-  const [buyingTypeId, setBuyingTypeId] = useState<string | null>(null);
+  // Pending purchase: aircraft type chosen in shop but not yet bought (committed on route create)
+  const [pendingPurchaseTypeId, setPendingPurchaseTypeId] = useState<string | null>(null);
 
   // Resolve airports
   const originAirport = findAirportByQuery(originIata, airports);
@@ -63,25 +65,45 @@ export const NewRouteModal: React.FC = () => {
   const selectedAc = selectedAircraftId ? aircraft[selectedAircraftId] ?? null : null;
   const selectedType = selectedAc ? AIRCRAFT_TYPES.find(t => t.id === selectedAc.typeId) ?? null : null;
 
+  // Pending aircraft type (chosen in shop, bought only when route is confirmed)
+  const pendingType = pendingPurchaseTypeId ? AIRCRAFT_TYPES.find(t => t.id === pendingPurchaseTypeId) ?? null : null;
+
+  // Mock Aircraft instance used purely for P&L preview of a pending purchase
+  const pendingMockAc = useMemo((): Aircraft | null => {
+    if (!pendingType) return null;
+    return {
+      id: 'pending', typeId: pendingType.id, name: pendingType.model,
+      airlineId: 'player', purchasedGameDay: gameDay, totalFlightHours: 0,
+      condition: 100, maintenanceHoursOwed: 0, isGrounded: false,
+      lastMaintenanceGameDay: gameDay, crashRisk: 0, knownFaultRiskMod: 1,
+      assignedRouteId: null, status: 'idle', currentLat: 0, currentLon: 0,
+      flightProgress: 0, activeMaintTier: null, autoMaintenanceEnabled: false,
+      autoMaintenanceThreshold: 40, autoMaintenanceTier: 'standard',
+    };
+  }, [pendingType, gameDay]);
+
+  const effectiveAc   = selectedAc ?? pendingMockAc;
+  const effectiveType = selectedType ?? pendingType;
+
   // Suggested price from flight cost
   useEffect(() => {
-    if (!selectedType || !distanceKm) return;
-    const flightDurationHours = distanceKm / selectedType.cruiseSpeedKmh;
+    if (!effectiveType || !distanceKm) return;
+    const flightDurationHours = distanceKm / effectiveType.cruiseSpeedKmh;
     const totalCostPerFlight =
-      (distanceKm / 100) * selectedType.fuelBurnLPer100Km * 0.82 +
-      selectedType.maintenanceCostPerHourUSD * flightDurationHours +
+      (distanceKm / 100) * effectiveType.fuelBurnLPer100Km * 0.82 +
+      effectiveType.maintenanceCostPerHourUSD * flightDurationHours +
       flightDurationHours * 85 +
       2000;
-    const suggested = getSuggestedEconomyPrice(totalCostPerFlight, selectedType.seatsEconomy + selectedType.seatsBusiness);
+    const suggested = getSuggestedEconomyPrice(totalCostPerFlight, effectiveType.seatsEconomy + effectiveType.seatsBusiness);
     setPriceEconomy(suggested);
     setPriceBusiness(suggested * 4);
-  }, [selectedType, distanceKm]);
+  }, [effectiveType, distanceKm]);
 
   // Validation
   const validOrigin = !!originAirport;
   const validDest = !!destAirport;
   const sameAirport = !!originAirport && !!destAirport && originAirport.iata === destAirport.iata;
-  const outOfRange = distanceKm !== null && selectedType !== null && distanceKm > selectedType.rangeKm;
+  const outOfRange = distanceKm !== null && effectiveType !== null && distanceKm > effectiveType.rangeKm;
 
   const canSubmit =
     validOrigin &&
@@ -92,23 +114,23 @@ export const NewRouteModal: React.FC = () => {
 
   // P&L preview — uses real demand model with price elasticity
   const pnlPreview = useMemo(() => {
-    if (!selectedAc || !selectedType || !originAirport || !destAirport || !distanceKm) return null;
+    if (!effectiveAc || !effectiveType || !originAirport || !destAirport || !distanceKm) return null;
 
     const mockRoute: Route = {
       id: 'preview', airlineId: 'player',
       originIata: originAirport.iata, destinationIata: destAirport.iata,
-      aircraftId: selectedAc.id, flightsPerWeek, priceEconomy, priceBusiness,
+      aircraftId: effectiveAc.id, flightsPerWeek, priceEconomy, priceBusiness,
       isActive: true, createdGameDay: gameDay, distanceKm, flightDurationHours: 0,
       dailyPassengers: 0, dailyRevenue: 0, dailyCost: 0, dailyProfit: 0,
       loadFactorEconomy: 0, loadFactorBusiness: 0,
     };
 
-    const costs = computeFlightCost(mockRoute, selectedAc, selectedType, originAirport, destAirport, FUEL_PRICE_USD_PER_LITER);
+    const costs = computeFlightCost(mockRoute, effectiveAc, effectiveType, originAirport, destAirport, FUEL_PRICE_USD_PER_LITER);
     const flightsPerDay = flightsPerWeek / 7;
     const dailyCost = costs.totalCost * flightsPerDay;
 
     // Reference price: cost-per-seat * 1.4 (the suggested break-even price)
-    const totalSeats = selectedType.seatsEconomy + selectedType.seatsBusiness;
+    const totalSeats = effectiveType.seatsEconomy + effectiveType.seatsBusiness;
     const referencePrice = totalSeats > 0 ? Math.round(costs.totalCost / totalSeats * 1.4) : 200;
     const referencePriceBiz = referencePrice * 4;
 
@@ -117,11 +139,11 @@ export const NewRouteModal: React.FC = () => {
     const bizFactor = Math.min(5, Math.pow(priceBusiness / referencePriceBiz, PRICE_ELASTICITY));
 
     const baselinePax = getBaselineDailyPax(originAirport, destAirport);
-    const ecoCapacity = selectedType.seatsEconomy * flightsPerDay;
-    const bizCapacity = selectedType.seatsBusiness * flightsPerDay;
+    const ecoCapacity = effectiveType.seatsEconomy * flightsPerDay;
+    const bizCapacity = effectiveType.seatsBusiness * flightsPerDay;
     const bizSplit = Math.min(0.25, Math.max(0.05, 0.10 * Math.sqrt(priceBusiness / (priceEconomy * 6 + 1))));
 
-    const condMod = conditionDemandMod(selectedAc.condition);
+    const condMod = conditionDemandMod(effectiveAc.condition);
     const ecoPax = Math.min(ecoCapacity, baselinePax * ecoFactor * condMod * (1 - bizSplit));
     const bizPax = Math.min(bizCapacity, baselinePax * bizFactor * condMod * bizSplit);
     const loadFactorEco = ecoCapacity > 0 ? ecoPax / ecoCapacity : 0;
@@ -136,22 +158,32 @@ export const NewRouteModal: React.FC = () => {
       referencePrice, flightDurationHours: costs.flightDurationHours,
       condMod,
     };
-  }, [selectedAc, selectedType, originAirport, destAirport, distanceKm, flightsPerWeek, priceEconomy, priceBusiness, gameDay]);
+  }, [effectiveAc, effectiveType, originAirport, destAirport, distanceKm, flightsPerWeek, priceEconomy, priceBusiness, gameDay]);
 
   function handleSubmit() {
     if (!canSubmit) return;
     setSubmitError(null);
 
-    const config = {
-      originIata: originAirport!.iata,
-      destinationIata: destAirport!.iata,
-      aircraftId: selectedAircraftId,
-      flightsPerWeek,
-      priceEconomy,
-      priceBusiness,
-    };
+    // If user picked a new aircraft from the shop, buy it now as part of route creation
+    let aircraftId: string | null = selectedAircraftId;
+    if (pendingPurchaseTypeId && !selectedAircraftId) {
+      const type = AIRCRAFT_TYPES.find(t => t.id === pendingPurchaseTypeId)!;
+      if (playerCash < type.purchasePrice) {
+        setSubmitError('Insufficient funds to purchase the selected aircraft.');
+        return;
+      }
+      const newId = buyAircraft(pendingPurchaseTypeId, type, gameDay);
+      if (!newId) {
+        setSubmitError('Aircraft purchase failed.');
+        return;
+      }
+      aircraftId = newId;
+    }
 
-    const result = createRoute(config, airports, gameDay);
+    const result = createRoute(
+      { originIata: originAirport!.iata, destinationIata: destAirport!.iata, aircraftId, flightsPerWeek, priceEconomy, priceBusiness },
+      airports, gameDay,
+    );
     if (result !== null) {
       closeModal();
     } else {
@@ -159,16 +191,11 @@ export const NewRouteModal: React.FC = () => {
     }
   }
 
-  function handleBuyAircraft(typeId: string) {
-    const type = AIRCRAFT_TYPES.find(t => t.id === typeId);
-    if (!type) return;
-    setBuyingTypeId(typeId);
-    const newId = buyAircraft(typeId, type, gameDay);
-    setBuyingTypeId(null);
-    if (newId) {
-      setSelectedAircraftId(newId);
-      setShowBuyPanel(false);
-    }
+  // Stage an aircraft type for purchase — committed only when the route is created
+  function handleSelectForPurchase(typeId: string) {
+    setPendingPurchaseTypeId(typeId);
+    setSelectedAircraftId(null);
+    setShowBuyPanel(false);
   }
 
   const playerCash = airlines['player']?.cashUSD ?? 0;
@@ -241,12 +268,29 @@ export const NewRouteModal: React.FC = () => {
           {/* Aircraft Selector */}
           <div>
             <label className="text-gray-300 text-sm block mb-2">
-              Aircraft <span className="text-gray-500 font-normal">(optional - route inactive without one)</span>
+              Aircraft <span className="text-gray-500 font-normal">(optional — route inactive without one)</span>
             </label>
-            {availableAircraft.length === 0 ? (
-              <p className="text-sm text-gray-500 italic">No unassigned aircraft available. Buy aircraft first.</p>
-            ) : (
-              <div className="space-y-1 max-h-40 overflow-y-auto pr-1">
+            <div className="space-y-1 max-h-44 overflow-y-auto pr-1">
+              {/* Pending purchase row */}
+              {pendingType && (
+                <div className="flex items-center justify-between px-3 py-2 rounded border border-amber-400/40 bg-amber-500/10 text-sm">
+                  <div>
+                    <span className="text-amber-200 font-medium">{manufacturerFlag(pendingType.manufacturer)} {pendingType.model}</span>
+                    <span className="ml-2 text-amber-400/70 text-xs">
+                      {pendingType.seatsEconomy}Y{pendingType.seatsBusiness > 0 ? `/${pendingType.seatsBusiness}J` : ''} · {pendingType.rangeKm.toLocaleString()} km
+                    </span>
+                    <span className="ml-2 text-xs text-amber-300/60 italic">purchased on create</span>
+                  </div>
+                  <button
+                    onClick={() => setPendingPurchaseTypeId(null)}
+                    className="text-gray-500 hover:text-red-400 text-xs ml-3"
+                  >
+                    ✕
+                  </button>
+                </div>
+              )}
+              {/* No aircraft option */}
+              {!pendingType && (
                 <button
                   onClick={() => setSelectedAircraftId(null)}
                   className={`w-full text-left px-3 py-2 rounded border text-sm transition-colors ${
@@ -257,35 +301,39 @@ export const NewRouteModal: React.FC = () => {
                 >
                   No aircraft (inactive route)
                 </button>
-                {availableAircraft.map(ac => {
-                  const acType = AIRCRAFT_TYPES.find(t => t.id === ac.typeId);
-                  const tooFar = distanceKm !== null && acType && distanceKm > acType.rangeKm;
-                  return (
-                    <button
-                      key={ac.id}
-                      onClick={() => !tooFar && setSelectedAircraftId(ac.id)}
-                      disabled={!!tooFar}
-                      className={`w-full text-left px-3 py-2 rounded border text-sm transition-colors ${
-                        selectedAircraftId === ac.id
-                          ? 'border-sky-300/40 bg-sky-500/15 text-sky-200'
-                          : tooFar
-                          ? 'border-white/10 bg-white/[0.025] text-gray-600 cursor-not-allowed'
-                          : 'border-white/10 bg-white/[0.055] text-gray-300 hover:border-white/20'
-                      }`}
-                    >
-                      <span className="font-mono text-xs text-gray-500 mr-2">{ac.id.slice(0, 8).toUpperCase()}</span>
-                      {acType?.model ?? ac.typeId}
-                      {acType && (
-                        <span className="ml-2 text-gray-500 text-xs">
-                          {acType.seatsEconomy}Y{acType.seatsBusiness > 0 ? `/${acType.seatsBusiness}J` : ''} - {acType.rangeKm.toLocaleString()} km
-                        </span>
-                      )}
-                      {tooFar && <span className="ml-2 text-red-500 text-xs">out of range</span>}
-                    </button>
-                  );
-                })}
-              </div>
-            )}
+              )}
+              {/* Existing fleet */}
+              {availableAircraft.map(ac => {
+                const acType = AIRCRAFT_TYPES.find(t => t.id === ac.typeId);
+                const tooFar = distanceKm !== null && acType && distanceKm > acType.rangeKm;
+                return (
+                  <button
+                    key={ac.id}
+                    onClick={() => { if (!tooFar) { setSelectedAircraftId(ac.id); setPendingPurchaseTypeId(null); } }}
+                    disabled={!!tooFar}
+                    className={`w-full text-left px-3 py-2 rounded border text-sm transition-colors ${
+                      selectedAircraftId === ac.id && !pendingType
+                        ? 'border-sky-300/40 bg-sky-500/15 text-sky-200'
+                        : tooFar
+                        ? 'border-white/10 bg-white/[0.025] text-gray-600 cursor-not-allowed'
+                        : 'border-white/10 bg-white/[0.055] text-gray-300 hover:border-white/20'
+                    }`}
+                  >
+                    <span className="font-mono text-xs text-gray-500 mr-2">{ac.id.slice(0, 8).toUpperCase()}</span>
+                    {acType?.model ?? ac.typeId}
+                    {acType && (
+                      <span className="ml-2 text-gray-500 text-xs">
+                        {acType.seatsEconomy}Y{acType.seatsBusiness > 0 ? `/${acType.seatsBusiness}J` : ''} · {acType.rangeKm.toLocaleString()} km
+                      </span>
+                    )}
+                    {tooFar && <span className="ml-2 text-red-500 text-xs">out of range</span>}
+                  </button>
+                );
+              })}
+              {availableAircraft.length === 0 && !pendingType && (
+                <p className="text-xs text-gray-500 italic px-1">No unassigned aircraft — buy one below.</p>
+              )}
+            </div>
           </div>
 
           {/* Inline aircraft shop */}
@@ -326,14 +374,16 @@ export const NewRouteModal: React.FC = () => {
                     {shopVisible.map(t => {
                       const fits      = distanceKm === null || t.rangeKm >= distanceKm;
                       const canAfford = playerCash >= t.purchasePrice;
-                      const isBuying  = buyingTypeId === t.id;
+                      const isPending = pendingPurchaseTypeId === t.id;
                       return (
                         <button
                           key={t.id}
-                          onClick={() => fits && canAfford && handleBuyAircraft(t.id)}
-                          disabled={!fits || !canAfford || isBuying}
+                          onClick={() => fits && canAfford && handleSelectForPurchase(t.id)}
+                          disabled={!fits || !canAfford}
                           className={`w-full flex items-center justify-between px-3 py-2 text-left text-sm transition-colors ${
-                            !fits
+                            isPending
+                              ? 'bg-amber-500/15 border-l-2 border-amber-400'
+                              : !fits
                               ? 'opacity-40 cursor-not-allowed'
                               : !canAfford
                               ? 'opacity-50 cursor-not-allowed'
@@ -345,6 +395,7 @@ export const NewRouteModal: React.FC = () => {
                               <span className="text-white font-medium">{t.model}</span>
                               {!fits && <span className="text-[10px] text-red-400 bg-red-900/40 px-1 rounded">out of range</span>}
                               {fits && <span className="text-[10px] text-green-400 bg-green-900/40 px-1 rounded">✓ in range</span>}
+                              {isPending && <span className="text-[10px] text-amber-300 bg-amber-900/40 px-1 rounded">selected</span>}
                             </div>
                             <div className="text-xs text-gray-500">
                               {t.seatsEconomy}Y{t.seatsBusiness > 0 ? `/${t.seatsBusiness}J` : ''} · {t.rangeKm.toLocaleString()} km
@@ -354,7 +405,6 @@ export const NewRouteModal: React.FC = () => {
                             <div className={canAfford ? 'text-green-400 font-semibold text-xs' : 'text-red-400 font-semibold text-xs'}>
                               {formatCurrency(t.purchasePrice)}
                             </div>
-                            {isBuying && <div className="text-xs text-blue-400">Buying…</div>}
                           </div>
                         </button>
                       );
@@ -492,7 +542,9 @@ export const NewRouteModal: React.FC = () => {
             disabled={!canSubmit}
             className="apple-button-primary px-5 py-2 text-sm disabled:opacity-40 disabled:cursor-not-allowed"
           >
-            Create Route
+            {pendingType
+              ? `Create Route + Buy ${pendingType.model} (${formatCurrency(pendingType.purchasePrice)})`
+              : 'Create Route'}
           </button>
         </div>
       </div>
