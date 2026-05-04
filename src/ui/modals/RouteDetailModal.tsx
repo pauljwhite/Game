@@ -126,6 +126,8 @@ export const RouteDetailModal: React.FC = () => {
   function handleSave() {
     if (!routeId) return;
     updateRoute(routeId, { priceEconomy, priceBusiness, flightsPerWeek });
+    closeModal();
+    selectRoute(null);
   }
 
   function handleToggleActive() {
