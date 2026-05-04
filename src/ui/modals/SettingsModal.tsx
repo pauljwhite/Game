@@ -12,9 +12,20 @@ export const SettingsModal: React.FC = () => {
   const themeMode = useGameStore(s => s.themeMode);
   const setThemeMode = useGameStore(s => s.setThemeMode);
 
+  const handleThemeSelect = (mode: ThemeMode) => {
+    setThemeMode(mode);
+    closeModal();
+  };
+
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center z-[9999]">
-      <div className="glass-panel rounded-t-2xl sm:rounded-xl w-full max-w-md max-h-[92svh] overflow-hidden flex flex-col">
+    <div
+      className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center z-[9999]"
+      onClick={closeModal}
+    >
+      <div
+        className="glass-panel rounded-t-2xl sm:rounded-xl w-full max-w-md max-h-[92svh] overflow-hidden flex flex-col"
+        onClick={event => event.stopPropagation()}
+      >
         <div className="panel-header flex items-center justify-between px-4 sm:px-6">
           <div>
             <h2 className="text-xl font-bold text-white">Settings</h2>
@@ -38,7 +49,7 @@ export const SettingsModal: React.FC = () => {
                 return (
                   <button
                     key={option.value}
-                    onClick={() => setThemeMode(option.value)}
+                    onClick={() => handleThemeSelect(option.value)}
                     className={`text-left rounded-lg border p-3 transition-all min-h-24 ${
                       active
                         ? 'border-sky-300/50 bg-sky-500/15 text-sky-100'
