@@ -16,7 +16,7 @@ export const HubsPanel: React.FC = () => {
   const hubAirports = playerAirline.hubIatas.map(iata => airports[iata]).filter(Boolean);
 
   return (
-    <div className="flex h-full min-h-0 flex-col">
+    <div className="panel-scroll flex h-full min-h-0 flex-col overflow-y-auto overscroll-contain">
       <div className="panel-header shrink-0">
         <div className="flex items-center justify-between">
           <h2 className="text-white font-bold">Hubs ({hubAirports.length})</h2>
@@ -27,7 +27,7 @@ export const HubsPanel: React.FC = () => {
         </p>
       </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
+      <div className="flex-none overflow-visible">
         {hubAirports.length === 0 && (
           <div className="p-4 text-gray-400 text-sm text-center">
             No hubs yet. Click an airport on the map to designate a hub.

@@ -85,6 +85,13 @@ html[data-theme='light'] .leaflet-container {
     -webkit-backdrop-filter: blur(14px) saturate(1.2);
   }
 
+  .panel-scroll {
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+    touch-action: pan-y;
+    scrollbar-gutter: stable;
+  }
+
   .apple-button {
     border-radius: 0.375rem;
     border: 1px solid rgba(255, 255, 255, 0.1);
