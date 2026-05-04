@@ -6,6 +6,11 @@ export interface LeafletMapHandle {
   svgOverlay: SVGSVGElement | null;
 }
 
+const WORLD_BOUNDS = L.latLngBounds(
+  L.latLng(-85.05112878, -180),
+  L.latLng(85.05112878, 180),
+);
+
 export function useLeafletMap(containerId: string): LeafletMapHandle {
   const [map, setMap] = useState<L.Map | null>(null);
   const [svgOverlay, setSvgOverlay] = useState<SVGSVGElement | null>(null);
@@ -30,11 +35,19 @@ export function useLeafletMap(containerId: string): LeafletMapHandle {
       zoomControl: false,
       attributionControl: false,
       preferCanvas: true,
+      maxBounds: WORLD_BOUNDS,
+      maxBoundsViscosity: 1,
+      worldCopyJump: false,
     });
 
     L.tileLayer(
       'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
-      { subdomains: 'abcd', maxZoom: 19 },
+      {
+        subdomains: 'abcd',
+        maxZoom: 19,
+        noWrap: true,
+        bounds: WORLD_BOUNDS,
+      },
     ).addTo(m);
 
     // SVG overlay - absolutely positioned over the map container
