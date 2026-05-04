@@ -144,6 +144,12 @@ const AirlineMenu: React.FC<{ onClose: () => void }> = ({ onClose }) => {
       {/* Actions */}
       <div className="px-4 py-3 space-y-2">
         <button
+          onClick={() => { onClose(); openModalById('settings'); }}
+          className="apple-button w-full py-2 text-xs font-semibold"
+        >
+          Settings
+        </button>
+        <button
           onClick={() => { onClose(); openModalById('rebrand'); }}
           className="apple-button w-full py-2 text-xs font-semibold"
         >

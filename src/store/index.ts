@@ -11,7 +11,7 @@ export type GameStore = GameSlice & PlayerSlice & WorldSlice & UISlice;
 
 const VALID_GAME_SPEEDS = new Set([0, 60, 300, 1200, 3600, 14400]);
 const DEFAULT_GAME_SPEED = 300;
-const SAVE_VERSION = 7;
+const SAVE_VERSION = 8;
 
 function uniqueExistingIds(ids: unknown, exists: (id: string) => boolean): string[] {
   if (!Array.isArray(ids)) return [];
@@ -113,6 +113,7 @@ function sanitizePersistedState(state: Partial<GameStore>): Partial<GameStore> {
     aiAircraft: normalizedAIAircraft,
     airportDailyPax: (state.airportDailyPax && typeof state.airportDailyPax === 'object') ? state.airportDailyPax : {},
     speed: VALID_GAME_SPEEDS.has(state.speed as number) ? state.speed : DEFAULT_GAME_SPEED,
+    themeMode: state.themeMode === 'light' ? 'light' : 'dark',
     isPaused: false,
   };
 
