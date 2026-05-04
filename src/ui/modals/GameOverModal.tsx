@@ -32,7 +32,7 @@ export const GameOverModal: React.FC = () => {
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center z-[9999]">
-      <div className="glass-panel rounded-t-2xl sm:rounded-xl px-4 sm:px-6 py-4 w-full max-w-md relative max-h-[92svh] overflow-y-auto">
+      <div className="glass-panel rounded-t-2xl sm:rounded-xl px-4 sm:px-6 py-4 w-full max-w-md relative max-h-[92svh] overflow-y-auto overscroll-contain">
         {/* Result header */}
         <div className={`text-center mb-6 ${isWin ? 'text-yellow-400' : 'text-red-400'}`}>
           <div className="text-5xl mb-3">{isWin ? '🏆' : '💸'}</div>

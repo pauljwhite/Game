@@ -17,10 +17,10 @@ export const SpeedControl: React.FC = () => {
   const togglePause = useGameStore(s => s.togglePause);
 
   return (
-    <div className="flex items-center gap-1 rounded-full border border-white/10 bg-white/[0.045] p-0.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]">
+    <div className="flex items-center gap-0.5 sm:gap-1 rounded-full border border-white/10 bg-white/[0.045] p-0.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]">
       <button
         onClick={togglePause}
-        className={`rounded-full px-2 py-1 text-sm font-mono font-bold transition-all active:scale-95 ${
+        className={`rounded-full px-1.5 sm:px-2 py-1 text-sm font-mono font-bold transition-all active:scale-95 min-w-8 ${
           isPaused ? 'bg-yellow-400 text-slate-950 shadow-[0_4px_14px_rgba(250,204,21,0.22)]' : 'text-white hover:bg-white/[0.11]'
         }`}
         title={isPaused ? 'Resume' : 'Pause'}
@@ -32,7 +32,7 @@ export const SpeedControl: React.FC = () => {
           key={option.value}
           onClick={() => setSpeed(option.value)}
           title={option.title}
-          className={`rounded-full px-2 py-1 text-xs font-mono transition-all active:scale-95 ${
+          className={`rounded-full px-1.5 sm:px-2 py-1 text-[11px] sm:text-xs font-mono transition-all active:scale-95 min-w-7 ${
             speed === option.value && !isPaused
               ? 'bg-sky-400/85 text-white shadow-[0_4px_14px_rgba(56,189,248,0.2)]'
               : 'text-slate-300 hover:bg-white/[0.1] hover:text-white'

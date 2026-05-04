@@ -26,7 +26,7 @@ export const RoutesPanel: React.FC = () => {
           >
             + New Route
           </button>
-          <button onClick={closePanel} aria-label="Close" className="w-7 h-7 flex items-center justify-center text-gray-400 hover:text-white hover:bg-gray-700 rounded transition-colors text-lg leading-none">×</button>
+          <button onClick={closePanel} aria-label="Close" className="w-10 h-10 sm:w-7 sm:h-7 flex items-center justify-center text-gray-400 hover:text-white hover:bg-gray-700 rounded transition-colors text-lg leading-none">×</button>
         </div>
       </div>
 
@@ -45,19 +45,19 @@ export const RoutesPanel: React.FC = () => {
               className="p-3 border-b border-white/10 hover:bg-white/[0.055] cursor-pointer transition-colors"
               onClick={() => { selectRoute(route.id); openModalById('routeDetail', route.id); }}
             >
-              <div className="flex items-center justify-between">
+              <div className="flex items-start justify-between gap-2">
                 <div className="flex items-center gap-2">
                   <span className={`w-2 h-2 rounded-full ${route.isActive ? 'bg-green-400' : 'bg-gray-500'}`} />
                   <span className="text-white font-mono text-sm">
                     {route.originIata} {'->'} {route.destinationIata}
                   </span>
                 </div>
-                <span className={`text-sm font-medium ${profitColor}`}>
+                <span className={`text-sm font-medium text-right shrink-0 ${profitColor}`}>
                   {formatCurrency(route.dailyProfit)}/day
                 </span>
               </div>
 
-              <div className="mt-1 grid grid-cols-2 gap-x-3 text-xs text-gray-400">
+              <div className="mt-1 grid grid-cols-1 min-[380px]:grid-cols-2 gap-x-3 text-xs text-gray-400">
                 <span>Eco: {formatCurrency(route.priceEconomy)}</span>
                 <span>Biz: {formatCurrency(route.priceBusiness)}</span>
                 <span>Rev: {formatCurrency(route.dailyRevenue)}</span>

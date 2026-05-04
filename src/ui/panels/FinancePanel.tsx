@@ -37,11 +37,11 @@ export const FinancePanel: React.FC = () => {
     <div className="flex flex-col h-full">
       <div className="panel-header flex items-center justify-between">
         <h2 className="text-white font-bold">Finance</h2>
-        <button onClick={closePanel} aria-label="Close" className="w-7 h-7 flex items-center justify-center text-gray-400 hover:text-white hover:bg-gray-700 rounded transition-colors text-lg leading-none">×</button>
+        <button onClick={closePanel} aria-label="Close" className="w-10 h-10 sm:w-7 sm:h-7 flex items-center justify-center text-gray-400 hover:text-white hover:bg-gray-700 rounded transition-colors text-lg leading-none">×</button>
       </div>
       <div className="flex-1 overflow-y-auto p-3 flex flex-col gap-4">
 
-      <div className="grid grid-cols-2 gap-2">
+      <div className="grid grid-cols-1 min-[380px]:grid-cols-2 gap-2">
         <div className="glass-card p-2">
           <div className="text-gray-400 text-xs">Cash</div>
           <div className={`text-lg font-bold ${playerAirline.cashUSD >= 0 ? 'text-green-400' : 'text-red-400'}`}>
@@ -83,7 +83,9 @@ export const FinancePanel: React.FC = () => {
 
       <div>
         <div className="text-gray-400 text-xs mb-1">30-Day Profit Trend</div>
-        <PnLChart snapshots={playerAirline.dailyStats.slice(-30)} width={352} height={80} />
+        <div className="overflow-hidden">
+          <PnLChart snapshots={playerAirline.dailyStats.slice(-30)} width={300} height={80} />
+        </div>
       </div>
 
       <div className="glass-card p-2">

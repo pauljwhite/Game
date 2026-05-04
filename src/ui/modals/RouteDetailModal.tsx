@@ -181,7 +181,7 @@ export const RouteDetailModal: React.FC = () => {
 
         <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4 overscroll-contain">
         {/* Stats */}
-        <div className="grid grid-cols-2 gap-3 mb-4">
+        <div className="grid grid-cols-2 gap-2 sm:gap-3 mb-4">
           <div className="glass-card p-3">
             <div className="text-gray-400 text-xs mb-1">Distance</div>
             <div className="text-white font-semibold">{Math.round(route.distanceKm).toLocaleString()} km</div>
@@ -214,7 +214,7 @@ export const RouteDetailModal: React.FC = () => {
               {assignedType && assignedType.seatsBusiness > 0 && (
                 <LoadFactorPreviewRow label="Biz" current={route.loadFactorBusiness} predicted={preview.lfb} />
               )}
-              <div className="border-t border-white/10 mt-2 pt-2 grid grid-cols-3 gap-2 text-xs">
+              <div className="border-t border-white/10 mt-2 pt-2 grid grid-cols-1 min-[380px]:grid-cols-3 gap-2 text-xs">
                 <div>
                   <div className="text-gray-500 text-[10px]">Revenue</div>
                   <div className="text-green-400">{formatCurrency(preview.dailyRevenue)}</div>
@@ -310,7 +310,7 @@ export const RouteDetailModal: React.FC = () => {
                 ↺ Reset to suggested ({formatCurrency(referencePrice)} / {formatCurrency(referencePrice * 4)})
               </button>
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="text-gray-400 text-xs block mb-1">Economy (max {formatCurrency(maxEco)})</label>
                 <PriceInput
@@ -345,7 +345,7 @@ export const RouteDetailModal: React.FC = () => {
         </div>
 
         {/* Action buttons */}
-        <div className="flex gap-2">
+        <div className="flex flex-col min-[420px]:flex-row gap-2">
           <button
             onClick={handleSave}
             className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-lg transition-colors text-sm"

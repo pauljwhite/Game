@@ -36,7 +36,7 @@ export const AirlinesPanel: React.FC = () => {
     <div className="flex flex-col h-full">
       <div className="panel-header flex items-center justify-between">
         <h2 className="text-white font-bold">Airlines</h2>
-        <button onClick={closePanel} aria-label="Close" className="w-7 h-7 flex items-center justify-center text-gray-400 hover:text-white hover:bg-gray-700 rounded transition-colors text-lg leading-none">×</button>
+        <button onClick={closePanel} aria-label="Close" className="w-10 h-10 sm:w-7 sm:h-7 flex items-center justify-center text-gray-400 hover:text-white hover:bg-gray-700 rounded transition-colors text-lg leading-none">×</button>
       </div>
 
       {/* Player row — pinned above the scroll area */}
@@ -58,7 +58,7 @@ export const AirlinesPanel: React.FC = () => {
               <div className="mt-1 h-1.5 bg-gray-700 rounded overflow-hidden">
                 <div className="h-full rounded" style={{ width: `${share}%`, backgroundColor: playerAirline.color }} />
               </div>
-              <div className="mt-1.5 grid grid-cols-3 gap-x-2 text-xs text-gray-400">
+              <div className="mt-1.5 grid grid-cols-1 min-[380px]:grid-cols-3 gap-x-2 gap-y-0.5 text-xs text-gray-400">
                 <span>Cash: <span className={playerAirline.cashUSD >= 0 ? 'text-green-400' : 'text-red-400'}>{formatCurrency(playerAirline.cashUSD)}</span></span>
                 <span>Fleet: <span className="text-white">{playerAirline.fleetIds.length}</span></span>
                 <span>Routes: <span className="text-white">{playerAirline.routeIds.length}</span></span>
@@ -115,7 +115,7 @@ export const AirlinesPanel: React.FC = () => {
                   />
                 </div>
 
-                <div className="mt-1.5 grid grid-cols-3 gap-x-2 text-xs text-gray-400">
+                <div className="mt-1.5 grid grid-cols-1 min-[380px]:grid-cols-3 gap-x-2 gap-y-0.5 text-xs text-gray-400">
                   <span>Cash: <span className={airline.cashUSD >= 0 ? 'text-green-400' : 'text-red-400'}>{formatCurrency(airline.cashUSD)}</span></span>
                   <span>Fleet: <span className="text-white">{airline.fleetIds.length}</span></span>
                   <span>Routes: <span className="text-white">{airline.routeIds.length}</span></span>
@@ -127,7 +127,7 @@ export const AirlinesPanel: React.FC = () => {
                 </div>
 
                 {/* Action buttons */}
-                <div className="mt-2 flex gap-1.5">
+                <div className="mt-2 flex flex-col min-[380px]:flex-row gap-1.5">
                   {!airline.isInsolvent && (
                     <button
                       onClick={e => { e.stopPropagation(); openModalById('sharesPurchase', airline.id); }}

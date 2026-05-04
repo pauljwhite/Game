@@ -30,7 +30,7 @@ export const CompetitorRouteModal: React.FC = () => {
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center z-[9999]">
-      <div className="glass-panel rounded-t-2xl sm:rounded-xl px-4 sm:px-6 py-4 w-full max-w-lg relative max-h-[92svh] overflow-y-auto">
+      <div className="glass-panel rounded-t-2xl sm:rounded-xl px-4 sm:px-6 py-4 w-full max-w-lg relative max-h-[92svh] overflow-y-auto overscroll-contain">
         <button
           onClick={closeModal}
           className="absolute top-4 right-4 text-gray-400 hover:text-white transition-colors text-xl leading-none"
@@ -51,7 +51,7 @@ export const CompetitorRouteModal: React.FC = () => {
 
         <h2 className="text-xl font-bold text-white mb-1">Competitor Route</h2>
 
-        <div className="flex items-center gap-2 mb-4">
+        <div className="flex items-center gap-2 mb-4 pr-8">
           <span className="text-blue-400 font-mono font-bold text-lg">{route.originIata}</span>
           <span className="text-gray-400">→</span>
           <span className="text-blue-400 font-mono font-bold text-lg">{route.destinationIata}</span>
@@ -61,7 +61,7 @@ export const CompetitorRouteModal: React.FC = () => {
         </div>
 
         {/* Stats grid */}
-        <div className="grid grid-cols-2 gap-3 mb-4">
+        <div className="grid grid-cols-2 gap-2 sm:gap-3 mb-4">
           <div className="glass-card p-3">
             <div className="text-gray-400 text-xs mb-1">Distance</div>
             <div className="text-white font-semibold">{Math.round(route.distanceKm).toLocaleString()} km</div>

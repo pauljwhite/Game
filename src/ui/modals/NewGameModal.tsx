@@ -119,7 +119,7 @@ export const NewGameModal: React.FC = () => {
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center z-[9999]">
-      <div className="glass-panel rounded-t-2xl sm:rounded-xl w-full max-w-lg px-4 sm:px-6 py-5 max-h-[92svh] overflow-y-auto">
+      <div className="glass-panel rounded-t-2xl sm:rounded-xl w-full max-w-lg px-4 sm:px-6 py-5 max-h-[92svh] overflow-y-auto overscroll-contain">
         <h1 className="text-2xl font-bold text-white mb-1">Mighty Airline Empire</h1>
         <p className="text-gray-400 text-sm mb-5">Build your airline from the ground up.</p>
 
@@ -183,7 +183,7 @@ export const NewGameModal: React.FC = () => {
 
           <div>
             <label className="text-gray-300 text-sm block mb-2">Difficulty</label>
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-1 min-[380px]:grid-cols-3 gap-2">
               {DIFFICULTIES.map(d => (
                 <button
                   key={d.id}

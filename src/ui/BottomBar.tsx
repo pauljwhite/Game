@@ -20,9 +20,9 @@ export const BottomBar: React.FC = () => {
   const latestNews = newsTicker[0] ?? 'Welcome to Mighty Airline Empire!';
 
   return (
-    <footer className="h-10 glass-nav border-t flex items-center px-4 gap-4 shrink-0 z-40 overflow-hidden">
+    <footer className="h-10 glass-nav border-t flex items-center px-2 sm:px-4 gap-2 sm:gap-4 shrink-0 z-40 overflow-hidden">
       {/* Market share bars */}
-      <div className="flex items-center gap-2 shrink-0">
+      <div className="hidden sm:flex items-center gap-2 shrink-0">
         <span className="soft-tag">Share</span>
         <div className="flex items-center gap-1 h-4">
           {sorted.slice(0, 6).map(a => {
@@ -43,12 +43,12 @@ export const BottomBar: React.FC = () => {
         </div>
       </div>
 
-      <div className="h-5 w-px bg-white/10" />
+      <div className="hidden sm:block h-5 w-px bg-white/10" />
 
       {/* News ticker */}
       <div className="flex-1 overflow-hidden">
         <div className="text-gray-300 text-xs whitespace-nowrap overflow-hidden text-ellipsis">
-          <span className="soft-tag mr-2 text-yellow-200">NEWS</span>
+          <span className="soft-tag mr-1.5 sm:mr-2 text-yellow-200">NEWS</span>
           {latestNews}
         </div>
       </div>

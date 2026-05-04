@@ -76,14 +76,14 @@ export const BuyAircraftModal: React.FC = () => {
         </div>
 
         {/* Two-column body */}
-        <div className="flex flex-1 min-h-0">
+        <div className="flex flex-col sm:flex-row flex-1 min-h-0">
           {/* Manufacturer sidebar */}
-          <div className="w-max sm:w-44 shrink-0 border-r border-white/10 overflow-y-auto py-2 bg-white/[0.025]">
+          <div className="w-full sm:w-44 shrink-0 border-b sm:border-b-0 sm:border-r border-white/10 overflow-x-auto sm:overflow-y-auto py-1 sm:py-2 bg-white/[0.025] flex sm:block scrollbar-none">
             {manufacturers.map(mfr => (
               <button
                 key={mfr}
                 onClick={() => { setActiveTab(mfr); setPurchaseError(null); }}
-                className={`w-full text-left px-2 sm:px-3 py-2 text-xs sm:text-sm transition-colors leading-tight ${
+                className={`shrink-0 sm:w-full text-left px-3 py-2 text-xs sm:text-sm transition-colors leading-tight ${
                   activeTab === mfr
                     ? 'bg-white/[0.12] text-white font-semibold'
                     : 'text-gray-400 hover:text-gray-200 hover:bg-white/[0.07]'
@@ -95,7 +95,7 @@ export const BuyAircraftModal: React.FC = () => {
           </div>
 
           {/* Aircraft list */}
-          <div className="overflow-y-auto flex-1 px-3 sm:px-4 py-3 sm:py-4">
+          <div className="overflow-y-auto flex-1 px-3 sm:px-4 py-3 sm:py-4 overscroll-contain">
             {purchaseError && (
               <div className="mb-3 px-3 py-2 bg-red-900/40 border border-red-700 rounded text-red-300 text-sm">
                 {purchaseError}
@@ -117,7 +117,7 @@ export const BuyAircraftModal: React.FC = () => {
                     }`}
                   >
                     {/* Mobile: stacked layout */}
-                    <div className="flex items-start gap-3">
+                    <div className="flex flex-col min-[420px]:flex-row items-stretch min-[420px]:items-start gap-3">
                       {/* Profile SVG — hidden on mobile */}
                       <div className="hidden sm:flex flex-shrink-0 w-44 items-center justify-center self-center">
                         <AircraftProfile
@@ -130,7 +130,7 @@ export const BuyAircraftModal: React.FC = () => {
                       {/* Info + actions */}
                       <div className="flex-1 min-w-0">
                         {/* Top row: model name + price + buy */}
-                        <div className="flex items-start justify-between gap-2 mb-1.5">
+                        <div className="flex items-start justify-between gap-2 mb-2">
                           <div className="min-w-0">
                             <div className="flex items-center flex-wrap gap-x-2 gap-y-0.5">
                               <span className="text-white font-semibold text-sm">{type.model}</span>
@@ -150,7 +150,7 @@ export const BuyAircraftModal: React.FC = () => {
                               <button
                                 onClick={() => handleBuy(type.id)}
                                 disabled={!canAfford}
-                                className={`px-3 py-1 rounded text-xs font-semibold transition-colors whitespace-nowrap ${
+                                className={`px-3 py-1 rounded text-xs font-semibold transition-colors whitespace-nowrap min-h-9 ${
                                   canAfford
                                     ? 'apple-button-primary'
                                     : 'bg-white/10 text-gray-500 cursor-not-allowed'
@@ -163,7 +163,7 @@ export const BuyAircraftModal: React.FC = () => {
                         </div>
 
                         {/* Specs grid */}
-                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-3 gap-y-0.5 text-xs text-gray-400">
+                        <div className="grid grid-cols-1 min-[380px]:grid-cols-2 sm:grid-cols-3 gap-x-3 gap-y-1 text-xs text-gray-400">
                           <span>Seats: <span className="text-gray-300">{type.seatsEconomy}Y{type.seatsBusiness > 0 ? `/${type.seatsBusiness}J` : ''}</span></span>
                           <span>Range: <span className="text-gray-300">{type.rangeKm.toLocaleString()} km</span></span>
                           <span>Speed: <span className="text-gray-300">{type.cruiseSpeedKmh} km/h</span></span>

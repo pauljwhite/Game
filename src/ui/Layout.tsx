@@ -65,7 +65,7 @@ export const Layout: React.FC = () => {
         </div>
 
         {PanelComponent && (
-          <div className="absolute inset-0 z-20 md:inset-y-0 md:right-0 md:left-auto md:w-96 border-l border-white/10 bg-gray-950/95 backdrop-blur-sm shadow-2xl flex flex-col overflow-hidden">
+          <div className="absolute inset-x-2 top-2 bottom-2 z-20 rounded-2xl border border-white/10 bg-gray-950/95 backdrop-blur-sm shadow-2xl flex flex-col overflow-hidden md:inset-y-0 md:right-0 md:left-auto md:bottom-auto md:top-0 md:w-96 md:rounded-none md:border-y-0 md:border-r-0 md:border-l">
             <PanelComponent />
           </div>
         )}

@@ -36,7 +36,7 @@ export const AirportPopup: React.FC = () => {
   const barColor = satMod > 0.8 ? 'bg-green-500' : satMod > 0.55 ? 'bg-yellow-500' : 'bg-red-500';
 
   return (
-    <div className="absolute bottom-12 left-4 z-[800] glass-panel rounded-xl p-3 w-64">
+    <div className="absolute inset-x-2 bottom-3 sm:inset-x-auto sm:bottom-12 sm:left-4 z-[800] glass-panel rounded-xl p-3 w-auto sm:w-64 max-h-[48svh] overflow-y-auto">
       {isClosed && (
         <div className="mb-2 px-2 py-1.5 bg-red-900/50 border border-red-500/50 rounded-lg flex items-center gap-1.5">
           <span className="text-red-400 font-bold text-xs">CLOSED</span>
@@ -87,7 +87,7 @@ export const AirportPopup: React.FC = () => {
         </div>
       </div>
 
-      <div className="mt-3 flex gap-2">
+      <div className="mt-3 flex flex-col min-[380px]:flex-row gap-2">
         <button
           onClick={() => openModalById('newRoute', selectedIata)}
           className="apple-button-primary flex-1 py-1"

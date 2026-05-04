@@ -81,7 +81,7 @@ export const RebrandModal: React.FC = () => {
 
   return (
     <div className="fixed inset-0 bg-black/80 flex items-end sm:items-center justify-center z-[9999]">
-      <div className="bg-gray-900 border border-gray-700 rounded-t-2xl sm:rounded-xl px-4 sm:px-6 py-4 shadow-2xl w-full max-w-md relative">
+      <div className="glass-panel rounded-t-2xl sm:rounded-xl px-4 sm:px-6 py-4 shadow-2xl w-full max-w-md relative max-h-[92svh] overflow-y-auto overscroll-contain">
         <button
           onClick={closeModal}
           className="absolute top-4 right-4 text-gray-400 hover:text-white text-xl leading-none"
@@ -168,7 +168,7 @@ export const RebrandModal: React.FC = () => {
           </div>
         )}
 
-        <div className="flex gap-2">
+        <div className="flex flex-col min-[380px]:flex-row gap-2">
           <button
             onClick={handleConfirm}
             disabled={!hasChange || !canAfford}

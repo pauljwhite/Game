@@ -20,7 +20,7 @@ export const HubsPanel: React.FC = () => {
       <div className="panel-header">
         <div className="flex items-center justify-between">
           <h2 className="text-white font-bold">Hubs ({hubAirports.length})</h2>
-          <button onClick={closePanel} aria-label="Close" className="w-7 h-7 flex items-center justify-center text-gray-400 hover:text-white hover:bg-gray-700 rounded transition-colors text-lg leading-none">×</button>
+          <button onClick={closePanel} aria-label="Close" className="w-10 h-10 sm:w-7 sm:h-7 flex items-center justify-center text-gray-400 hover:text-white hover:bg-gray-700 rounded transition-colors text-lg leading-none">×</button>
         </div>
         <p className="text-gray-400 text-xs mt-0.5">
           Annual fee: {formatCurrency(HUB_ANNUAL_FEE_USD)}/hub - Benefits: −15% airport fees, +20% demand
@@ -35,7 +35,7 @@ export const HubsPanel: React.FC = () => {
         )}
         {hubAirports.map(airport => (
           <div key={airport.iata} className="p-3 border-b border-white/10">
-            <div className="flex items-center justify-between">
+            <div className="flex items-start justify-between gap-3">
               <div>
                 <div className="text-white text-sm font-medium">{airport.name}</div>
                 <div className="text-gray-400 text-xs">{airport.city}, {airport.country} - {airport.iata}</div>

@@ -63,7 +63,7 @@ const AirlineMenu: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   return (
     <div
       ref={ref}
-      className="absolute top-full left-0 mt-2 w-72 max-w-[calc(100vw-0.5rem)] rounded-xl z-[9999] overflow-hidden border border-white/10 bg-gray-950/95 shadow-2xl backdrop-blur-xl"
+      className="fixed left-2 right-2 top-[3.25rem] sm:absolute sm:top-full sm:left-0 sm:right-auto sm:mt-2 sm:w-72 max-w-[calc(100vw-1rem)] rounded-xl z-[9999] overflow-hidden border border-white/10 bg-gray-950/95 shadow-2xl backdrop-blur-xl"
     >
       {/* Header */}
       <div className="px-4 py-3 border-b border-white/10 bg-white/[0.035]" style={{ borderLeftColor: player.color, borderLeftWidth: 3 }}>
@@ -184,19 +184,19 @@ export const TopBar: React.FC = () => {
   return (
     <header className="glass-nav border-b relative z-10 shrink-0">
       {/* Primary row: branding | date | speed | (nav on lg+) */}
-      <div className="h-12 flex items-center px-3 gap-2">
+      <div className="min-h-12 flex items-center px-2 sm:px-3 gap-1.5 sm:gap-2">
         {/* Airline branding — clickable */}
         <div className="relative shrink-0">
           <button
             onClick={() => setMenuOpen(v => !v)}
-            className="flex items-center gap-1.5 min-w-0 rounded-full border border-white/10 bg-white/[0.045] px-2.5 py-1 transition-all hover:bg-white/[0.09]"
+            className="flex items-center gap-1.5 min-w-0 rounded-full border border-white/10 bg-white/[0.045] px-2 py-1 transition-all hover:bg-white/[0.09]"
           >
             <span className="text-lg">{playerAirline?.logoEmoji ?? '✈'}</span>
             <div className="leading-none min-w-0 text-left">
-              <div className="text-white font-bold text-xs truncate max-w-[120px] sm:max-w-[160px]">
+              <div className="text-white font-bold text-xs truncate max-w-[86px] min-[380px]:max-w-[110px] sm:max-w-[160px]">
                 {playerAirline?.name ?? 'Mighty Airline Empire'}
               </div>
-              <div className={`text-xs font-mono ${(playerAirline?.cashUSD ?? 0) >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+              <div className={`hidden min-[380px]:block text-xs font-mono ${(playerAirline?.cashUSD ?? 0) >= 0 ? 'text-green-400' : 'text-red-400'}`}>
                 {playerAirline ? formatCurrency(playerAirline.cashUSD) : '-'}
               </div>
             </div>
@@ -237,7 +237,12 @@ export const TopBar: React.FC = () => {
       </div>
 
       {/* Secondary nav row — visible below lg */}
-      <div className="lg:hidden flex items-center gap-1 px-3 pb-1.5 overflow-x-auto scrollbar-none">
+      <div className="lg:hidden flex items-center gap-1 px-2 sm:px-3 pb-1.5 overflow-x-auto scrollbar-none">
+        <div className="flex sm:hidden items-center gap-1 rounded-full border border-white/10 bg-white/[0.045] px-2.5 h-10 shrink-0 text-[11px] font-mono">
+          <span className="text-gray-300">{gameDate}</span>
+          <span className="text-gray-600">Â·</span>
+          <span className="text-blue-300">{gameClock}</span>
+        </div>
         {NAV_ITEMS.map(item => (
           <button
             key={item.id}

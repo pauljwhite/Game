@@ -227,10 +227,10 @@ export const NewRouteModal: React.FC = () => {
         </div>
 
         {/* Body */}
-        <div className="overflow-y-auto flex-1 px-4 sm:px-6 py-4 space-y-5">
+        <div className="overflow-y-auto flex-1 px-4 sm:px-6 py-4 space-y-5 overscroll-contain">
 
           {/* Airport Inputs */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             <AirportSearchInput
               label="Origin"
               value={originIata}
@@ -251,7 +251,7 @@ export const NewRouteModal: React.FC = () => {
 
           {/* Distance */}
           {distanceKm !== null && (
-            <div className="flex items-center gap-2 text-sm">
+            <div className="flex flex-wrap items-center gap-2 text-sm">
               <span className="text-gray-400">Distance:</span>
               <span className="text-white font-semibold">{distanceKm.toLocaleString()} km</span>
               {sameAirport && (
@@ -352,14 +352,14 @@ export const NewRouteModal: React.FC = () => {
                   Your cash: <span className="text-white font-semibold">{formatCurrency(playerCash)}</span>
                   {distanceKm && <span className="ml-2">· Route: {distanceKm.toLocaleString()} km</span>}
                 </div>
-                <div className="flex h-52">
+                  <div className="flex flex-col sm:flex-row h-[22rem] sm:h-52">
                   {/* Manufacturer sidebar */}
-                  <div className="w-28 sm:w-36 shrink-0 border-r border-white/10 overflow-y-auto py-1 bg-white/[0.025]">
+                  <div className="w-full sm:w-36 shrink-0 border-b sm:border-b-0 sm:border-r border-white/10 overflow-x-auto sm:overflow-y-auto py-1 bg-white/[0.025] flex sm:block scrollbar-none">
                     {buyMfrs.map(mfr => (
                       <button
                         key={mfr}
                         onClick={() => setBuyMfr(mfr)}
-                        className={`w-full text-left px-2 py-1.5 text-xs transition-colors ${
+                        className={`shrink-0 sm:w-full text-left px-3 sm:px-2 py-2 sm:py-1.5 text-xs transition-colors ${
                           activeBuyMfr === mfr
                             ? 'bg-white/[0.12] text-white font-semibold'
                             : 'text-gray-400 hover:text-gray-200 hover:bg-white/[0.07]'
@@ -457,7 +457,7 @@ export const NewRouteModal: React.FC = () => {
                     </button>
                   )}
                 </div>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                   <div>
                     <label className="text-gray-400 text-xs block mb-1">Economy (max {formatUSD(maxEco)})</label>
                     <PriceInput
@@ -499,7 +499,7 @@ export const NewRouteModal: React.FC = () => {
               )}
 
               {/* Revenue / cost / profit */}
-              <div className="grid grid-cols-3 gap-3 text-sm">
+              <div className="grid grid-cols-1 min-[380px]:grid-cols-3 gap-2 sm:gap-3 text-sm">
                 <div>
                   <p className="text-gray-400 text-xs">Revenue</p>
                   <p className="text-green-400 font-semibold">{formatUSD(pnlPreview.dailyRevenue)}</p>
@@ -530,10 +530,10 @@ export const NewRouteModal: React.FC = () => {
         </div>
 
         {/* Footer */}
-        <div className="px-4 sm:px-6 py-3 sm:py-4 border-t border-white/10 bg-white/[0.025] flex-shrink-0 flex gap-3 justify-end">
+        <div className="px-4 sm:px-6 py-3 sm:py-4 border-t border-white/10 bg-white/[0.025] flex-shrink-0 flex flex-col-reverse sm:flex-row gap-2 sm:gap-3 sm:justify-end">
           <button
             onClick={closeModal}
-            className="px-4 py-2 rounded border border-gray-600 text-gray-300 hover:border-gray-400 text-sm transition-colors"
+            className="px-4 py-2 rounded border border-gray-600 text-gray-300 hover:border-gray-400 text-sm transition-colors min-h-11"
           >
             Cancel
           </button>
