@@ -280,7 +280,17 @@ html[data-theme='light'] .text-slate-300 { color: rgb(71, 85, 105); }
 html[data-theme='light'] .bg-gray-950\/95,
 html[data-theme='light'] .bg-gray-950\/90,
 html[data-theme='light'] .bg-gray-900,
-html[data-theme='light'] .bg-gray-900\/80 {
+html[data-theme='light'] .bg-gray-900\/80,
+html[data-theme='light'] .bg-blue-900\/40,
+html[data-theme='light'] .bg-green-900\/40,
+html[data-theme='light'] .bg-orange-900\/40,
+html[data-theme='light'] .bg-red-900\/30,
+html[data-theme='light'] .bg-red-900\/40,
+html[data-theme='light'] .bg-red-900\/50,
+html[data-theme='light'] .bg-teal-900\/40,
+html[data-theme='light'] .bg-teal-900\/60,
+html[data-theme='light'] .bg-yellow-900\/30,
+html[data-theme='light'] .bg-yellow-900\/50 {
   background-color: rgba(248, 250, 252, 0.96);
 }
 
@@ -321,6 +331,50 @@ html[data-theme='light'] .bg-white\/\[0\.07\] {
   background-color: rgba(15, 23, 42, 0.055);
 }
 
+html[data-theme='light'] .bg-blue-900\/40 { background-color: rgba(59, 130, 246, 0.12); }
+html[data-theme='light'] .bg-green-900\/40 { background-color: rgba(34, 197, 94, 0.12); }
+html[data-theme='light'] .bg-orange-900\/40 { background-color: rgba(249, 115, 22, 0.12); }
+html[data-theme='light'] .bg-red-900\/30,
+html[data-theme='light'] .bg-red-900\/40,
+html[data-theme='light'] .bg-red-900\/50 { background-color: rgba(239, 68, 68, 0.12); }
+html[data-theme='light'] .bg-teal-900\/40,
+html[data-theme='light'] .bg-teal-900\/60 { background-color: rgba(20, 184, 166, 0.12); }
+html[data-theme='light'] .bg-yellow-900\/30,
+html[data-theme='light'] .bg-yellow-900\/50 { background-color: rgba(245, 158, 11, 0.14); }
+
+html[data-theme='light'] .text-blue-300,
+html[data-theme='light'] .text-sky-100,
+html[data-theme='light'] .text-sky-200 {
+  color: rgb(3, 105, 161);
+}
+
+html[data-theme='light'] .text-green-100,
+html[data-theme='light'] .text-green-400 {
+  color: rgb(21, 128, 61);
+}
+
+html[data-theme='light'] .text-orange-200 {
+  color: rgb(194, 65, 12);
+}
+
+html[data-theme='light'] .text-red-200,
+html[data-theme='light'] .text-red-300,
+html[data-theme='light'] .text-red-400 {
+  color: rgb(185, 28, 28);
+}
+
+html[data-theme='light'] .text-teal-200,
+html[data-theme='light'] .text-teal-300 {
+  color: rgb(15, 118, 110);
+}
+
+html[data-theme='light'] .text-yellow-100,
+html[data-theme='light'] .text-yellow-200,
+html[data-theme='light'] .text-yellow-300,
+html[data-theme='light'] .text-yellow-400 {
+  color: rgb(180, 83, 9);
+}
+
 html[data-theme='light'] .hover\:bg-white\/\[0\.06\]:hover,
 html[data-theme='light'] .hover\:bg-white\/\[0\.07\]:hover,
 html[data-theme='light'] .hover\:bg-white\/\[0\.08\]:hover,
@@ -337,6 +391,27 @@ html[data-theme='light'] textarea {
   color: rgb(15, 23, 42);
   background-color: rgba(255, 255, 255, 0.82);
   border-color: rgba(15, 23, 42, 0.16);
+}
+
+html[data-theme='light'] .bg-blue-500,
+html[data-theme='light'] .bg-blue-600,
+html[data-theme='light'] .bg-green-500,
+html[data-theme='light'] .bg-green-600,
+html[data-theme='light'] .bg-green-700,
+html[data-theme='light'] .bg-red-500,
+html[data-theme='light'] .bg-red-600,
+html[data-theme='light'] .bg-sky-400\/85,
+html[data-theme='light'] .bg-sky-500,
+html[data-theme='light'] .bg-teal-500,
+html[data-theme='light'] .bg-teal-700,
+html[data-theme='light'] .bg-yellow-400,
+html[data-theme='light'] .bg-yellow-600,
+html[data-theme='light'] .bg-yellow-700 {
+  color: white;
+}
+
+html[data-theme='light'] .bg-yellow-400 {
+  color: rgb(15, 23, 42);
 }
 
 @media (max-width: 640px) {
