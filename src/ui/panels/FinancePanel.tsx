@@ -34,12 +34,12 @@ export const FinancePanel: React.FC = () => {
     .sort((a, b) => b.dividend - a.dividend);
 
   return (
-    <div className="flex flex-col h-full">
-      <div className="panel-header flex items-center justify-between">
+    <div className="flex h-full min-h-0 flex-col">
+      <div className="panel-header flex shrink-0 items-center justify-between">
         <h2 className="text-white font-bold">Finance</h2>
         <button onClick={closePanel} aria-label="Close" className="w-10 h-10 sm:w-7 sm:h-7 flex items-center justify-center text-gray-400 hover:text-white hover:bg-gray-700 rounded transition-colors text-lg leading-none">×</button>
       </div>
-      <div className="flex-1 overflow-y-auto p-3 flex flex-col gap-4">
+      <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto overscroll-contain p-3">
 
       <div className="grid grid-cols-1 min-[380px]:grid-cols-2 gap-2">
         <div className="glass-card p-2">

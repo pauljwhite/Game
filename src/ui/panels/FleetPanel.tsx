@@ -349,7 +349,7 @@ function FleetPolicySection() {
   const THRESHOLD_OPTIONS = [20, 30, 40, 50, 60, 70, 80];
 
   return (
-    <div className="border-b border-white/10">
+    <div className="shrink-0 border-b border-white/10">
       <button
         onClick={() => setExpanded(v => !v)}
         className="w-full flex items-center justify-between px-3 py-2 bg-white/[0.03] hover:bg-white/[0.06] transition-colors text-left"
@@ -437,8 +437,8 @@ export const FleetPanel: React.FC = () => {
   const fleetList   = Object.values(aircraft).filter(ac => ac.airlineId === 'player');
 
   return (
-    <div className="flex flex-col h-full">
-      <div className="panel-header flex items-center justify-between">
+    <div className="flex h-full min-h-0 flex-col">
+      <div className="panel-header flex shrink-0 items-center justify-between">
         <h2 className="text-white font-bold">Fleet ({fleetList.length})</h2>
         <div className="flex items-center gap-1">
           <button
@@ -455,7 +455,7 @@ export const FleetPanel: React.FC = () => {
 
       {/* Column headers */}
       {fleetList.length > 0 && (
-        <div className="flex items-center gap-1.5 px-2 py-1 border-b border-white/5 text-[10px] text-gray-500 select-none bg-white/[0.02]">
+        <div className="flex shrink-0 items-center gap-1.5 px-2 py-1 border-b border-white/5 text-[10px] text-gray-500 select-none bg-white/[0.02]">
           <span className="w-2 shrink-0" />
           <span className="w-14 shrink-0">Aircraft</span>
           <span className="flex-1 min-w-0">Route</span>
@@ -464,7 +464,7 @@ export const FleetPanel: React.FC = () => {
         </div>
       )}
 
-      <div className="flex-1 overflow-y-auto overflow-x-hidden">
+      <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-contain">
         {fleetList.length === 0 && (
           <div className="p-4 text-gray-400 text-sm text-center">
             No aircraft yet. Buy your first plane!

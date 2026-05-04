@@ -16,8 +16,8 @@ export const RoutesPanel: React.FC = () => {
   void airlines;
 
   return (
-    <div className="flex flex-col h-full">
-      <div className="panel-header flex items-center justify-between">
+    <div className="flex h-full min-h-0 flex-col">
+      <div className="panel-header flex shrink-0 items-center justify-between">
         <h2 className="text-white font-bold">Routes ({playerRoutes.length})</h2>
         <div className="flex items-center gap-1">
           <button
@@ -30,7 +30,7 @@ export const RoutesPanel: React.FC = () => {
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto">
+      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
         {playerRoutes.length === 0 && (
           <div className="p-4 text-gray-400 text-sm text-center">
             No routes yet. Create your first route!

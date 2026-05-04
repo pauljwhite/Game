@@ -64,14 +64,14 @@ export const Layout: React.FC = () => {
     <div className={`flex flex-col h-[100svh] text-white overflow-hidden ${themeMode === 'light' ? 'bg-slate-100' : 'bg-slate-950'}`}>
       <TopBar />
 
-      <div className="flex-1 flex relative overflow-hidden z-0">
-        <div className="flex-1 relative">
+      <div className="flex-1 min-h-0 flex relative overflow-hidden z-0">
+        <div className="flex-1 min-h-0 relative">
           <GameMap />
           <AirportPopup />
         </div>
 
         {PanelComponent && (
-          <div className={`absolute inset-x-2 top-2 bottom-2 z-20 rounded-2xl border border-white/10 backdrop-blur-sm shadow-2xl flex flex-col overflow-hidden md:inset-y-0 md:right-0 md:left-auto md:bottom-auto md:top-0 md:w-96 md:rounded-none md:border-y-0 md:border-r-0 md:border-l ${themeMode === 'light' ? 'bg-white/95' : 'bg-gray-950/95'}`}>
+          <div className={`absolute inset-x-2 top-2 bottom-2 z-20 rounded-2xl border border-white/10 backdrop-blur-sm shadow-2xl flex min-h-0 flex-col overflow-hidden md:inset-y-0 md:right-0 md:left-auto md:bottom-auto md:top-0 md:w-96 md:rounded-none md:border-y-0 md:border-r-0 md:border-l ${themeMode === 'light' ? 'bg-white/95' : 'bg-gray-950/95'}`}>
             <PanelComponent />
           </div>
         )}
