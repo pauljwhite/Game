@@ -15,11 +15,14 @@ export const SharePurchaseModal: React.FC = () => {
   const buyShares     = useGameStore(s => s.buyShares);
   const sellShares    = useGameStore(s => s.sellShares);
 
-  const [mode, setMode]               = useState<'buy' | 'sell'>('buy');
+  const payload   = modalPayload as { targetId: string; mode: 'buy' | 'sell' } | string | null;
+  const targetId  = payload ? (typeof payload === 'string' ? payload : payload.targetId) : null;
+  const initMode  = payload && typeof payload === 'object' ? payload.mode : 'buy';
+
+  const [mode, setMode]               = useState<'buy' | 'sell'>(initMode);
   const [percentInput, setPercentInput] = useState(5);
   const [source, setSource]           = useState<'market' | string>('market');
 
-  const targetId = modalPayload as string | null;
   const target   = targetId ? aiAirlines[targetId] : null;
   const player   = airlines['player'];
 
