@@ -255,11 +255,9 @@ export const AirlinesPanel: React.FC = () => {
             </div>
           );
         })}
-      </div>
-
-      {/* Insolvent airlines accordion */}
-      {insolventAI.length > 0 && (
-        <div className="shrink-0 border-t border-gray-700">
+        {/* Insolvent airlines accordion */}
+        {insolventAI.length > 0 && (
+          <div className="border-t border-gray-700">
           <button
             onClick={() => setInsolventOpen(v => !v)}
             className="w-full flex items-center justify-between px-3 py-2 text-xs text-gray-500 hover:text-gray-300 hover:bg-gray-800/50 transition-colors"
@@ -291,8 +289,9 @@ export const AirlinesPanel: React.FC = () => {
               ))}
             </div>
           )}
-        </div>
-      )}
+          </div>
+        )}
+      </div>
     </div>
   );
 };
