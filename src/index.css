@@ -276,11 +276,40 @@ html[data-theme='light'] .text-gray-300 { color: rgb(51, 65, 85); }
 html[data-theme='light'] .text-gray-400 { color: rgb(71, 85, 105); }
 html[data-theme='light'] .text-gray-500 { color: rgb(100, 116, 139); }
 html[data-theme='light'] .text-gray-600 { color: rgb(148, 163, 184); }
-html[data-theme='light'] .bg-gray-700 { background-color: rgba(15, 23, 42, 0.10); }
-html[data-theme='light'] .bg-gray-800 { background-color: rgba(15, 23, 42, 0.08); }
+html[data-theme='light'] .text-slate-300 { color: rgb(71, 85, 105); }
+html[data-theme='light'] .bg-gray-950\/95,
+html[data-theme='light'] .bg-gray-950\/90,
+html[data-theme='light'] .bg-gray-900,
+html[data-theme='light'] .bg-gray-900\/80 {
+  background-color: rgba(248, 250, 252, 0.96);
+}
+
+html[data-theme='light'] .bg-gray-800,
+html[data-theme='light'] .bg-gray-800\/50,
+html[data-theme='light'] .bg-gray-700,
+html[data-theme='light'] .bg-gray-700\/50 {
+  background-color: rgba(15, 23, 42, 0.08);
+}
+
+html[data-theme='light'] .hover\:bg-gray-800\/50:hover,
+html[data-theme='light'] .hover\:bg-gray-700:hover,
+html[data-theme='light'] .hover\:bg-gray-600:hover {
+  background-color: rgba(15, 23, 42, 0.12);
+}
+
 html[data-theme='light'] .bg-slate-950\/35 { background-color: rgba(226, 232, 240, 0.55); }
 html[data-theme='light'] .bg-slate-950\/25 { background-color: rgba(226, 232, 240, 0.42); }
 html[data-theme='light'] .border-white\/10 { border-color: rgba(15, 23, 42, 0.10); }
+html[data-theme='light'] .border-white\/5 { border-color: rgba(15, 23, 42, 0.07); }
+html[data-theme='light'] .border-gray-700,
+html[data-theme='light'] .border-gray-700\/50,
+html[data-theme='light'] .border-gray-600 {
+  border-color: rgba(15, 23, 42, 0.14);
+}
+
+html[data-theme='light'] .bg-white\/5,
+html[data-theme='light'] .bg-white\/10,
+html[data-theme='light'] .bg-white\/15,
 html[data-theme='light'] .bg-white\/\[0\.025\],
 html[data-theme='light'] .bg-white\/\[0\.03\],
 html[data-theme='light'] .bg-white\/\[0\.035\],
@@ -290,6 +319,24 @@ html[data-theme='light'] .bg-white\/\[0\.055\],
 html[data-theme='light'] .bg-white\/\[0\.06\],
 html[data-theme='light'] .bg-white\/\[0\.07\] {
   background-color: rgba(15, 23, 42, 0.055);
+}
+
+html[data-theme='light'] .hover\:bg-white\/\[0\.06\]:hover,
+html[data-theme='light'] .hover\:bg-white\/\[0\.07\]:hover,
+html[data-theme='light'] .hover\:bg-white\/\[0\.08\]:hover,
+html[data-theme='light'] .hover\:bg-white\/\[0\.09\]:hover,
+html[data-theme='light'] .hover\:bg-white\/\[0\.1\]:hover,
+html[data-theme='light'] .hover\:bg-white\/\[0\.11\]:hover,
+html[data-theme='light'] .hover\:bg-white\/15:hover {
+  background-color: rgba(15, 23, 42, 0.10);
+}
+
+html[data-theme='light'] input,
+html[data-theme='light'] select,
+html[data-theme='light'] textarea {
+  color: rgb(15, 23, 42);
+  background-color: rgba(255, 255, 255, 0.82);
+  border-color: rgba(15, 23, 42, 0.16);
 }
 
 @media (max-width: 640px) {
