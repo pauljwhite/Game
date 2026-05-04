@@ -462,7 +462,7 @@ export const NewRouteModal: React.FC = () => {
                     <label className="text-gray-400 text-xs block mb-1">Economy (max {formatUSD(maxEco)})</label>
                     <PriceInput
                       value={priceEconomy} min={1} max={maxEco}
-                      onChange={v => { setPriceEconomy(v); setPriceBusiness(Math.min(maxBiz, Math.round(v * 4))); }}
+                      onChange={v => setPriceEconomy(v)}
                     />
                   </div>
                   <div>
