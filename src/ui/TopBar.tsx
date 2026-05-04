@@ -213,12 +213,11 @@ export const TopBar: React.FC = () => {
           {menuOpen && <AirlineMenu onClose={() => setMenuOpen(false)} />}
         </div>
 
-        {/* Date — shown inline on all sizes; clock only on sm+ */}
-        <div className="flex items-center gap-1 text-xs font-mono shrink-0">
-          <span className="text-gray-500 hidden sm:inline">|</span>
-          <span className="text-gray-300 text-[10px] sm:text-xs">{gameDate}</span>
-          <span className="text-gray-600 hidden sm:inline">·</span>
-          <span className="text-blue-300 hidden sm:inline">{gameClock}</span>
+        {/* Date + time chip — always visible in primary row */}
+        <div className="flex items-center gap-1 rounded-full border border-white/10 bg-white/[0.045] px-2 sm:px-2.5 h-8 shrink-0 text-[11px] font-mono">
+          <span className="text-gray-300">{gameDate}</span>
+          <span className="text-gray-600">·</span>
+          <span className="text-blue-300">{gameClock}</span>
         </div>
 
         <div className="flex-1" />
