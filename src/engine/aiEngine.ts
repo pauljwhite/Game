@@ -435,8 +435,6 @@ function adjustPrices(
 
     if (priceDelta !== 0) {
       const newPrice = Math.max(50, Math.round(route.priceEconomy * (1 + priceDelta)));
-      store.updateAIAirline(airline.id, {}); // trigger re-render
-      // Directly mutate via store's internal mechanism - we update through the route
       const updatedRoute: Route = { ...route, priceEconomy: newPrice, priceBusiness: Math.round(newPrice * 4 * targetMultiplier) };
       store.addAIRoute(updatedRoute); // addAIRoute overwrites if same id
     }

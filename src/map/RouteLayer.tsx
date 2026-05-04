@@ -22,16 +22,31 @@ const MAX_AI_ROUTE_ARCS = 120;
 const ARC_POINT_COUNT = 32;
 
 export const RouteLayer: React.FC<RouteLayerProps> = ({ map, mapVersion }) => {
-  const routes = useGameStore(s => s.routes);
-  const aiRoutes = useGameStore(s => s.aiRoutes);
-  const airports = useGameStore(s => s.airports);
-  const airlines = useGameStore(s => s.airlines);
-  const aiAirlines = useGameStore(s => s.aiAirlines);
+  // Subscribe ONLY to a stable string derived from geometry-relevant fields. With
+  // Zustand's default Object.is equality on the result, the component re-renders
+  // only when a route is added/removed/activated or an airline's color changes —
+  // NOT when revenue/profit/load-factor stats update every daily tick.
+  const geomKey = useGameStore(s => {
+    const parts: string[] = [];
+    for (const r of Object.values(s.routes)) {
+      const color = s.airlines[r.airlineId]?.color ?? '';
+      parts.push(`P${r.id}:${r.originIata}-${r.destinationIata}:${r.isActive ? 1 : 0}:${color}`);
+    }
+    for (const r of Object.values(s.aiRoutes)) {
+      const ai = s.aiAirlines[r.airlineId];
+      const color = ai?.color ?? '';
+      const insolvent = ai?.isInsolvent ? 1 : 0;
+      parts.push(`A${r.id}:${r.originIata}-${r.destinationIata}:${r.isActive ? 1 : 0}:${insolvent}:${color}`);
+    }
+    return parts.join('|');
+  });
   const selectedRouteId = useGameStore(s => s.selectedRouteId);
   const selectRoute = useGameStore(s => s.selectRoute);
   const openModalById = useGameStore(s => s.openModalById);
 
   const arcs: RouteArc[] = useMemo(() => {
+    // Pull fresh state lazily — referencing the dicts here doesn't cause renders.
+    const { routes, aiRoutes, airports, airlines, aiAirlines } = useGameStore.getState();
     const result: RouteArc[] = [];
     const bounds = map.getBounds().pad(0.35);
 
@@ -66,8 +81,7 @@ export const RouteLayer: React.FC<RouteLayerProps> = ({ map, mapVersion }) => {
     }
 
     return result;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [routes, aiRoutes, airports, airlines, aiAirlines, selectedRouteId, mapVersion]);
+  }, [geomKey, selectedRouteId, mapVersion, map]);
 
   void mapVersion;
 

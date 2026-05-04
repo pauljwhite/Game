@@ -22,19 +22,29 @@ function hashString(value: string): number {
 }
 
 export function PlaneLayer({ map, svgOverlay }: PlaneLayerProps) {
-  const routes = useGameStore(s => s.routes);
-  const aiRoutes = useGameStore(s => s.aiRoutes);
-  const aircraft = useGameStore(s => s.aircraft);
-  const aiAircraft = useGameStore(s => s.aiAircraft);
-  const airlines = useGameStore(s => s.airlines);
-  const aiAirlines = useGameStore(s => s.aiAirlines);
-  const airports = useGameStore(s => s.airports);
+  // Subscribe to a stable key that only changes when plane DOM topology needs to
+  // change: route assignments, active state, grounded state, color. Stats updates
+  // (revenue/profit/load) won't re-trigger DOM diffing every tick.
+  const planeKey = useGameStore(s => {
+    const parts: string[] = [];
+    const addRoute = (r: { id: string; aircraftId: string | null; isActive: boolean; airlineId: string }, prefix: string) => {
+      if (!r.aircraftId || !r.isActive) return;
+      const ac = s.aircraft[r.aircraftId] ?? s.aiAircraft[r.aircraftId];
+      if (!ac || ac.isGrounded) return;
+      const airline = s.airlines[ac.airlineId] ?? s.aiAirlines[ac.airlineId];
+      if (airline?.isInsolvent) return;
+      parts.push(`${prefix}${r.id}:${r.aircraftId}:${ac.typeId}:${airline?.color ?? ''}`);
+    };
+    for (const r of Object.values(s.routes)) addRoute(r, 'P');
+    for (const r of Object.values(s.aiRoutes)) addRoute(r, 'A');
+    return parts.join('|');
+  });
 
   const rafRef = useRef(0);
   const planeGroupRef = useRef<SVGGElement | null>(null);
   const planeElementsRef = useRef<Map<string, SVGGElement>>(new Map());
 
-  // Initialize/sync plane DOM nodes when routes change
+  // Initialize/sync plane DOM nodes when planeKey changes
   useEffect(() => {
     if (!planeGroupRef.current) {
       const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
@@ -46,7 +56,9 @@ export function PlaneLayer({ map, svgOverlay }: PlaneLayerProps) {
     const g = planeGroupRef.current;
     const positions = getPlanePositions();
 
-    // Add planes for active routes
+    // Pull fresh state lazily — these dict refs don't drive the effect.
+    const { routes, aiRoutes, aircraft, aiAircraft, airlines, aiAirlines, airports } = useGameStore.getState();
+
     const allRoutes = [
       ...Object.values(routes),
       ...Object.values(aiRoutes).slice(0, Math.max(0, MAX_RENDERED_PLANES - Object.keys(routes).length)),
@@ -120,7 +132,7 @@ export function PlaneLayer({ map, svgOverlay }: PlaneLayerProps) {
       }
     });
 
-  }, [routes, aiRoutes, aircraft, aiAircraft, airlines, aiAirlines, airports, svgOverlay]);
+  }, [planeKey, svgOverlay]);
 
   useEffect(() => {
     const group = planeGroupRef.current;
