@@ -132,7 +132,8 @@ export const createWorldSlice: StateCreator<GameStore, [['zustand/immer', never]
       ac.condition = Math.max(0, Math.min(100, ac.condition + conditionDelta));
       ac.maintenanceHoursOwed += hoursOwed;
       ac.totalFlightHours += hoursOwed;
-      const baseCrashRisk = Math.max(0, (40 - ac.condition) / 40) ** 2;
+      const condFrac = Math.max(0, 1 - ac.condition / 100);
+      const baseCrashRisk = condFrac ** 3;
       const agePenalty = Math.max(0, ((state.gameDay - ac.purchasedGameDay) / 365 - 15) * 0.01);
       ac.crashRisk = Math.min(0.95, baseCrashRisk + agePenalty);
       // Emergency grounding at critically low condition
@@ -160,7 +161,8 @@ export const createWorldSlice: StateCreator<GameStore, [['zustand/immer', never]
         ac.condition = Math.max(0, Math.min(100, ac.condition + conditionDelta));
         ac.maintenanceHoursOwed += hoursOwed;
         ac.totalFlightHours += hoursOwed;
-        const baseCrashRisk = Math.max(0, (40 - ac.condition) / 40) ** 2;
+        const condFrac = Math.max(0, 1 - ac.condition / 100);
+        const baseCrashRisk = condFrac ** 3;
         const agePenalty = Math.max(0, ((state.gameDay - ac.purchasedGameDay) / 365 - 15) * 0.01);
         ac.crashRisk = Math.min(0.95, baseCrashRisk + agePenalty);
         if (ac.condition < 15 && !ac.isGrounded && ac.status !== 'maintenance') {
