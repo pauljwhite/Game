@@ -38,6 +38,18 @@ html[data-theme='light'] .leaflet-container {
   pointer-events: none;
 }
 
+.news-ticker-track {
+  display: inline-flex;
+  min-width: max-content;
+  animation: news-ticker-scroll 28s linear infinite;
+  will-change: transform;
+}
+
+.news-ticker-item {
+  display: inline-block;
+  padding-right: 4rem;
+}
+
 @layer components {
   .glass-nav {
     border-color: rgba(255, 255, 255, 0.08);
@@ -307,6 +319,15 @@ html[data-theme='light'] .bg-white\/\[0\.07\] {
 @keyframes route-dash {
   to {
     stroke-dashoffset: -120;
+  }
+}
+
+@keyframes news-ticker-scroll {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
   }
 }
 
