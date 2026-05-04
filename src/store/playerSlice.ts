@@ -50,6 +50,7 @@ export interface PlayerSlice {
   setPRCampaign: (airlineId: string) => void;
   rebrandAirline: (newName: string | null, newColor: string | null, cost: number) => void;
   buyShares: (targetId: string, percent: number, source: 'market' | string) => void;
+  sellShares: (targetId: string, percent: number) => void;
   applyDividend: (amount: number) => void;
   setMaintenancePolicy: (policy: Airline['maintenancePolicy']) => void;
   setAircraftPolicyExclusion: (aircraftId: string, excluded: boolean) => void;
@@ -511,6 +512,35 @@ export const createPlayerSlice: StateCreator<GameStore, [['zustand/immer', never
     get().pushNewsItem(
       `You acquired ${percent}% stake in ${target.name} for ${
         new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(cost)
+      }.`,
+    );
+  },
+
+  sellShares: (targetId, percent) => {
+    const state = get();
+    const target = state.aiAirlines[targetId];
+    const player = state.airlines[PLAYER_ID];
+    if (!target || !player) return;
+    const currentStake = (target.shareholders ?? {})[PLAYER_ID] ?? 0;
+    if (percent <= 0 || percent > currentStake) return;
+
+    const baseValue = rawCompanyValue(target, state.aiAircraft, state.aiRoutes);
+    const proceeds = Math.round((baseValue / 100) * percent / 100_000) * 100_000;
+
+    set((s) => {
+      const t = s.aiAirlines[targetId];
+      const p = s.airlines[PLAYER_ID];
+      if (!t || !p) return;
+      t.shareholders ??= {};
+      const remaining = (t.shareholders[PLAYER_ID] ?? 0) - percent;
+      if (remaining <= 0) delete t.shareholders[PLAYER_ID];
+      else t.shareholders[PLAYER_ID] = remaining;
+      p.cashUSD += proceeds;
+    });
+
+    get().pushNewsItem(
+      `You sold ${percent}% stake in ${target.name} for ${
+        new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(proceeds)
       }.`,
     );
   },

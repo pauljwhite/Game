@@ -13,9 +13,11 @@ export const SharePurchaseModal: React.FC = () => {
   const aiRoutes      = useGameStore(s => s.aiRoutes);
   const closeModal    = useGameStore(s => s.closeModal);
   const buyShares     = useGameStore(s => s.buyShares);
+  const sellShares    = useGameStore(s => s.sellShares);
 
+  const [mode, setMode]               = useState<'buy' | 'sell'>('buy');
   const [percentInput, setPercentInput] = useState(5);
-  const [source, setSource] = useState<'market' | string>('market');
+  const [source, setSource]           = useState<'market' | string>('market');
 
   const targetId = modalPayload as string | null;
   const target   = targetId ? aiAirlines[targetId] : null;
@@ -24,41 +26,52 @@ export const SharePurchaseModal: React.FC = () => {
   if (!target || !player) return null;
 
   const shareholders = target.shareholders ?? {};
-  const playerStake = shareholders['player'] ?? 0;
-  const ownedTotal  = Object.values(shareholders).reduce((s, v) => s + v, 0);
-  const marketFloat = Math.max(0, 100 - ownedTotal);
+  const playerStake  = shareholders['player'] ?? 0;
+  const ownedTotal   = Object.values(shareholders).reduce((s, v) => s + v, 0);
+  const marketFloat  = Math.max(0, 100 - ownedTotal);
 
-  // Other AI shareholders who could sell
   const aiShareholders = Object.entries(shareholders)
     .filter(([id, pct]) => id !== 'player' && pct > 0)
     .map(([id, pct]) => ({ id, name: aiAirlines[id]?.name ?? id, pct }));
 
-  // Validate available amount from chosen source
+  const companyValue = useMemo(() => rawCompanyValue(target, aiAircraft, aiRoutes), [target, aiAircraft, aiRoutes]);
+  const pricePerPct  = companyValue / 100;
+
+  // ── Buy mode ────────────────────────────────────────────────────────────
   const maxFromSource = source === 'market'
     ? marketFloat
     : (shareholders[source] ?? 0);
-
-  const percent = Math.min(Math.max(1, percentInput), Math.min(50, maxFromSource));
-
+  const buyPercent = Math.min(Math.max(1, percentInput), Math.min(50, maxFromSource));
   const cost = useMemo(() => {
-    if (!target || percent <= 0) return 0;
-    return calculateSharePrice(percent, playerStake, target, aiAircraft, aiRoutes, source !== 'market');
-  }, [target, percent, playerStake, aiAircraft, aiRoutes, source]);
+    if (!target || buyPercent <= 0) return 0;
+    return calculateSharePrice(buyPercent, playerStake, target, aiAircraft, aiRoutes, source !== 'market');
+  }, [target, buyPercent, playerStake, aiAircraft, aiRoutes, source]);
+  const stakeAfterBuy    = playerStake + buyPercent;
+  const willHaveMajority = stakeAfterBuy >= 50;
+  const estDailyDiv      = (buyPercent / 100) * Math.max(0, target.lastDailyProfit ?? 0);
+  const canAfford        = player.cashUSD >= cost;
+  const hasSource        = maxFromSource >= 1;
 
-  const companyValue = useMemo(() => rawCompanyValue(target, aiAircraft, aiRoutes), [target, aiAircraft, aiRoutes]);
-  const pricePerPct  = companyValue / 100;
-  const stakeAfter   = playerStake + percent;
-  const willHaveMajority = stakeAfter >= 50;
-  const estDailyDiv  = (percent / 100) * Math.max(0, target.lastDailyProfit ?? 0);
-
-  const canAfford = player.cashUSD >= cost;
-  const hasSource = maxFromSource >= 1;
+  // ── Sell mode ────────────────────────────────────────────────────────────
+  const sellPercent  = Math.min(Math.max(1, percentInput), playerStake);
+  const proceeds     = Math.round((pricePerPct * sellPercent) / 100_000) * 100_000;
+  const lostDailyDiv = (sellPercent / 100) * Math.max(0, target.lastDailyProfit ?? 0);
+  const stakeAfterSell = playerStake - sellPercent;
+  const canSell      = playerStake >= 1;
 
   function handleBuy() {
-    if (!targetId || !canAfford || !hasSource || percent <= 0) return;
-    buyShares(targetId, percent, source);
+    if (!targetId || !canAfford || !hasSource || buyPercent <= 0) return;
+    buyShares(targetId, buyPercent, source);
     closeModal();
   }
+
+  function handleSell() {
+    if (!targetId || !canSell || sellPercent <= 0) return;
+    sellShares(targetId, sellPercent);
+    closeModal();
+  }
+
+  const isSell = mode === 'sell';
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center z-[9999]">
@@ -69,9 +82,26 @@ export const SharePurchaseModal: React.FC = () => {
         <div className="flex items-center gap-3 mb-4 pr-8">
           <span className="text-3xl">{target.logoEmoji}</span>
           <div>
-            <h2 className="text-xl font-bold text-white">Buy Shares in {target.name}</h2>
+            <h2 className="text-xl font-bold text-white">{target.name}</h2>
             <p className="text-gray-400 text-sm capitalize">{target.personality} · Hub: {target.hubIatas.join(', ')}</p>
           </div>
+        </div>
+
+        {/* Buy / Sell toggle */}
+        <div className="flex rounded-lg overflow-hidden border border-white/10 mb-4 text-sm font-semibold">
+          <button
+            onClick={() => { setMode('buy'); setPercentInput(5); }}
+            className={`flex-1 py-2 transition-colors ${!isSell ? 'bg-teal-700 text-white' : 'bg-white/5 text-gray-400 hover:bg-white/10'}`}
+          >
+            Buy Shares
+          </button>
+          <button
+            onClick={() => { setMode('sell'); setPercentInput(Math.min(5, playerStake)); }}
+            disabled={playerStake <= 0}
+            className={`flex-1 py-2 transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${isSell ? 'bg-orange-700 text-white' : 'bg-white/5 text-gray-400 hover:bg-white/10'}`}
+          >
+            Sell Shares{playerStake > 0 ? ` (${playerStake.toFixed(0)}%)` : ''}
+          </button>
         </div>
 
         {/* Company overview */}
@@ -96,7 +126,7 @@ export const SharePurchaseModal: React.FC = () => {
           </div>
         </div>
 
-        {/* Ownership breakdown */}
+        {/* Ownership bar */}
         <div className="mb-4">
           <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Ownership</div>
           <div className="flex rounded overflow-hidden h-3">
@@ -125,8 +155,8 @@ export const SharePurchaseModal: React.FC = () => {
           </div>
         </div>
 
-        {/* Source */}
-        {aiShareholders.length > 0 && (
+        {/* Buy: source selector */}
+        {!isSell && aiShareholders.length > 0 && (
           <div className="mb-4">
             <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Buy from</div>
             <div className="space-y-1.5">
@@ -139,7 +169,7 @@ export const SharePurchaseModal: React.FC = () => {
                 }`}
               >
                 <span className="font-medium">Market float</span>
-                <span>{marketFloat.toFixed(0)}% available · {formatCurrency(pricePerPct)}/% </span>
+                <span>{marketFloat.toFixed(0)}% available · {formatCurrency(pricePerPct)}/%</span>
               </button>
               {aiShareholders.map(s => (
                 <button
@@ -161,10 +191,13 @@ export const SharePurchaseModal: React.FC = () => {
 
         {/* Amount selector */}
         <div className="mb-4">
-          <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Amount to buy</div>
+          <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+            {isSell ? 'Amount to sell' : 'Amount to buy'}
+          </div>
           <div className="grid grid-cols-5 gap-1.5 mb-2">
             {QUICK_AMOUNTS.map(amt => {
-              const disabled = amt > maxFromSource;
+              const max   = isSell ? playerStake : Math.min(50, maxFromSource);
+              const disabled = amt > max;
               return (
                 <button
                   key={amt}
@@ -172,7 +205,7 @@ export const SharePurchaseModal: React.FC = () => {
                   disabled={disabled}
                   className={`flex-1 py-1.5 rounded text-xs font-semibold transition-colors ${
                     percentInput === amt && !disabled
-                      ? 'bg-blue-600 text-white'
+                      ? isSell ? 'bg-orange-600 text-white' : 'bg-blue-600 text-white'
                       : disabled
                         ? 'bg-gray-800 text-gray-600 cursor-not-allowed'
                         : 'bg-white/10 text-gray-300 hover:bg-white/15'
@@ -187,46 +220,76 @@ export const SharePurchaseModal: React.FC = () => {
             <input
               type="range"
               min={1}
-              max={Math.min(50, maxFromSource)}
+              max={isSell ? Math.max(1, playerStake) : Math.max(1, Math.min(50, maxFromSource))}
               step={1}
               value={percentInput}
               onChange={e => setPercentInput(Number(e.target.value))}
-              className="flex-1 accent-blue-500 h-1"
+              className={`flex-1 h-1 ${isSell ? 'accent-orange-500' : 'accent-blue-500'}`}
             />
-            <span className="text-white font-semibold text-sm w-12 text-right">{percent}%</span>
+            <span className="text-white font-semibold text-sm w-12 text-right">
+              {isSell ? sellPercent : buyPercent}%
+            </span>
           </div>
-          {maxFromSource < 1 && (
+          {!isSell && maxFromSource < 1 && (
             <p className="text-xs text-red-400 mt-1">No shares available from this source.</p>
+          )}
+          {isSell && !canSell && (
+            <p className="text-xs text-red-400 mt-1">You don't own any shares to sell.</p>
           )}
         </div>
 
         {/* Summary */}
         <div className="glass-card p-3 mb-4 space-y-1.5 text-sm">
-          <div className="flex justify-between">
-            <span className="text-gray-400">Cost</span>
-            <span className="text-white font-semibold">{formatCurrency(cost)}</span>
-          </div>
-          {estDailyDiv > 0 && (
-            <div className="flex justify-between">
-              <span className="text-gray-400">Est. daily dividend</span>
-              <span className="text-green-400">+{formatCurrency(estDailyDiv)}</span>
-            </div>
+          {isSell ? (
+            <>
+              <div className="flex justify-between">
+                <span className="text-gray-400">Proceeds</span>
+                <span className="text-green-400 font-semibold">+{formatCurrency(proceeds)}</span>
+              </div>
+              {lostDailyDiv > 0 && (
+                <div className="flex justify-between">
+                  <span className="text-gray-400">Lost daily dividend</span>
+                  <span className="text-red-400">−{formatCurrency(lostDailyDiv)}</span>
+                </div>
+              )}
+              <div className="flex justify-between">
+                <span className="text-gray-400">Your stake after</span>
+                <span className="text-white font-semibold">{stakeAfterSell.toFixed(0)}%</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-400">Cash after</span>
+                <span className="text-white">{formatCurrency(player.cashUSD + proceeds)}</span>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="flex justify-between">
+                <span className="text-gray-400">Cost</span>
+                <span className="text-white font-semibold">{formatCurrency(cost)}</span>
+              </div>
+              {estDailyDiv > 0 && (
+                <div className="flex justify-between">
+                  <span className="text-gray-400">Est. daily dividend</span>
+                  <span className="text-green-400">+{formatCurrency(estDailyDiv)}</span>
+                </div>
+              )}
+              <div className="flex justify-between">
+                <span className="text-gray-400">Your stake after</span>
+                <span className={`font-semibold ${willHaveMajority ? 'text-teal-300' : 'text-white'}`}>
+                  {stakeAfterBuy.toFixed(0)}%{willHaveMajority ? ' ✓ Majority' : ''}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-400">Cash after</span>
+                <span className={canAfford ? 'text-white' : 'text-red-400'}>
+                  {formatCurrency(player.cashUSD - cost)}
+                </span>
+              </div>
+            </>
           )}
-          <div className="flex justify-between">
-            <span className="text-gray-400">Your stake after</span>
-            <span className={`font-semibold ${willHaveMajority ? 'text-teal-300' : 'text-white'}`}>
-              {stakeAfter.toFixed(0)}%{willHaveMajority ? ' ✓ Majority' : ''}
-            </span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-gray-400">Cash after</span>
-            <span className={canAfford ? 'text-white' : 'text-red-400'}>
-              {formatCurrency(player.cashUSD - cost)}
-            </span>
-          </div>
         </div>
 
-        {!canAfford && (
+        {!isSell && !canAfford && (
           <p className="text-red-400 text-xs mb-3 text-center">
             Insufficient funds — need {formatCurrency(cost - player.cashUSD)} more.
           </p>
@@ -236,13 +299,23 @@ export const SharePurchaseModal: React.FC = () => {
           <button onClick={closeModal} className="flex-1 py-2.5 bg-gray-700 hover:bg-gray-600 text-gray-200 font-semibold rounded-lg transition-colors text-sm">
             Cancel
           </button>
-          <button
-            onClick={handleBuy}
-            disabled={!canAfford || !hasSource || percent <= 0}
-            className="flex-1 py-2.5 bg-teal-700 hover:bg-teal-600 text-white font-semibold rounded-lg transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            Buy {percent}% — {formatCurrency(cost)}
-          </button>
+          {isSell ? (
+            <button
+              onClick={handleSell}
+              disabled={!canSell || sellPercent <= 0}
+              className="flex-1 py-2.5 bg-orange-700 hover:bg-orange-600 text-white font-semibold rounded-lg transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Sell {sellPercent}% — +{formatCurrency(proceeds)}
+            </button>
+          ) : (
+            <button
+              onClick={handleBuy}
+              disabled={!canAfford || !hasSource || buyPercent <= 0}
+              className="flex-1 py-2.5 bg-teal-700 hover:bg-teal-600 text-white font-semibold rounded-lg transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Buy {buyPercent}% — {formatCurrency(cost)}
+            </button>
+          )}
         </div>
       </div>
     </div>

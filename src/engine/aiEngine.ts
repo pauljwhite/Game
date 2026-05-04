@@ -238,11 +238,28 @@ function tryDissolveInsolvent(store: StoreState, gameDay: number): void {
   });
 }
 
+function trySellAIShares(store: StoreState): void {
+  const { aiAirlines } = store;
+  Object.values(aiAirlines).forEach(seller => {
+    if (seller.cashUSD > 8_000_000) return; // only sell when cash is tight
+    // Find cross-holdings this airline has in other AI airlines
+    Object.entries(aiAirlines).forEach(([targetId, target]) => {
+      if (targetId === seller.id) return;
+      const stake = (target.shareholders ?? {})[seller.id] ?? 0;
+      if (stake <= 0) return;
+      // Sell half the stake (round to whole percent, minimum 1%)
+      const toSell = Math.max(1, Math.floor(stake / 2));
+      store.sellAIShares(seller.id, targetId, toSell);
+    });
+  });
+}
+
 export function runAITick(store: StoreState, gameDay: number): void {
   trySpawnNewAirline(store, gameDay);
   tryAIBuyout(store, gameDay);
   tryDissolveInsolvent(store, gameDay);
   runAIMaintenanceTick(store, gameDay);
+  trySellAIShares(store);
 
   const { aiAirlines, aiAircraft, aiRoutes, airports } = store;
   Object.values(aiAirlines).forEach(airline => {

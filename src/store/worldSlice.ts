@@ -4,6 +4,7 @@ import { AIRPORTS } from '@/data/airports';
 import { MAINTENANCE_TIERS, computeMaintenanceCost } from '@/utils/constants';
 import { AIRCRAFT_TYPES } from '@/data/aircraftTypes';
 import type { MaintenanceTier } from '@/types/aircraft';
+import { rawCompanyValue } from '@/engine/valuation';
 import type { GameStore } from './index';
 
 export interface WorldSlice {
@@ -39,6 +40,7 @@ export interface WorldSlice {
   updateAIRoute: (routeId: string, changes: Partial<Route>) => void;
   aiAcquireAirline: (buyerId: string, targetId: string, cost: number) => void;
   setShareholding: (targetId: string, ownerId: string, newPercent: number) => void;
+  sellAIShares: (sellerId: string, targetId: string, percent: number) => void;
   applyAIDividend: (airlineId: string, amount: number) => void;
   payDividend: (payerAirlineId: string, receiverOwnerId: string, amount: number) => void;
   ignoreAIGrounding: (aircraftId: string) => void;
@@ -318,6 +320,21 @@ export const createWorldSlice: StateCreator<GameStore, [['zustand/immer', never]
       } else {
         target.shareholders[ownerId] = newPercent;
       }
+    }),
+
+  sellAIShares: (sellerId, targetId, percent) =>
+    set((state) => {
+      const seller = state.aiAirlines[sellerId];
+      const target = state.aiAirlines[targetId];
+      if (!seller || !target) return;
+      const currentStake = (target.shareholders ?? {})[sellerId] ?? 0;
+      if (percent <= 0 || percent > currentStake) return;
+      const proceeds = Math.round((rawCompanyValue(target, state.aiAircraft, state.aiRoutes) / 100) * percent / 100_000) * 100_000;
+      target.shareholders ??= {};
+      const remaining = currentStake - percent;
+      if (remaining <= 0) delete target.shareholders[sellerId];
+      else target.shareholders[sellerId] = remaining;
+      seller.cashUSD += proceeds;
     }),
 
   applyAIDividend: (airlineId, amount) =>
