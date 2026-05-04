@@ -139,9 +139,9 @@ export const RouteDetailModal: React.FC = () => {
   }
 
   function handleToggleActive() {
-    if (!routeId) return;
+    if (!routeId || !route) return;
     if (!route.isActive && assignedRunwayLimited) return;
-    updateRoute(routeId, { isActive: !route!.isActive });
+    updateRoute(routeId, { isActive: !route.isActive });
   }
 
   function handleAssign(aircraftId: string) {
