@@ -192,7 +192,7 @@ export const TopBar: React.FC = () => {
   return (
     <header className="glass-nav border-b relative z-10 shrink-0">
       {/* Primary row: branding | date | speed | (nav on lg+) */}
-      <div className="min-h-12 flex items-center px-2 sm:px-3 gap-1.5 sm:gap-2">
+      <div className="min-h-12 flex items-center px-2 sm:px-3 gap-1 sm:gap-2">
         {/* Airline branding — clickable */}
         <div className="relative shrink-0">
           <button
@@ -201,7 +201,7 @@ export const TopBar: React.FC = () => {
           >
             <span className="text-lg">{playerAirline?.logoEmoji ?? '✈'}</span>
             <div className="leading-none min-w-0 text-left">
-              <div className="text-white font-bold text-xs truncate max-w-[72px] min-[380px]:max-w-[100px] sm:max-w-[160px]">
+              <div className="text-white font-bold text-xs truncate max-w-[56px] min-[380px]:max-w-[80px] sm:max-w-[160px]">
                 {playerAirline?.name ?? 'Mighty Airline Empire'}
               </div>
               <div className={`hidden min-[380px]:block text-xs font-mono ${(playerAirline?.cashUSD ?? 0) >= 0 ? 'text-green-400' : 'text-red-400'}`}>
@@ -214,7 +214,7 @@ export const TopBar: React.FC = () => {
         </div>
 
         {/* Date + time chip — always visible in primary row */}
-        <div className="flex items-center gap-1 rounded-full border border-white/10 bg-white/[0.045] px-2 sm:px-2.5 h-8 shrink-0 text-[11px] font-mono">
+        <div className="flex items-center gap-1 rounded-full border border-white/10 bg-white/[0.045] px-1.5 sm:px-2.5 h-7 sm:h-8 shrink-0 text-[10px] sm:text-[11px] font-mono">
           <span className="text-gray-300">{gameDate}</span>
           <span className="text-gray-600">·</span>
           <span className="text-blue-300">{gameClock}</span>
