@@ -37,6 +37,8 @@ export interface PlayerSlice {
   takeoverAirline: (targetAirlineId: string, aiAirlines: Record<string, Airline>, aiRoutes: Record<string, Route>, aiAircraft: Record<string, Aircraft>) => void;
   updateRouteStats: (routeId: string, stats: Partial<Route>) => void;
   updateAircraftCondition: (aircraftId: string, conditionDelta: number, hoursOwed: number) => void;
+  batchUpdatePlayerRoutes: (updates: Record<string, Partial<Route>>) => void;
+  batchUpdatePlayerAircraft: (updates: Record<string, { conditionDelta: number; hoursOwed: number }>) => void;
   groundAircraft: (aircraftId: string, reason?: string) => void;
   ignoreGrounding: (aircraftId: string) => void;
   startMaintenance: (aircraftId: string, gameDay: number, tier: MaintenanceTier) => void;
@@ -313,6 +315,34 @@ export const createPlayerSlice: StateCreator<GameStore, [['zustand/immer', never
         ac.groundedReason = `Critical condition (${ac.condition.toFixed(0)}%) — requires maintenance`;
         if (ac.assignedRouteId && state.routes[ac.assignedRouteId]) {
           state.routes[ac.assignedRouteId].isActive = false;
+        }
+      }
+    }),
+
+  batchUpdatePlayerRoutes: (updates) =>
+    set((state) => {
+      for (const [routeId, changes] of Object.entries(updates)) {
+        if (state.routes[routeId]) Object.assign(state.routes[routeId], changes);
+      }
+    }),
+
+  batchUpdatePlayerAircraft: (updates) =>
+    set((state) => {
+      for (const [acId, { conditionDelta, hoursOwed }] of Object.entries(updates)) {
+        const ac = state.aircraft[acId];
+        if (!ac) continue;
+        ac.condition = Math.max(0, Math.min(100, ac.condition + conditionDelta));
+        ac.maintenanceHoursOwed += hoursOwed;
+        ac.totalFlightHours += hoursOwed;
+        const baseCrashRisk = Math.max(0, (40 - ac.condition) / 40) ** 2;
+        const agePenalty = Math.max(0, ((state.gameDay - ac.purchasedGameDay) / 365 - 15) * 0.01);
+        ac.crashRisk = Math.min(0.95, baseCrashRisk + agePenalty);
+        if (ac.condition < 20 && !ac.isGrounded) {
+          ac.isGrounded = true;
+          ac.groundedReason = `Critical condition (${ac.condition.toFixed(0)}%) — requires maintenance`;
+          if (ac.assignedRouteId && state.routes[ac.assignedRouteId]) {
+            state.routes[ac.assignedRouteId].isActive = false;
+          }
         }
       }
     }),

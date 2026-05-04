@@ -150,6 +150,9 @@ export function runDailyTick(store: ReturnType<typeof import('@/store/index')['u
     let totalCrewCost = 0;
     let totalPassengers = 0;
 
+    const playerRouteUpdates: Record<string, Partial<typeof routes[string]>> = {};
+    const playerAcUpdates: Record<string, { conditionDelta: number; hoursOwed: number }> = {};
+
     const playerRouteIds = playerAirline.routeIds;
     playerRouteIds.forEach(routeId => {
       const route = routes[routeId];
@@ -206,12 +209,12 @@ export function runDailyTick(store: ReturnType<typeof import('@/store/index')['u
       const lfe = ecoCapacity > 0 ? ecoPax / ecoCapacity : 0;
       const lfb = bizCapacity > 0 ? bizPax / bizCapacity : 0;
 
-      store.updateRouteStats(routeId, {
+      playerRouteUpdates[routeId] = {
         dailyRevenue, dailyCost, dailyProfit,
         loadFactorEconomy: lfe, loadFactorBusiness: lfb,
         dailyPassengers: ecoPax + bizPax,
         flightDurationHours: flightCosts.flightDurationHours,
-      });
+      };
 
       totalRevenue += dailyRevenue;
       totalFuelCost += flightCosts.fuelCost * flightsPerDay;
@@ -220,9 +223,9 @@ export function runDailyTick(store: ReturnType<typeof import('@/store/index')['u
       totalCrewCost += flightCosts.crewCost * flightsPerDay;
       totalPassengers += ecoPax + bizPax;
 
-      // Condition degradation
+      // Condition degradation — accumulate, apply in one batch set()
       const conditionLoss = flightsPerDay * flightCosts.flightDurationHours * 0.08;
-      store.updateAircraftCondition(ac.id, -conditionLoss, flightsPerDay * flightCosts.flightDurationHours);
+      playerAcUpdates[ac.id] = { conditionDelta: -conditionLoss, hoursOwed: flightsPerDay * flightCosts.flightDurationHours };
 
       // Crash check — knownFaultRiskMod drastically raises risk when flying with ignored fault
       const riskMod = ac.knownFaultRiskMod ?? 1;
@@ -251,6 +254,9 @@ export function runDailyTick(store: ReturnType<typeof import('@/store/index')['u
       }
     });
 
+    store.batchUpdatePlayerRoutes(playerRouteUpdates);
+    store.batchUpdatePlayerAircraft(playerAcUpdates);
+
     const hubFees = (playerAirline.hubIatas.length * HUB_ANNUAL_FEE_USD) / 365;
     const totalCost = totalFuelCost + totalMaintenanceCost + totalAirportFees + totalCrewCost + hubFees;
     const netProfit = totalRevenue - totalCost;
@@ -261,6 +267,9 @@ export function runDailyTick(store: ReturnType<typeof import('@/store/index')['u
 
   // AI economics (same model as player, capped by seat capacity)
   const aiNetProfits: Record<string, number> = {};
+  const aiRouteUpdates: Record<string, Partial<typeof aiRoutes[string]>> = {};
+  const aiAcUpdates: Record<string, { conditionDelta: number; hoursOwed: number }> = {};
+
   Object.values(aiAirlines).forEach(aiAirline => {
     if (aiAirline.isInsolvent) return;
     let aiRevenue = 0;
@@ -309,17 +318,16 @@ export function runDailyTick(store: ReturnType<typeof import('@/store/index')['u
       aiCost += dailyCost;
       aiPax += dailyPax;
 
-      store.updateAIRoute(routeId, {
+      aiRouteUpdates[routeId] = {
         dailyRevenue, dailyCost, dailyProfit,
         loadFactorEconomy: loadFactor,
         dailyPassengers: dailyPax,
-      });
+      };
 
-      store.updateAIAircraftCondition(
-        ac.id,
-        -(flightsPerDay * flightCosts.flightDurationHours * 0.08),
-        flightsPerDay * flightCosts.flightDurationHours,
-      );
+      aiAcUpdates[ac.id] = {
+        conditionDelta: -(flightsPerDay * flightCosts.flightDurationHours * 0.08),
+        hoursOwed: flightsPerDay * flightCosts.flightDurationHours,
+      };
 
       // AI crash check — higher risk when flying with a known ignored fault
       const aiRiskMod = ac.knownFaultRiskMod ?? 1;
@@ -348,14 +356,7 @@ export function runDailyTick(store: ReturnType<typeof import('@/store/index')['u
     const willBeInsolvent = (aiAirline.cashUSD + netProfit) < -50_000_000;
     const wasInsolvent = aiAirline.isInsolvent;
 
-    store.updateAIAirlineStats(aiAirline.id, netProfit, aiPax, aiRevenue, aiCost, gameDay);
-
-    // Reputation recovery for AI airlines (same natural drift as player)
-    if (!aiAirline.isInsolvent && aiAirline.reputationScore < 100) {
-      store.updateAIAirline(aiAirline.id, {
-        reputationScore: Math.min(100, aiAirline.reputationScore + 0.3),
-      });
-    }
+    store.updateAIAirlineStats(aiAirline.id, netProfit, aiPax, aiRevenue, aiCost, gameDay, !aiAirline.isInsolvent);
 
     // First tick crossing into insolvency: ground the airline
     if (!wasInsolvent && willBeInsolvent) {
@@ -363,6 +364,9 @@ export function runDailyTick(store: ReturnType<typeof import('@/store/index')['u
       aiAirline.routeIds.forEach(rid => store.updateAIRoute(rid, { isActive: false }));
     }
   });
+
+  store.batchUpdateAIRoutes(aiRouteUpdates);
+  store.batchUpdateAIAircraft(aiAcUpdates);
 
   // Distribute dividends: deduct from payer, credit shareholder atomically
   let playerDividendTotal = 0;
