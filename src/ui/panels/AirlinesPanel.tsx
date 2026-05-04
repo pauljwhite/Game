@@ -130,18 +130,10 @@ export const AirlinesPanel: React.FC = () => {
                 <div className="mt-2 flex flex-col min-[380px]:flex-row gap-1.5">
                   {!airline.isInsolvent && (
                     <button
-                      onClick={e => { e.stopPropagation(); openModalById('sharesPurchase', { targetId: airline.id, mode: 'buy' }); }}
+                      onClick={e => { e.stopPropagation(); openModalById('sharesPurchase', airline.id); }}
                       className="flex-1 py-1 bg-teal-900/60 hover:bg-teal-800/80 text-teal-200 text-xs rounded transition-colors"
                     >
-                      Buy Shares
-                    </button>
-                  )}
-                  {playerStake > 0 && (
-                    <button
-                      onClick={e => { e.stopPropagation(); openModalById('sharesPurchase', { targetId: airline.id, mode: 'sell' }); }}
-                      className="flex-1 py-1 bg-orange-900/60 hover:bg-orange-800/80 text-orange-200 text-xs rounded transition-colors"
-                    >
-                      Sell ({playerStake.toFixed(0)}%)
+                      Shares{playerStake > 0 ? ` (${playerStake.toFixed(0)}%)` : ''}
                     </button>
                   )}
                   <button
