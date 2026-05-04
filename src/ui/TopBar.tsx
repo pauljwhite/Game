@@ -201,7 +201,7 @@ export const TopBar: React.FC = () => {
           >
             <span className="text-lg">{playerAirline?.logoEmoji ?? '✈'}</span>
             <div className="leading-none min-w-0 text-left">
-              <div className="text-white font-bold text-xs truncate max-w-[86px] min-[380px]:max-w-[110px] sm:max-w-[160px]">
+              <div className="text-white font-bold text-xs truncate max-w-[72px] min-[380px]:max-w-[100px] sm:max-w-[160px]">
                 {playerAirline?.name ?? 'Mighty Airline Empire'}
               </div>
               <div className={`hidden min-[380px]:block text-xs font-mono ${(playerAirline?.cashUSD ?? 0) >= 0 ? 'text-green-400' : 'text-red-400'}`}>
@@ -213,12 +213,12 @@ export const TopBar: React.FC = () => {
           {menuOpen && <AirlineMenu onClose={() => setMenuOpen(false)} />}
         </div>
 
-        {/* Date — hidden on xs, shown from sm */}
-        <div className="hidden sm:flex items-center gap-1 text-xs font-mono shrink-0">
-          <span className="text-gray-500">|</span>
-          <span className="text-gray-300">{gameDate}</span>
-          <span className="text-gray-600">·</span>
-          <span className="text-blue-300">{gameClock}</span>
+        {/* Date — shown inline on all sizes; clock only on sm+ */}
+        <div className="flex items-center gap-1 text-xs font-mono shrink-0">
+          <span className="text-gray-500 hidden sm:inline">|</span>
+          <span className="text-gray-300 text-[10px] sm:text-xs">{gameDate}</span>
+          <span className="text-gray-600 hidden sm:inline">·</span>
+          <span className="text-blue-300 hidden sm:inline">{gameClock}</span>
         </div>
 
         <div className="flex-1" />
@@ -246,11 +246,6 @@ export const TopBar: React.FC = () => {
 
       {/* Secondary nav row — visible below lg */}
       <div className="lg:hidden flex items-center gap-1 px-2 sm:px-3 pb-1.5 overflow-x-auto scrollbar-none">
-        <div className="flex sm:hidden items-center gap-1 rounded-full border border-white/10 bg-white/[0.045] px-2.5 h-10 shrink-0 text-[11px] font-mono">
-          <span className="text-gray-300">{gameDate}</span>
-          <span className="text-gray-600">Â·</span>
-          <span className="text-blue-300">{gameClock}</span>
-        </div>
         {NAV_ITEMS.map(item => (
           <button
             key={item.id}

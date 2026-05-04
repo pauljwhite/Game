@@ -16,6 +16,15 @@ export const SpeedControl: React.FC = () => {
   const setSpeed = useGameStore(s => s.setSpeed);
   const togglePause = useGameStore(s => s.togglePause);
 
+  const currentIndex = SPEEDS.findIndex(s => s.value === speed);
+  const currentLabel = SPEEDS[currentIndex]?.label ?? '1×';
+
+  const cycleSpeed = () => {
+    const nextIndex = (currentIndex + 1) % SPEEDS.length;
+    setSpeed(SPEEDS[nextIndex].value);
+    if (isPaused) togglePause();
+  };
+
   return (
     <div className="flex items-center gap-0.5 sm:gap-1 rounded-full border border-white/10 bg-white/[0.045] p-0.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]">
       <button
@@ -27,12 +36,27 @@ export const SpeedControl: React.FC = () => {
       >
         {isPaused ? '▶' : '⏸'}
       </button>
+
+      {/* Mobile: single cycle button showing current speed */}
+      <button
+        onClick={cycleSpeed}
+        title="Tap to change speed"
+        className={`sm:hidden rounded-full px-2 py-1 text-[11px] font-mono font-semibold transition-all active:scale-95 min-w-8 ${
+          !isPaused
+            ? 'bg-sky-400/85 text-white shadow-[0_4px_14px_rgba(56,189,248,0.2)]'
+            : 'text-slate-300 hover:bg-white/[0.1] hover:text-white'
+        }`}
+      >
+        {currentLabel}
+      </button>
+
+      {/* Desktop: full speed button row */}
       {SPEEDS.map(option => (
         <button
           key={option.value}
           onClick={() => setSpeed(option.value)}
           title={option.title}
-          className={`rounded-full px-1.5 sm:px-2 py-1 text-[11px] sm:text-xs font-mono transition-all active:scale-95 min-w-7 ${
+          className={`hidden sm:block rounded-full px-1.5 sm:px-2 py-1 text-[11px] sm:text-xs font-mono transition-all active:scale-95 min-w-7 ${
             speed === option.value && !isPaused
               ? 'bg-sky-400/85 text-white shadow-[0_4px_14px_rgba(56,189,248,0.2)]'
               : 'text-slate-300 hover:bg-white/[0.1] hover:text-white'
