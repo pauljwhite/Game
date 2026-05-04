@@ -133,6 +133,21 @@ export const AIRCRAFT_MIN_RUNWAY_M: Record<string, number> = {
   'arj21-900': 1900,
   c919: 2100,
   c929: 2800,
+  // Cessna
+  c208: 480,
+  c208b: 640,
+  // Piper
+  pa31: 600,
+  pa42: 900,
+  // Dassault
+  mercure: 2200,
+  falcon20: 1600,
+  falcon50: 1600,
+  falcon900: 1650,
+  falcon2000: 1700,
+  falcon7x: 1800,
+  falcon8x: 1900,
+  falcon10x: 2000,
 };
 
 export function estimateMinRunwayM(type: Omit<AircraftType, 'minRunwayM'>): number {

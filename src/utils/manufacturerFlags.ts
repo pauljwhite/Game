@@ -21,6 +21,9 @@ export const MANUFACTURER_FLAGS: Record<string, string> = {
   'Antonov':              '🇺🇦',
   'Tupolev':              '🇷🇺',
   'Yakovlev':             '🇷🇺',
+  'Cessna':               '🇺🇸',
+  'Piper':                '🇺🇸',
+  'Dassault':             '🇫🇷',
 };
 
 export function manufacturerFlag(manufacturer: string): string {
