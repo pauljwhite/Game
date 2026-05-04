@@ -144,28 +144,30 @@ const AirlineMenu: React.FC<{ onClose: () => void }> = ({ onClose }) => {
       {/* Actions */}
       <div className="px-4 py-3 space-y-2">
         <button
-          onClick={() => { onClose(); openModalById('settings'); }}
-          className="apple-button w-full py-2 text-xs font-semibold"
-        >
-          Settings
-        </button>
-        <button
           onClick={() => { onClose(); openModalById('rebrand'); }}
           className="apple-button w-full py-2 text-xs font-semibold"
         >
           ✏ Rebrand Airline
         </button>
-        <button
-          onClick={handleStartAgain}
-          onMouseLeave={() => setConfirming(false)}
-          className={`w-full py-2 rounded text-xs font-semibold transition-colors ${
-            confirming
-              ? 'apple-button-danger'
-              : 'apple-button w-full'
-          }`}
-        >
-          {confirming ? 'Click again to confirm — all progress lost' : 'Start Again'}
-        </button>
+        <div className="grid grid-cols-2 gap-2">
+          <button
+            onClick={() => { onClose(); openModalById('settings'); }}
+            className="apple-button w-full py-2 text-xs font-semibold"
+          >
+            Theme
+          </button>
+          <button
+            onClick={handleStartAgain}
+            onMouseLeave={() => setConfirming(false)}
+            className={`w-full py-2 rounded text-xs font-semibold transition-colors ${
+              confirming
+                ? 'apple-button-danger'
+                : 'apple-button'
+            }`}
+          >
+            {confirming ? 'Confirm reset' : 'Start Again'}
+          </button>
+        </div>
       </div>
     </div>
   );
