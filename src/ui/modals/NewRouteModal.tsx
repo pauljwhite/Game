@@ -12,6 +12,7 @@ import { LoadFactorBar } from '@/ui/components/LoadFactorBar';
 import { PriceInput } from '@/ui/components/PriceInput';
 import { formatCurrency } from '@/utils/format';
 import { manufacturerFlag } from '@/utils/manufacturerFlags';
+import { canAirportHandleAircraft, formatRunwayLength } from '@/utils/runway';
 
 function formatUSD(n: number): string {
   if (Math.abs(n) >= 1_000_000) return `$${(n / 1_000_000).toFixed(2)}M`;
@@ -104,13 +105,17 @@ export const NewRouteModal: React.FC = () => {
   const validDest = !!destAirport;
   const sameAirport = !!originAirport && !!destAirport && originAirport.iata === destAirport.iata;
   const outOfRange = distanceKm !== null && effectiveType !== null && distanceKm > effectiveType.rangeKm;
+  const originRunwayShort = !!originAirport && !!effectiveType && !canAirportHandleAircraft(originAirport, effectiveType);
+  const destRunwayShort = !!destAirport && !!effectiveType && !canAirportHandleAircraft(destAirport, effectiveType);
+  const runwayLimited = originRunwayShort || destRunwayShort;
 
   const canSubmit =
     validOrigin &&
     validDest &&
     !sameAirport &&
     distanceKm !== null &&
-    !outOfRange;
+    !outOfRange &&
+    !runwayLimited;
 
   // P&L preview — uses real demand model with price elasticity
   const pnlPreview = useMemo(() => {
@@ -262,6 +267,11 @@ export const NewRouteModal: React.FC = () => {
                   Exceeds {selectedType.model} range ({selectedType.rangeKm.toLocaleString()} km)
                 </span>
               )}
+              {runwayLimited && effectiveType && (
+                <span className="text-red-400 ml-2">
+                  Runway too short for {effectiveType.model} ({formatRunwayLength(effectiveType.minRunwayM)} required)
+                </span>
+              )}
             </div>
           )}
 
@@ -306,15 +316,20 @@ export const NewRouteModal: React.FC = () => {
               {availableAircraft.map(ac => {
                 const acType = AIRCRAFT_TYPES.find(t => t.id === ac.typeId);
                 const tooFar = distanceKm !== null && acType && distanceKm > acType.rangeKm;
+                const tooShort = !!acType && (
+                  (!!originAirport && !canAirportHandleAircraft(originAirport, acType)) ||
+                  (!!destAirport && !canAirportHandleAircraft(destAirport, acType))
+                );
+                const unavailable = !!tooFar || tooShort;
                 return (
                   <button
                     key={ac.id}
-                    onClick={() => { if (!tooFar) { setSelectedAircraftId(ac.id); setPendingPurchaseTypeId(null); } }}
-                    disabled={!!tooFar}
+                    onClick={() => { if (!unavailable) { setSelectedAircraftId(ac.id); setPendingPurchaseTypeId(null); } }}
+                    disabled={unavailable}
                     className={`w-full text-left px-3 py-2 rounded border text-sm transition-colors ${
                       selectedAircraftId === ac.id && !pendingType
                         ? 'border-sky-300/40 bg-sky-500/15 text-sky-200'
-                        : tooFar
+                        : unavailable
                         ? 'border-white/10 bg-white/[0.025] text-gray-600 cursor-not-allowed'
                         : 'border-white/10 bg-white/[0.055] text-gray-300 hover:border-white/20'
                     }`}
@@ -327,6 +342,7 @@ export const NewRouteModal: React.FC = () => {
                       </span>
                     )}
                     {tooFar && <span className="ml-2 text-red-500 text-xs">out of range</span>}
+                    {tooShort && <span className="ml-2 text-red-500 text-xs">runway too short</span>}
                   </button>
                 );
               })}
@@ -372,7 +388,9 @@ export const NewRouteModal: React.FC = () => {
                   {/* Aircraft list */}
                   <div className="flex-1 overflow-y-auto divide-y divide-white/10 bg-slate-950/25">
                     {shopVisible.map(t => {
-                      const fits      = distanceKm === null || t.rangeKm >= distanceKm;
+                      const fitsRange = distanceKm === null || t.rangeKm >= distanceKm;
+                      const fitsRunway = (!originAirport || canAirportHandleAircraft(originAirport, t)) && (!destAirport || canAirportHandleAircraft(destAirport, t));
+                      const fits      = fitsRange && fitsRunway;
                       const canAfford = playerCash >= t.purchasePrice;
                       const isPending = pendingPurchaseTypeId === t.id;
                       return (
@@ -393,7 +411,8 @@ export const NewRouteModal: React.FC = () => {
                           <div className="min-w-0">
                             <div className="flex items-center gap-2 flex-wrap">
                               <span className="text-white font-medium">{t.model}</span>
-                              {!fits && <span className="text-[10px] text-red-400 bg-red-900/40 px-1 rounded">out of range</span>}
+                              {!fitsRange && <span className="text-[10px] text-red-400 bg-red-900/40 px-1 rounded">out of range</span>}
+                              {fitsRange && !fitsRunway && <span className="text-[10px] text-red-400 bg-red-900/40 px-1 rounded">runway too short</span>}
                               {fits && <span className="text-[10px] text-green-400 bg-green-900/40 px-1 rounded">✓ in range</span>}
                               {isPending && <span className="text-[10px] text-amber-300 bg-amber-900/40 px-1 rounded">selected</span>}
                             </div>

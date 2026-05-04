@@ -20,6 +20,7 @@ export interface AircraftType {
   seatsEconomy: number;
   seatsBusiness: number;
   rangeKm: number;
+  minRunwayM: number;
   cruiseSpeedKmh: number;
   fuelBurnLPer100Km: number;
   purchasePrice: number;

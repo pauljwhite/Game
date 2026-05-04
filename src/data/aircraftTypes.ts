@@ -1,6 +1,7 @@
 import type { AircraftType } from '@/types/aircraft';
+import { AIRCRAFT_MIN_RUNWAY_M, estimateMinRunwayM } from './aircraftRunways';
 
-export const AIRCRAFT_TYPES: AircraftType[] = [
+const AIRCRAFT_TYPE_DATA: Omit<AircraftType, 'minRunwayM'>[] = [
   {
     id: 'b707-120',
     manufacturer: 'Boeing',
@@ -2128,3 +2129,8 @@ export const AIRCRAFT_TYPES: AircraftType[] = [
     profileId: 'wide-twin',
   },
 ];
+
+export const AIRCRAFT_TYPES: AircraftType[] = AIRCRAFT_TYPE_DATA.map(type => ({
+  ...type,
+  minRunwayM: AIRCRAFT_MIN_RUNWAY_M[type.id] ?? estimateMinRunwayM(type),
+}));

@@ -4,6 +4,7 @@ import { AIRCRAFT_TYPES } from '@/data/aircraftTypes';
 import { AircraftProfile } from '@/assets/profiles/AircraftProfile';
 import { gameDayFromMs } from '@/engine/economicsEngine';
 import { manufacturerFlag } from '@/utils/manufacturerFlags';
+import { formatRunwayLength } from '@/utils/runway';
 
 const EPOCH_YEAR = 1960;
 
@@ -166,6 +167,7 @@ export const BuyAircraftModal: React.FC = () => {
                         <div className="grid grid-cols-1 min-[380px]:grid-cols-2 sm:grid-cols-3 gap-x-3 gap-y-1 text-xs text-gray-400">
                           <span>Seats: <span className="text-gray-300">{type.seatsEconomy}Y{type.seatsBusiness > 0 ? `/${type.seatsBusiness}J` : ''}</span></span>
                           <span>Range: <span className="text-gray-300">{type.rangeKm.toLocaleString()} km</span></span>
+                          <span>Runway: <span className="text-gray-300">{formatRunwayLength(type.minRunwayM)}</span></span>
                           <span>Speed: <span className="text-gray-300">{type.cruiseSpeedKmh} km/h</span></span>
                           <span>Fuel: <span className="text-gray-300">{type.fuelBurnLPer100Km.toLocaleString()} L/100km</span></span>
                           <span>Maint: <span className="text-gray-300">{formatUSD(type.maintenanceCostPerHourUSD)}/hr</span></span>

@@ -6,6 +6,7 @@ import { computeFlightCost } from './economicsEngine';
 import { haversineKm } from '@/utils/geo';
 import { v4 as uuidv4 } from 'uuid';
 import { FUEL_PRICE_USD_PER_LITER, MAINTENANCE_TIERS, computeMaintenanceCost } from '@/utils/constants';
+import { canAirportHandleAircraft } from '@/utils/runway';
 
 type StoreState = ReturnType<typeof import('@/store/index')['useGameStore']['getState']>;
 
@@ -317,9 +318,11 @@ function tryExpand(
   if (!hubIata || !airports[hubIata]) return;
 
   const hubAirport = airports[hubIata];
+  if (!canAirportHandleAircraft(hubAirport, chosenType)) return;
   const candidateAirports = Object.values(airports)
     .filter(ap => {
       if (ap.iata === hubIata) return false;
+      if (!canAirportHandleAircraft(ap, chosenType)) return false;
       const dist = haversineKm(hubAirport.lat, hubAirport.lon, ap.lat, ap.lon);
       if (dist > chosenType.rangeKm || dist < 200) return false;
       // Don't duplicate existing AI routes from this hub

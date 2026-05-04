@@ -17,6 +17,7 @@ export interface Airport {
   country: string;
   lat: number;
   lon: number;
+  longestRunwayM?: number;
   size: AirportSize;
   region: AirportRegion;
   landingFee: number;

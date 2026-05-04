@@ -1,11 +1,12 @@
 import type { StateCreator } from 'zustand';
-import type { Airline, Aircraft, Route, AircraftType } from '@/types';
+import type { Airline, Aircraft, Route, AircraftType, Airport } from '@/types';
 import type { MaintenanceTier } from '@/types/aircraft';
 import { v4 as uuid } from 'uuid';
 import { haversineKm } from '@/utils/geo';
 import { AIRCRAFT_TYPES } from '@/data/aircraftTypes';
 import { computeMaintenanceCost, MAINTENANCE_TIERS } from '@/utils/constants';
 import { computeAircraftValue, calculateBuyoutPrice, rawCompanyValue, calculateSharePrice } from '@/engine/valuation';
+import { canAirportHandleAircraft } from '@/utils/runway';
 import type { GameStore } from './index';
 
 export interface RouteConfig {
@@ -26,7 +27,7 @@ export interface PlayerSlice {
   initPlayer: (settings: { name: string; color: string; emoji: string; startingCash: number; gameDay: number }) => void;
   buyAircraft: (typeId: string, aircraftType: AircraftType, gameDay: number) => string | null;
   sellAircraft: (aircraftId: string) => void;
-  createRoute: (config: RouteConfig, airports: Record<string, { lat: number; lon: number }>, gameDay: number) => string | null;
+  createRoute: (config: RouteConfig, airports: Record<string, Airport>, gameDay: number) => string | null;
   updateRoute: (routeId: string, changes: Partial<Route>) => void;
   deleteRoute: (routeId: string) => void;
   designateHub: (iata: string) => void;
@@ -138,6 +139,11 @@ export const createPlayerSlice: StateCreator<GameStore, [['zustand/immer', never
     const origin = airports[config.originIata];
     const dest = airports[config.destinationIata];
     if (!origin || !dest) return null;
+    if (config.aircraftId) {
+      const ac = get().aircraft[config.aircraftId];
+      const type = ac ? AIRCRAFT_TYPES.find(t => t.id === ac.typeId) : null;
+      if (type && (!canAirportHandleAircraft(origin, type) || !canAirportHandleAircraft(dest, type))) return null;
+    }
     const id = uuid();
     const distanceKm = haversineKm(origin.lat, origin.lon, dest.lat, dest.lon);
     set((state) => {
@@ -195,6 +201,12 @@ export const createPlayerSlice: StateCreator<GameStore, [['zustand/immer', never
     set((state) => {
       const ac = state.aircraft[aircraftId];
       if (!ac) return;
+      if (routeId && state.routes[routeId]) {
+        const type = AIRCRAFT_TYPES.find(t => t.id === ac.typeId);
+        const origin = state.airports[state.routes[routeId].originIata];
+        const dest = state.airports[state.routes[routeId].destinationIata];
+        if (type && (!canAirportHandleAircraft(origin, type) || !canAirportHandleAircraft(dest, type))) return;
+      }
       if (ac.assignedRouteId && state.routes[ac.assignedRouteId]) {
         state.routes[ac.assignedRouteId].aircraftId = null;
         state.routes[ac.assignedRouteId].isActive = false;

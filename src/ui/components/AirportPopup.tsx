@@ -2,6 +2,7 @@ import React from 'react';
 import { useGameStore } from '@/store';
 import { formatCurrency } from '@/utils/format';
 import { airportIcao } from '@/utils/airportSearch';
+import { formatRunwayLength } from '@/utils/runway';
 import { getAirportCapacity, airportSaturationMod } from '@/engine/demandModel';
 
 export const AirportPopup: React.FC = () => {
@@ -65,6 +66,8 @@ export const AirportPopup: React.FC = () => {
         <span className="text-white capitalize">{airport.size}</span>
         <span className="text-gray-400">Landing fee</span>
         <span className="text-white">{formatCurrency(airport.landingFee)}</span>
+        <span className="text-gray-400">Runway</span>
+        <span className="text-white">{formatRunwayLength(airport.longestRunwayM)}</span>
         <span className="text-gray-400">Region</span>
         <span className="text-white capitalize">{airport.region.replace('_', ' ')}</span>
         {isHub && (

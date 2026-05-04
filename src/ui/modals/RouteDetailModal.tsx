@@ -7,6 +7,7 @@ import { AIRCRAFT_TYPES } from '@/data/aircraftTypes';
 import { computeFlightCost } from '@/engine/economicsEngine';
 import { getPlayerMarketShare, getBaselineDailyPax, conditionDemandMod } from '@/engine/demandModel';
 import { HUB_DEMAND_BONUS, REPUTATION_DEMAND_FACTOR } from '@/utils/constants';
+import { canAirportHandleAircraft, formatRunwayLength } from '@/utils/runway';
 
 function LoadFactorPreviewRow({ label, current, predicted }: { label: string; current: number; predicted: number }) {
   const pct  = Math.round(Math.min(1, Math.max(0, predicted)) * 100);
@@ -109,13 +110,20 @@ export const RouteDetailModal: React.FC = () => {
   }, [priceEconomy, priceBusiness, flightsPerWeek, assignedAircraft, assignedType, origin, destination,
       routes, aiRoutes, airlines, aiAirlines, globalFuelPrice]);
 
-  // Aircraft eligible for this route: not in maintenance/crashed, range sufficient
+  const assignedRunwayLimited = !!assignedType && (
+    !canAirportHandleAircraft(origin, assignedType) ||
+    !canAirportHandleAircraft(destination, assignedType)
+  );
+
+  // Aircraft eligible for this route: not in maintenance/crashed, range and runway sufficient
   const eligibleAircraft = Object.values(aircraft).filter(ac => {
     if (ac.airlineId !== 'player') return false;
     if (ac.status === 'maintenance' || ac.status === 'crashed') return false;
     if (ac.id === route.aircraftId) return false; // already assigned
     const type = AIRCRAFT_TYPES.find(t => t.id === ac.typeId);
-    return type && type.rangeKm >= route.distanceKm;
+    return type && type.rangeKm >= route.distanceKm &&
+      canAirportHandleAircraft(origin, type) &&
+      canAirportHandleAircraft(destination, type);
   });
 
   const conditionColor =
@@ -132,6 +140,7 @@ export const RouteDetailModal: React.FC = () => {
 
   function handleToggleActive() {
     if (!routeId) return;
+    if (!route.isActive && assignedRunwayLimited) return;
     updateRoute(routeId, { isActive: !route!.isActive });
   }
 
@@ -187,6 +196,12 @@ export const RouteDetailModal: React.FC = () => {
           <div className="glass-card p-3">
             <div className="text-gray-400 text-xs mb-1">Distance</div>
             <div className="text-white font-semibold">{Math.round(route.distanceKm).toLocaleString()} km</div>
+          </div>
+          <div className="glass-card p-3">
+            <div className="text-gray-400 text-xs mb-1">Runway</div>
+            <div className={assignedRunwayLimited ? 'text-red-400 font-semibold' : 'text-white font-semibold'}>
+              {assignedType ? formatRunwayLength(assignedType.minRunwayM) : 'No aircraft'}
+            </div>
           </div>
           <div className="glass-card p-3">
             <div className="text-gray-400 text-xs mb-1">Daily Revenue</div>
@@ -269,13 +284,18 @@ export const RouteDetailModal: React.FC = () => {
               {assignedAircraft.isGrounded && (
                 <div className="text-yellow-400 text-xs">Grounded — route inactive until maintained</div>
               )}
+              {assignedRunwayLimited && assignedType && (
+                <div className="text-red-400 text-xs">
+                  Runway too short for {assignedType.model}; requires {formatRunwayLength(assignedType.minRunwayM)}.
+                </div>
+              )}
             </div>
           ) : (
             <div className="space-y-2">
               <p className="text-gray-500 text-xs">No aircraft assigned — route is inactive.</p>
               {eligibleAircraft.length === 0 ? (
                 <p className="text-gray-600 text-xs italic">
-                  No available aircraft with sufficient range ({Math.round(route.distanceKm).toLocaleString()} km).
+                  No available aircraft with sufficient range and runway compatibility.
                 </p>
               ) : (
                 <select
@@ -356,7 +376,11 @@ export const RouteDetailModal: React.FC = () => {
           </button>
           <button
             onClick={handleToggleActive}
+            disabled={!route.isActive && assignedRunwayLimited}
             className={`flex-1 py-2.5 font-semibold rounded-lg transition-colors text-sm ${
+              !route.isActive && assignedRunwayLimited
+                ? 'bg-gray-700 text-gray-500 cursor-not-allowed'
+                :
               route.isActive
                 ? 'bg-yellow-700 hover:bg-yellow-600 text-yellow-100'
                 : 'bg-green-700 hover:bg-green-600 text-green-100'

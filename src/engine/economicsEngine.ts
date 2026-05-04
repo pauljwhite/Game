@@ -9,6 +9,7 @@ import { getBaselineDailyPax, getCompetitivenessScore, conditionDemandMod, getAi
 import { runRandomEventsTick } from './randomEvents';
 import { AIRCRAFT_TYPES } from '@/data/aircraftTypes';
 import { formatCurrency } from '@/utils/format';
+import { canAirportHandleAircraft } from '@/utils/runway';
 
 const AIRCRAFT_TYPE_BY_ID = Object.fromEntries(
   AIRCRAFT_TYPES.map(type => [type.id, type]),
@@ -168,6 +169,7 @@ export function runDailyTick(store: ReturnType<typeof import('@/store/index')['u
 
       const aircraftType: AircraftType | undefined = AIRCRAFT_TYPE_BY_ID[ac.typeId];
       if (!aircraftType) return;
+      if (!canAirportHandleAircraft(origin, aircraftType) || !canAirportHandleAircraft(dest, aircraftType)) return;
 
       const flightCosts = computeFlightCost(route, ac, aircraftType, origin, dest, globalFuelPrice);
       const flightsPerDay = route.flightsPerWeek / 7;
@@ -276,6 +278,7 @@ export function runDailyTick(store: ReturnType<typeof import('@/store/index')['u
 
       const aircraftType: AircraftType | undefined = AIRCRAFT_TYPE_BY_ID[ac.typeId];
       if (!aircraftType) return;
+      if (!canAirportHandleAircraft(origin, aircraftType) || !canAirportHandleAircraft(dest, aircraftType)) return;
 
       const flightCosts = computeFlightCost(route, ac, aircraftType, origin, dest, globalFuelPrice);
       const flightsPerDay = route.flightsPerWeek / 7;

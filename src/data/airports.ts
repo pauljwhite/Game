@@ -1,6 +1,10 @@
 import type { Airport } from '@/types/airport';
+import { RUNWAY_LENGTHS_M } from './runwayLengths';
 
-const airport = (value: Airport): Airport => value;
+const airport = (value: Airport): Airport => ({
+  ...value,
+  longestRunwayM: RUNWAY_LENGTHS_M[value.iata],
+});
 
 // Generated from OurAirports public-domain airports.csv.
 // Filter: scheduled_service=yes, valid IATA code, and airport/seaplane types suitable for airline service.
