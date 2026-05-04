@@ -1,5 +1,9 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import L from 'leaflet';
+
+const TILE_URL_DARK  = 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
+const TILE_URL_LIGHT = 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
+const TILE_OPTIONS = { subdomains: 'abcd' as const, maxZoom: 19, noWrap: true };
 
 export interface LeafletMapHandle {
   map: L.Map | null;
@@ -11,9 +15,10 @@ const WORLD_BOUNDS = L.latLngBounds(
   L.latLng(85.05112878, 180),
 );
 
-export function useLeafletMap(containerId: string): LeafletMapHandle {
+export function useLeafletMap(containerId: string, isDark = true): LeafletMapHandle {
   const [map, setMap] = useState<L.Map | null>(null);
   const [svgOverlay, setSvgOverlay] = useState<SVGSVGElement | null>(null);
+  const tileLayerRef = useRef<L.TileLayer | null>(null);
 
   const syncSvgSize = useCallback((m: L.Map, svg: SVGSVGElement) => {
     const size = m.getSize();
@@ -40,14 +45,9 @@ export function useLeafletMap(containerId: string): LeafletMapHandle {
       worldCopyJump: false,
     });
 
-    L.tileLayer(
-      'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
-      {
-        subdomains: 'abcd',
-        maxZoom: 19,
-        noWrap: true,
-        bounds: WORLD_BOUNDS,
-      },
+    tileLayerRef.current = L.tileLayer(
+      isDark ? TILE_URL_DARK : TILE_URL_LIGHT,
+      { ...TILE_OPTIONS, bounds: WORLD_BOUNDS },
     ).addTo(m);
 
     // SVG overlay - absolutely positioned over the map container
@@ -92,6 +92,16 @@ export function useLeafletMap(containerId: string): LeafletMapHandle {
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [containerId]);
+
+  // Swap tile layer when theme changes after map init
+  useEffect(() => {
+    if (!map || !tileLayerRef.current) return;
+    tileLayerRef.current.remove();
+    tileLayerRef.current = L.tileLayer(
+      isDark ? TILE_URL_DARK : TILE_URL_LIGHT,
+      { ...TILE_OPTIONS, bounds: WORLD_BOUNDS },
+    ).addTo(map);
+  }, [isDark, map]);
 
   return { map, svgOverlay };
 }

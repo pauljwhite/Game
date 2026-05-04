@@ -3,11 +3,13 @@ import { useLeafletMap } from './useLeafletMap';
 import { RouteLayer } from './RouteLayer';
 import { AirportMarkers } from './AirportMarkers';
 import { PlaneLayer } from './PlaneLayer';
+import { useGameStore } from '@/store';
 
 const MAP_CONTAINER_ID = 'leaflet-map';
 
 export const GameMap: React.FC = () => {
-  const { map, svgOverlay } = useLeafletMap(MAP_CONTAINER_ID);
+  const isDark = useGameStore(s => s.themeMode) !== 'light';
+  const { map, svgOverlay } = useLeafletMap(MAP_CONTAINER_ID, isDark);
   const [mapVersion, setMapVersion] = useState(0);
   const listenerRef = useRef(false);
 
