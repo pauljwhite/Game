@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect } from 'react';
 import { useGameStore, useHydrated } from '@/store';
 import { TopBar } from './TopBar';
 import { BottomBar } from './BottomBar';
@@ -37,7 +37,6 @@ export const Layout: React.FC = () => {
   const newspaperQueue   = useGameStore(s => s.newspaperQueue);
   const openModalById    = useGameStore(s => s.openModalById);
   const themeMode        = useGameStore(s => s.themeMode);
-  const panelShellRef    = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     document.documentElement.dataset.theme = themeMode;
@@ -61,15 +60,6 @@ export const Layout: React.FC = () => {
 
   const PanelComponent = openPanel ? PANELS[openPanel] : null;
 
-  const handlePanelWheel = (event: React.WheelEvent<HTMLDivElement>) => {
-    const scrollPanel = panelShellRef.current?.querySelector<HTMLElement>('.panel-scroll');
-    if (!scrollPanel) return;
-
-    event.preventDefault();
-    event.stopPropagation();
-    scrollPanel.scrollTop += event.deltaY || event.deltaX;
-  };
-
   return (
     <div className={`flex flex-col h-[100svh] text-white overflow-hidden ${themeMode === 'light' ? 'bg-slate-100' : 'bg-slate-950'}`}>
       <TopBar />
@@ -81,11 +71,7 @@ export const Layout: React.FC = () => {
         </div>
 
         {PanelComponent && (
-          <div
-            ref={panelShellRef}
-            onWheelCapture={handlePanelWheel}
-            className={`absolute inset-x-2 top-2 bottom-2 z-20 rounded-2xl border border-white/10 backdrop-blur-sm shadow-2xl flex min-h-0 flex-col overflow-hidden md:inset-y-0 md:right-0 md:left-auto md:bottom-auto md:top-0 md:w-96 md:rounded-none md:border-y-0 md:border-r-0 md:border-l ${themeMode === 'light' ? 'bg-white/95' : 'bg-gray-950/95'}`}
-          >
+          <div className={`absolute inset-x-2 top-2 bottom-2 z-20 rounded-2xl border border-white/10 backdrop-blur-sm shadow-2xl flex min-h-0 flex-col overflow-hidden md:inset-y-0 md:right-0 md:left-auto md:w-96 md:rounded-none md:border-y-0 md:border-r-0 md:border-l ${themeMode === 'light' ? 'bg-white/95' : 'bg-gray-950/95'}`}>
             <PanelComponent />
           </div>
         )}
