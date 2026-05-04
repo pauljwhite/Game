@@ -2,13 +2,25 @@ import type { Route, Aircraft, AircraftType, Airport } from '@/types';
 import {
   HUB_COST_DISCOUNT, HUB_DEMAND_BONUS,
   HUB_ANNUAL_FEE_USD, CREW_COST_PER_FLIGHT_HOUR_USD,
-  REPUTATION_DEMAND_FACTOR, CRASH_DEMAND_PENALTY_PCT, DAY_MS,
+  REPUTATION_DEMAND_FACTOR, REP_PRICE_FACTOR, PRICE_ELASTICITY, CRASH_DEMAND_PENALTY_PCT, DAY_MS,
   MAINTENANCE_TIERS,
 } from '@/utils/constants';
-import { getBaselineDailyPax, getPlayerMarketShare, conditionDemandMod, getAirportCapacity, airportSaturationMod } from './demandModel';
+import { getBaselineDailyPax, getCompetitivenessScore, conditionDemandMod, getAirportCapacity, airportSaturationMod } from './demandModel';
 import { runRandomEventsTick } from './randomEvents';
 import { AIRCRAFT_TYPES } from '@/data/aircraftTypes';
 import { formatCurrency } from '@/utils/format';
+
+const AIRCRAFT_TYPE_BY_ID = Object.fromEntries(
+  AIRCRAFT_TYPES.map(type => [type.id, type]),
+);
+
+function repPricePremium(reputationScore: number): number {
+  return 1 + (reputationScore - 50) * REP_PRICE_FACTOR;
+}
+
+function routePairKey(origin: string, dest: string): string {
+  return origin < dest ? `${origin}:${dest}` : `${dest}:${origin}`;
+}
 
 export function computeFlightCost(
   route: Route,
@@ -41,6 +53,49 @@ export function runDailyTick(store: ReturnType<typeof import('@/store/index')['u
 
   const allRoutes = [...Object.values(routes), ...Object.values(aiRoutes)];
   const allAirlines = [...Object.values(airlines), ...Object.values(aiAirlines)];
+  const airlineById = new Map(allAirlines.map(airline => [airline.id, airline]));
+  const activeRoutesByPair = new Map<string, Route[]>();
+
+  allRoutes.forEach(route => {
+    if (!route.isActive) return;
+    const key = routePairKey(route.originIata, route.destinationIata);
+    const pairRoutes = activeRoutesByPair.get(key);
+    if (pairRoutes) pairRoutes.push(route);
+    else activeRoutesByPair.set(key, [route]);
+  });
+
+  const getMarketShare = (
+    routeOrigin: string,
+    routeDest: string,
+    price: number,
+    referencePrice?: number,
+    airlineId = 'player',
+    cabin: 'economy' | 'business' = 'economy',
+  ): number => {
+    const getPrice = (route: Route) => cabin === 'business' ? route.priceBusiness : route.priceEconomy;
+    const pairRoutes = activeRoutesByPair.get(routePairKey(routeOrigin, routeDest)) ?? [];
+    const routesOnPair = cabin === 'economy' ? pairRoutes : pairRoutes.filter(route => getPrice(route) > 0);
+    const airline = airlineById.get(airlineId);
+    const premium = airline ? repPricePremium(airline.reputationScore) : 1;
+    const effectivePrice = price / premium;
+
+    if (routesOnPair.length === 0) {
+      if (referencePrice && referencePrice > 0) {
+        return Math.min(5, Math.pow(effectivePrice / referencePrice, PRICE_ELASTICITY));
+      }
+      return 1;
+    }
+
+    const avgPrice = routesOnPair.reduce((sum, route) => sum + getPrice(route), 0) / routesOnPair.length;
+    const ownScore = getCompetitivenessScore(effectivePrice, avgPrice);
+    const totalScore = routesOnPair.reduce((sum, route) => {
+      const competitor = airlineById.get(route.airlineId);
+      const competitorPremium = competitor ? repPricePremium(competitor.reputationScore) : 1;
+      return sum + getCompetitivenessScore(getPrice(route) / competitorPremium, avgPrice);
+    }, 0);
+
+    return totalScore > 0 ? ownScore / totalScore : 1;
+  };
 
   // Build airport pax totals from last tick's dailyPassengers (used for saturation this tick)
   const prevAirportPax = state.airportDailyPax;
@@ -111,7 +166,7 @@ export function runDailyTick(store: ReturnType<typeof import('@/store/index')['u
         (dest.closedUntilGameDay !== undefined && dest.closedUntilGameDay >= gameDay)
       ) return;
 
-      const aircraftType: AircraftType | undefined = AIRCRAFT_TYPES.find(t => t.id === ac.typeId);
+      const aircraftType: AircraftType | undefined = AIRCRAFT_TYPE_BY_ID[ac.typeId];
       if (!aircraftType) return;
 
       const flightCosts = computeFlightCost(route, ac, aircraftType, origin, dest, globalFuelPrice);
@@ -131,14 +186,14 @@ export function runDailyTick(store: ReturnType<typeof import('@/store/index')['u
       const condMod = conditionDemandMod(ac.condition);
 
       // Economy class — independent demand
-      const ecoMarketShare = getPlayerMarketShare(route.originIata, route.destinationIata, route.priceEconomy, allAirlines, allRoutes, ecoReferencePrice);
+      const ecoMarketShare = getMarketShare(route.originIata, route.destinationIata, route.priceEconomy, ecoReferencePrice);
       const ecoCapacity = aircraftType.seatsEconomy * flightsPerDay;
       const ecoPax = Math.min(ecoCapacity, Math.floor(baselinePax * 0.90 * ecoMarketShare * repMod * crashPenalty * condMod));
 
       // Business class — independent demand (10% of route baseline, competes on biz price)
       const bizCapacity = aircraftType.seatsBusiness * flightsPerDay;
       const bizMarketShare = aircraftType.seatsBusiness > 0
-        ? getPlayerMarketShare(route.originIata, route.destinationIata, route.priceBusiness, allAirlines, allRoutes, bizReferencePrice, 'player', 'business')
+        ? getMarketShare(route.originIata, route.destinationIata, route.priceBusiness, bizReferencePrice, 'player', 'business')
         : 0;
       const bizPax = Math.min(bizCapacity, Math.floor(baselinePax * 0.10 * bizMarketShare * repMod * crashPenalty * condMod));
 
@@ -219,7 +274,7 @@ export function runDailyTick(store: ReturnType<typeof import('@/store/index')['u
       const dest = airports[route.destinationIata];
       if (!origin || !dest) return;
 
-      const aircraftType: AircraftType | undefined = AIRCRAFT_TYPES.find(t => t.id === ac.typeId);
+      const aircraftType: AircraftType | undefined = AIRCRAFT_TYPE_BY_ID[ac.typeId];
       if (!aircraftType) return;
 
       const flightCosts = computeFlightCost(route, ac, aircraftType, origin, dest, globalFuelPrice);
@@ -235,10 +290,7 @@ export function runDailyTick(store: ReturnType<typeof import('@/store/index')['u
       const baselinePax = getBaselineDailyPax(origin, dest) * aiSatMod;
       const aiRepMod = 1 + (aiAirline.reputationScore - 50) * REPUTATION_DEMAND_FACTOR;
       const aiCondMod = conditionDemandMod(ac.condition);
-      const marketShare = getPlayerMarketShare(
-        route.originIata, route.destinationIata,
-        route.priceEconomy, allAirlines, allRoutes, referencePrice,
-      );
+      const marketShare = getMarketShare(route.originIata, route.destinationIata, route.priceEconomy, referencePrice, aiAirline.id);
       const demandPax = Math.floor(baselinePax * marketShare * aiRepMod * aiCondMod);
 
       // Cap to actual seat capacity
@@ -270,7 +322,7 @@ export function runDailyTick(store: ReturnType<typeof import('@/store/index')['u
       const aiRiskMod = ac.knownFaultRiskMod ?? 1;
       if (ac.crashRisk > 0.001 && Math.random() < ac.crashRisk * aiRiskMod * flightsPerDay * 0.0008) {
         const crashRoute = route ? `${route.originIata}–${route.destinationIata}` : 'unknown route';
-        const acModel = AIRCRAFT_TYPES.find(t => t.id === ac.typeId)?.model ?? 'aircraft';
+        const acModel = AIRCRAFT_TYPE_BY_ID[ac.typeId]?.model ?? 'aircraft';
         store.triggerAICrash(ac.id);
         store.pushNewsItem(`CRASH: ${aiAirline.name} ${acModel} lost on ${crashRoute}.`);
         store.pushNewspaper({

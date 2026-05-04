@@ -1,7 +1,7 @@
 import type { Airline, Route, Aircraft, Airport, AircraftType } from '@/types';
 import type { MaintenanceTier } from '@/types/aircraft';
 import { AIRCRAFT_TYPES } from '@/data/aircraftTypes';
-import { getBaselineDailyPax, getPlayerMarketShare } from './demandModel';
+import { getBaselineDailyPax } from './demandModel';
 import { computeFlightCost } from './economicsEngine';
 import { haversineKm } from '@/utils/geo';
 import { v4 as uuidv4 } from 'uuid';
@@ -244,9 +244,6 @@ export function runAITick(store: StoreState, gameDay: number): void {
   runAIMaintenanceTick(store, gameDay);
 
   const { aiAirlines, aiAircraft, aiRoutes, airports } = store;
-  const allRoutes = [...Object.values(store.routes), ...Object.values(aiRoutes)];
-  const allAirlines = [...Object.values(store.airlines), ...Object.values(aiAirlines)];
-
   Object.values(aiAirlines).forEach(airline => {
     if (airline.isInsolvent) return;
 
@@ -258,11 +255,11 @@ export function runAITick(store: StoreState, gameDay: number): void {
     // Expand: buy aircraft + create route
     const expandInterval = AI_EXPAND_INTERVAL_DAYS[airline.personality] ?? 7;
     if (gameDay % expandInterval === (Math.abs(airline.id.charCodeAt(0)) % expandInterval)) {
-      tryExpand(airline, aiAircraft, aiRoutes, airports, allAirlines, allRoutes, store, gameDay);
+      tryExpand(airline, aiAircraft, aiRoutes, airports, store, gameDay);
     }
 
     // Price adjustment toward load factor target
-    adjustPrices(airline, aiRoutes, AI_PRICE_MULTIPLIER[airline.personality] ?? 1.0, AI_LOAD_TARGET[airline.personality] ?? 0.70, allAirlines, allRoutes, airports, store);
+    adjustPrices(airline, aiRoutes, AI_PRICE_MULTIPLIER[airline.personality] ?? 1.0, AI_LOAD_TARGET[airline.personality] ?? 0.70, store);
   });
 }
 
@@ -290,8 +287,6 @@ function tryExpand(
   _aiAircraft: Record<string, Aircraft>,
   aiRoutes: Record<string, Route>,
   airports: Record<string, Airport>,
-  allAirlines: Airline[],
-  allRoutes: Route[],
   store: StoreState,
   gameDay: number,
 ): void {
@@ -416,9 +411,6 @@ function tryExpand(
   });
   store.addAIAircraft(newAircraft);
   store.addAIRoute(newRoute);
-
-  void allAirlines;
-  void allRoutes;
 }
 
 function adjustPrices(
@@ -426,23 +418,11 @@ function adjustPrices(
   aiRoutes: Record<string, Route>,
   targetMultiplier: number,
   loadTarget: number,
-  allAirlines: Airline[],
-  allRoutes: Route[],
-  airports: Record<string, Airport>,
   store: StoreState,
 ): void {
   airline.routeIds.forEach(rid => {
     const route = aiRoutes[rid];
     if (!route) return;
-
-    const origin = airports[route.originIata];
-    const dest = airports[route.destinationIata];
-    if (!origin || !dest) return;
-
-    const marketShare = getPlayerMarketShare(
-      route.originIata, route.destinationIata,
-      route.priceEconomy, allAirlines, allRoutes,
-    );
 
     // If underperforming load target, lower prices slightly; if overperforming, raise
     const lf = route.loadFactorEconomy || 0.5;
@@ -457,7 +437,5 @@ function adjustPrices(
       const updatedRoute: Route = { ...route, priceEconomy: newPrice, priceBusiness: Math.round(newPrice * 4 * targetMultiplier) };
       store.addAIRoute(updatedRoute); // addAIRoute overwrites if same id
     }
-
-    void marketShare;
   });
 }

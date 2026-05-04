@@ -4,6 +4,7 @@ import { computeMaintenanceCost } from '@/utils/constants';
 
 // Global throttle — multiply all event probabilities by this factor (0.6 = 40% fewer events)
 const EVENT_SCALE = 0.6;
+const AIRPORT_EVENT_SAMPLE_SIZE = 220;
 
 function aiIgnoreGroundingChance(airline: { cashUSD: number; personality: string }): boolean {
   let chance = 0.15;
@@ -584,11 +585,17 @@ export function runRandomEventsTick(
 
   // ── Airport closure events ─────────────────────────────────────────────
   const { airports, gameDay } = store;
-  const airportList = Object.values(airports).filter(ap => {
-    // Skip airports already closed
-    if (ap.closedUntilGameDay && ap.closedUntilGameDay >= gameDay) return false;
-    return true;
-  });
+  const airportValues = Object.values(airports);
+  const airportChecks = Math.min(AIRPORT_EVENT_SAMPLE_SIZE, airportValues.length);
+  const airportOffset = (gameDay * AIRPORT_EVENT_SAMPLE_SIZE) % Math.max(1, airportValues.length);
+  const airportList: typeof airportValues = [];
+
+  for (let i = 0; i < airportChecks; i++) {
+    const airport = airportValues[(airportOffset + i) % airportValues.length];
+    if (!airport) continue;
+    if (airport.closedUntilGameDay && airport.closedUntilGameDay >= gameDay) continue;
+    airportList.push(airport);
+  }
 
   for (const airport of airportList) {
     for (const evt of AIRPORT_EVENTS) {
