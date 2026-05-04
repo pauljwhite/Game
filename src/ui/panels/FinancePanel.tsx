@@ -7,6 +7,7 @@ export const FinancePanel: React.FC = () => {
   const airlines   = useGameStore(s => s.airlines);
   const routes     = useGameStore(s => s.routes);
   const aiAirlines = useGameStore(s => s.aiAirlines);
+  const isDark     = useGameStore(s => s.themeMode) !== 'light';
 
   const closePanel = useGameStore(s => s.closePanel);
   const playerAirline = airlines['player'];
@@ -84,7 +85,7 @@ export const FinancePanel: React.FC = () => {
       <div>
         <div className="text-gray-400 text-xs mb-1">30-Day Profit Trend</div>
         <div className="overflow-hidden">
-          <PnLChart snapshots={playerAirline.dailyStats.slice(-30)} width={300} height={80} />
+          <PnLChart snapshots={playerAirline.dailyStats.slice(-30)} width={300} height={80} isDark={isDark} />
         </div>
       </div>
 

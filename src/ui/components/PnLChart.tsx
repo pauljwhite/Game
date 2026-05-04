@@ -5,9 +5,10 @@ interface PnLChartProps {
   snapshots: DailySnapshot[];
   width?: number;
   height?: number;
+  isDark?: boolean;
 }
 
-export const PnLChart: React.FC<PnLChartProps> = ({ snapshots, width = 300, height = 80 }) => {
+export const PnLChart: React.FC<PnLChartProps> = ({ snapshots, width = 300, height = 80, isDark = true }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
@@ -16,12 +17,17 @@ export const PnLChart: React.FC<PnLChartProps> = ({ snapshots, width = 300, heig
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
+    const bg       = isDark ? '#1f2937' : '#f1f5f9';
+    const emptyBg  = isDark ? '#374151' : '#e2e8f0';
+    const emptyTxt = isDark ? '#6b7280' : '#94a3b8';
+    const zeroDash = isDark ? '#374151' : '#cbd5e1';
+
     ctx.clearRect(0, 0, width, height);
 
     if (snapshots.length < 2) {
-      ctx.fillStyle = '#374151';
+      ctx.fillStyle = emptyBg;
       ctx.fillRect(0, 0, width, height);
-      ctx.fillStyle = '#6b7280';
+      ctx.fillStyle = emptyTxt;
       ctx.font = '11px sans-serif';
       ctx.textAlign = 'center';
       ctx.fillText('No data yet', width / 2, height / 2 + 4);
@@ -38,12 +44,12 @@ export const PnLChart: React.FC<PnLChartProps> = ({ snapshots, width = 300, heig
     const chartH = height - pad.top - pad.bottom;
 
     // Background
-    ctx.fillStyle = '#1f2937';
+    ctx.fillStyle = bg;
     ctx.fillRect(0, 0, width, height);
 
     // Zero line
     const zeroY = pad.top + chartH - ((0 - min) / range) * chartH;
-    ctx.strokeStyle = '#374151';
+    ctx.strokeStyle = zeroDash;
     ctx.lineWidth = 1;
     ctx.setLineDash([3, 3]);
     ctx.beginPath();
@@ -67,13 +73,14 @@ export const PnLChart: React.FC<PnLChartProps> = ({ snapshots, width = 300, heig
 
     // Fill under line
     const lastX = pad.left + chartW;
-    void (pad.top + chartH - ((lastProfit - min) / range) * chartH); // lastY unused; fill uses zeroY
+    void (pad.top + chartH - ((lastProfit - min) / range) * chartH);
     ctx.lineTo(lastX, zeroY);
     ctx.lineTo(pad.left, zeroY);
     ctx.closePath();
     ctx.fillStyle = lastProfit >= 0 ? 'rgba(34,197,94,0.15)' : 'rgba(239,68,68,0.15)';
     ctx.fill();
-  }, [snapshots, width, height]);
+  }, [snapshots, width, height, isDark]);
 
   return <canvas ref={canvasRef} width={width} height={height} className="rounded" />;
 };
+
