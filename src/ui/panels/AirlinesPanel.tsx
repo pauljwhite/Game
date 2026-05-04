@@ -33,7 +33,7 @@ export const AirlinesPanel: React.FC = () => {
   const insolventAI = allAI.filter(a => a.isInsolvent);
 
   return (
-    <div className="panel-scroll flex h-full min-h-0 flex-col overflow-y-auto overscroll-contain">
+    <div className="flex h-full min-h-0 flex-col">
       <div className="panel-header flex shrink-0 items-center justify-between">
         <h2 className="text-white font-bold">Airlines</h2>
         <button onClick={closePanel} aria-label="Close" className="w-10 h-10 sm:w-7 sm:h-7 flex items-center justify-center text-gray-400 hover:text-white hover:bg-gray-700 rounded transition-colors text-lg leading-none">×</button>
@@ -72,7 +72,7 @@ export const AirlinesPanel: React.FC = () => {
       })()}
 
       {/* AI airlines — scrollable */}
-      <div className="flex-none overflow-visible">
+      <div className="panel-scroll min-h-0 flex-1 overflow-y-auto overscroll-contain">
         {activeAI.map(airline => {
           const share = totalPax > 0 ? (getDailyPax(airline) / totalPax) * 100 : 0;
           const playerStake = (airline.shareholders ?? {})['player'] ?? 0;
