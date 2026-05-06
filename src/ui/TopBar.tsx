@@ -245,20 +245,22 @@ export const TopBar: React.FC = () => {
       </div>
 
       {/* Secondary nav row — visible below lg */}
-      <div className="lg:hidden flex items-center gap-1 px-2 sm:px-3 pb-1.5 overflow-x-auto scrollbar-none">
-        {NAV_ITEMS.map(item => (
-          <button
-            key={item.id}
-            onClick={() => togglePanel(item.id)}
-            className={`nav-pill whitespace-nowrap shrink-0 ${
-              openPanel === item.id
-                ? 'nav-pill-active'
-                : ''
-            }`}
-          >
-            {item.label}
-          </button>
-        ))}
+      <div className="lg:hidden flex justify-end px-2 sm:px-3 pb-1.5 overflow-x-auto scrollbar-none">
+        <nav className="ml-auto flex w-max items-center justify-end gap-1">
+          {NAV_ITEMS.map(item => (
+            <button
+              key={item.id}
+              onClick={() => togglePanel(item.id)}
+              className={`nav-pill whitespace-nowrap shrink-0 ${
+                openPanel === item.id
+                  ? 'nav-pill-active'
+                  : ''
+              }`}
+            >
+              {item.label}
+            </button>
+          ))}
+        </nav>
       </div>
     </header>
   );
