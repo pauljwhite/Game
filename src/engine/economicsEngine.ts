@@ -82,6 +82,7 @@ export function runDailyTick(store: ReturnType<typeof import('@/store/index')['u
 
     if (routesOnPair.length === 0) {
       if (referencePrice && referencePrice > 0) {
+        if (effectivePrice <= 0) return 5;
         return Math.min(5, Math.pow(effectivePrice / referencePrice, PRICE_ELASTICITY));
       }
       return 1;

@@ -13,6 +13,7 @@ export function getBaselineDailyPax(origin: Airport, dest: Airport): number {
 
 export function getCompetitivenessScore(price: number, avgCompetitorPrice: number): number {
   if (avgCompetitorPrice <= 0) return 1;
+  if (price <= 0) return 5;
   return Math.pow(price / avgCompetitorPrice, PRICE_ELASTICITY);
 }
 
@@ -55,6 +56,7 @@ export function getPlayerMarketShare(
 
   if (routesOnPair.length === 0) {
     if (referencePrice && referencePrice > 0) {
+      if (playerEffectivePrice <= 0) return 5;
       return Math.min(5, Math.pow(playerEffectivePrice / referencePrice, PRICE_ELASTICITY));
     }
     return 1;

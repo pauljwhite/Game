@@ -29,8 +29,9 @@ function repPricePremium(reputationScore: number): number {
 }
 
 function normalisePrice(value: number): number {
+  if (value <= 0) return 0;
   const step = value < 200 ? 5 : value < 1000 ? 10 : value < 5000 ? 50 : 100;
-  return Math.max(1, Math.round(value / step) * step);
+  return Math.max(0, Math.round(value / step) * step);
 }
 
 interface RouteEstimateInput {
@@ -95,6 +96,7 @@ function estimateRouteProfit(input: RouteEstimateInput): RouteEstimate {
     const ownEffectivePrice = price / playerPremium;
 
     if (cabinCompetitors.length === 0) {
+      if (ownEffectivePrice <= 0) return 5;
       return Math.min(5, Math.pow(ownEffectivePrice / referencePriceForCabin, PRICE_ELASTICITY));
     }
 
@@ -679,12 +681,12 @@ export const NewRouteModal: React.FC = () => {
                   <div>
                     <label className="text-gray-400 text-xs block mb-1">Economy (max {formatUSD(maxEco)})</label>
                     <PriceInput
-                      value={priceEconomy} min={1} max={maxEco}
+                      value={priceEconomy} min={0} max={maxEco}
                       onChange={v => setPriceEconomy(v)}
                     />
                     <input
                       type="range"
-                      min={1}
+                      min={0}
                       max={maxEco}
                       step={1}
                       value={Math.min(maxEco, priceEconomy)}
@@ -692,7 +694,7 @@ export const NewRouteModal: React.FC = () => {
                       className="mt-2 w-full accent-blue-500"
                     />
                     <div className="flex justify-between text-[10px] text-gray-500 mt-1">
-                      <span>$1</span>
+                      <span>$0</span>
                       {refPrice && <span>Suggested {formatUSD(refPrice)}</span>}
                       <span>{formatUSD(maxEco)}</span>
                     </div>
@@ -700,12 +702,12 @@ export const NewRouteModal: React.FC = () => {
                   <div>
                     <label className="text-gray-400 text-xs block mb-1">Business (max {formatUSD(maxBiz)})</label>
                     <PriceInput
-                      value={priceBusiness} min={1} max={maxBiz}
+                      value={priceBusiness} min={0} max={maxBiz}
                       onChange={v => setPriceBusiness(v)}
                     />
                     <input
                       type="range"
-                      min={1}
+                      min={0}
                       max={maxBiz}
                       step={1}
                       value={Math.min(maxBiz, priceBusiness)}
@@ -713,7 +715,7 @@ export const NewRouteModal: React.FC = () => {
                       className="mt-2 w-full accent-blue-500"
                     />
                     <div className="flex justify-between text-[10px] text-gray-500 mt-1">
-                      <span>$1</span>
+                      <span>$0</span>
                       {refPrice && <span>Suggested {formatUSD(refPrice * 4)}</span>}
                       <span>{formatUSD(maxBiz)}</span>
                     </div>
