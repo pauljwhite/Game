@@ -5,6 +5,7 @@ import { LoadFactorBar } from '@/ui/components/LoadFactorBar';
 import { PriceInput } from '@/ui/components/PriceInput';
 import { AIRCRAFT_TYPES } from '@/data/aircraftTypes';
 import { computeFlightCost } from '@/engine/economicsEngine';
+import { optimiseRouteSettings } from '@/engine/routeOptimizer';
 import { getPlayerMarketShare, getBaselineDailyPax, conditionDemandMod } from '@/engine/demandModel';
 import { HUB_DEMAND_BONUS, REPUTATION_DEMAND_FACTOR } from '@/utils/constants';
 import { canAirportHandleAircraft, formatRunwayLength } from '@/utils/runway';
@@ -69,6 +70,8 @@ export const RouteDetailModal: React.FC = () => {
   const aiAirlines  = useGameStore(s => s.aiAirlines);
   const aiRoutes    = useGameStore(s => s.aiRoutes);
   const globalFuelPrice = useGameStore(s => s.globalFuelPrice);
+  const airportDailyPax = useGameStore(s => s.airportDailyPax);
+  const gameDay = useGameStore(s => s.gameDay);
 
   const assignedAircraft = route.aircraftId ? aircraft[route.aircraftId] : null;
   const origin      = airports[route.originIata];
@@ -143,6 +146,28 @@ export const RouteDetailModal: React.FC = () => {
     updateRoute(routeId, { priceEconomy, priceBusiness: hasBusinessSeats ? priceBusiness : 0, flightsPerWeek });
     closeModal();
     selectRoute(null);
+  }
+
+  function handleOptimiseRoute() {
+    if (!route || !assignedAircraft || !assignedType || !origin || !destination) return;
+
+    const optimised = optimiseRouteSettings({
+      route: { ...route, flightsPerWeek, priceEconomy, priceBusiness: hasBusinessSeats ? priceBusiness : 0 },
+      aircraft: assignedAircraft,
+      aircraftType: assignedType,
+      origin,
+      destination,
+      globalFuelPrice,
+      playerAirline: airlines['player'],
+      competitorAirlines: { ...airlines, ...aiAirlines },
+      competitorRoutes: [...Object.values(routes), ...Object.values(aiRoutes)],
+      airportDailyPax,
+      gameDay,
+    });
+
+    setFlightsPerWeek(optimised.flightsPerWeek);
+    setPriceEconomy(optimised.priceEconomy);
+    setPriceBusiness(hasBusinessSeats ? optimised.priceBusiness : 0);
   }
 
   function handleToggleActive() {
@@ -331,13 +356,23 @@ export const RouteDetailModal: React.FC = () => {
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <span className="text-gray-300 text-sm">Pricing</span>
-              <button
-                type="button"
-                onClick={() => { setPriceEconomy(referencePrice); setPriceBusiness(hasBusinessSeats ? referencePrice * 4 : 0); }}
-                className="text-xs text-blue-400 hover:text-blue-300 transition-colors"
-              >
-                ↺ Reset to suggested ({formatCurrency(referencePrice)}{hasBusinessSeats ? ` / ${formatCurrency(referencePrice * 4)}` : ''})
-              </button>
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={handleOptimiseRoute}
+                  disabled={!assignedAircraft || !assignedType || assignedRunwayLimited}
+                  className="text-xs text-emerald-400 hover:text-emerald-300 transition-colors disabled:text-gray-600 disabled:cursor-not-allowed"
+                >
+                  Optimise
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setPriceEconomy(referencePrice); setPriceBusiness(hasBusinessSeats ? referencePrice * 4 : 0); }}
+                  className="text-xs text-blue-400 hover:text-blue-300 transition-colors"
+                >
+                  ↺ Reset to suggested ({formatCurrency(referencePrice)}{hasBusinessSeats ? ` / ${formatCurrency(referencePrice * 4)}` : ''})
+                </button>
+              </div>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>

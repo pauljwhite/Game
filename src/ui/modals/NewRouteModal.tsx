@@ -13,6 +13,7 @@ import { PriceInput } from '@/ui/components/PriceInput';
 import { formatCurrency } from '@/utils/format';
 import { manufacturerFlag } from '@/utils/manufacturerFlags';
 import { canAirportHandleAircraft, formatRunwayLength } from '@/utils/runway';
+import { optimiseRouteSettings } from '@/engine/routeOptimizer';
 
 const ALL_MANUFACTURERS = 'All';
 
@@ -142,11 +143,13 @@ function estimateRouteProfit(input: RouteEstimateInput): RouteEstimate {
 
 export const NewRouteModal: React.FC = () => {
   const airports    = useGameStore(s => s.airports);
+  const routes      = useGameStore(s => s.routes);
   const aircraft    = useGameStore(s => s.aircraft);
   const airlines    = useGameStore(s => s.airlines);
   const aiAirlines  = useGameStore(s => s.aiAirlines);
   const aiRoutes    = useGameStore(s => s.aiRoutes);
   const globalFuelPrice = useGameStore(s => s.globalFuelPrice);
+  const airportDailyPax = useGameStore(s => s.airportDailyPax);
   const modalPayload = useGameStore(s => s.modalPayload);
   const closeModal  = useGameStore(s => s.closeModal);
   const createRoute = useGameStore(s => s.createRoute);
@@ -257,13 +260,13 @@ export const NewRouteModal: React.FC = () => {
       gameDay,
       globalFuelPrice,
       playerAirline: airlines['player'],
-      competitorAirlines: aiAirlines,
-      competitorRoutes: Object.values(aiRoutes),
+      competitorAirlines: { ...airlines, ...aiAirlines },
+      competitorRoutes: [...Object.values(routes), ...Object.values(aiRoutes)],
     });
   }, [
     effectiveAc, effectiveType, originAirport, destAirport, distanceKm,
     flightsPerWeek, priceEconomy, priceBusiness, gameDay, globalFuelPrice,
-    airlines, aiAirlines, aiRoutes,
+    airlines, aiAirlines, routes, aiRoutes,
   ]);
 
   const optimisable = !!effectiveAc && !!effectiveType && !!originAirport && !!destAirport && !!distanceKm && !sameAirport && !outOfRange && !runwayLimited;
@@ -271,80 +274,39 @@ export const NewRouteModal: React.FC = () => {
   function handleOptimiseRoute() {
     if (!effectiveAc || !effectiveType || !originAirport || !destAirport || !distanceKm) return;
 
-    const baseEstimate = estimateRouteProfit({
+    const route: Route = {
+      id: 'preview',
+      airlineId: 'player',
+      originIata: originAirport.iata,
+      destinationIata: destAirport.iata,
+      aircraftId: effectiveAc.id,
+      flightsPerWeek,
+      priceEconomy,
+      priceBusiness,
+      isActive: true,
+      createdGameDay: gameDay,
+      distanceKm,
+      flightDurationHours: 0,
+      dailyPassengers: 0,
+      dailyRevenue: 0,
+      dailyCost: 0,
+      dailyProfit: 0,
+      loadFactorEconomy: 0,
+      loadFactorBusiness: 0,
+    };
+    const best = optimiseRouteSettings({
+      route,
       aircraft: effectiveAc,
       aircraftType: effectiveType,
       origin: originAirport,
       destination: destAirport,
-      distanceKm,
-      flightsPerWeek,
-      priceEconomy,
-      priceBusiness,
-      gameDay,
       globalFuelPrice,
       playerAirline: airlines['player'],
-      competitorAirlines: aiAirlines,
-      competitorRoutes: Object.values(aiRoutes),
+      competitorAirlines: { ...airlines, ...aiAirlines },
+      competitorRoutes: [...Object.values(routes), ...Object.values(aiRoutes)],
+      airportDailyPax,
+      gameDay,
     });
-
-    const ecoReference = baseEstimate.referencePrice;
-    const bizReference = ecoReference * 4;
-    const maxEco = ecoReference * 6;
-    const maxBiz = bizReference * 6;
-    const multipliers = [
-      0.15, 0.20, 0.25, 0.30, 0.35, 0.40, 0.45, 0.50, 0.60, 0.70,
-      0.80, 0.90, 1.00, 1.10, 1.20, 1.35, 1.50, 1.75, 2.00, 2.25,
-      2.50, 2.75, 3.00, 3.50, 4.00, 4.50, 5.00, 5.50, 6.00,
-    ];
-    const ecoPrices = Array.from(new Set([
-      priceEconomy,
-      ecoReference,
-      ...multipliers.map(multiplier => normalisePrice(ecoReference * multiplier)),
-    ])).filter(price => price >= 1 && price <= maxEco);
-    const bizPrices = effectiveType.seatsBusiness > 0
-      ? Array.from(new Set([
-          priceBusiness,
-          bizReference,
-          ...multipliers.map(multiplier => normalisePrice(bizReference * multiplier)),
-        ])).filter(price => price >= 1 && price <= maxBiz)
-      : [0];
-
-    let best = {
-      flightsPerWeek,
-      priceEconomy,
-      priceBusiness,
-      estimate: baseEstimate,
-    };
-
-    for (let candidateFlights = 1; candidateFlights <= 21; candidateFlights++) {
-      for (const candidateEco of ecoPrices) {
-        for (const candidateBiz of bizPrices) {
-          const estimate = estimateRouteProfit({
-            aircraft: effectiveAc,
-            aircraftType: effectiveType,
-            origin: originAirport,
-            destination: destAirport,
-            distanceKm,
-            flightsPerWeek: candidateFlights,
-            priceEconomy: candidateEco,
-            priceBusiness: candidateBiz,
-            gameDay,
-            globalFuelPrice,
-            playerAirline: airlines['player'],
-            competitorAirlines: aiAirlines,
-            competitorRoutes: Object.values(aiRoutes),
-          });
-          if (estimate.dailyProfit > best.estimate.dailyProfit) {
-            best = {
-              flightsPerWeek: candidateFlights,
-              priceEconomy: candidateEco,
-              priceBusiness: candidateBiz,
-              estimate,
-            };
-          }
-        }
-      }
-    }
 
     setFlightsPerWeek(best.flightsPerWeek);
     setPriceEconomy(best.priceEconomy);

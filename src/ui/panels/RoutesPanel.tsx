@@ -17,6 +17,8 @@ export const RoutesPanel: React.FC = () => {
   const aiAirlines = useGameStore(s => s.aiAirlines);
   const aiRoutes = useGameStore(s => s.aiRoutes);
   const globalFuelPrice = useGameStore(s => s.globalFuelPrice);
+  const airportDailyPax = useGameStore(s => s.airportDailyPax);
+  const gameDay = useGameStore(s => s.gameDay);
   const openModalById = useGameStore(s => s.openModalById);
   const selectRoute = useGameStore(s => s.selectRoute);
   const deleteRoute = useGameStore(s => s.deleteRoute);
@@ -54,8 +56,10 @@ export const RoutesPanel: React.FC = () => {
         destination,
         globalFuelPrice,
         playerAirline: airlines['player'],
-        competitorAirlines: aiAirlines,
-        competitorRoutes: Object.values(aiRoutes),
+        competitorAirlines: { ...airlines, ...aiAirlines },
+        competitorRoutes: [...Object.values(routes), ...Object.values(aiRoutes)],
+        airportDailyPax,
+        gameDay,
       });
 
       updates[route.id] = {

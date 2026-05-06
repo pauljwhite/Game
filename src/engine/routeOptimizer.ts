@@ -1,7 +1,7 @@
 import type { Aircraft, AircraftType, Airline, Airport, Route } from '@/types';
 import { PRICE_ELASTICITY, REP_PRICE_FACTOR, REPUTATION_DEMAND_FACTOR, HUB_DEMAND_BONUS } from '@/utils/constants';
 import { computeFlightCost } from './economicsEngine';
-import { conditionDemandMod, getBaselineDailyPax, getCompetitivenessScore } from './demandModel';
+import { airportSaturationMod, conditionDemandMod, getAirportCapacity, getBaselineDailyPax, getCompetitivenessScore } from './demandModel';
 
 export interface RouteOptimisationInput {
   route: Route;
@@ -13,6 +13,8 @@ export interface RouteOptimisationInput {
   playerAirline: Airline | undefined;
   competitorAirlines: Record<string, Airline>;
   competitorRoutes: Route[];
+  airportDailyPax?: Record<string, number>;
+  gameDay?: number;
 }
 
 export interface RouteOptimisationResult {
@@ -20,6 +22,16 @@ export interface RouteOptimisationResult {
   priceEconomy: number;
   priceBusiness: number;
   dailyProfit: number;
+}
+
+interface MarketContext {
+  pairCompetitors: Route[];
+  referencePrice: number;
+  referencePriceBiz: number;
+  baselinePax: number;
+  repMod: number;
+  condMod: number;
+  playerPremium: number;
 }
 
 function routePairKey(origin: string, dest: string): string {
@@ -30,19 +42,15 @@ function repPricePremium(reputationScore: number): number {
   return 1 + (reputationScore - 50) * REP_PRICE_FACTOR;
 }
 
-function normalisePrice(value: number): number {
+export function normaliseOptimisedPrice(value: number): number {
   if (value <= 0) return 0;
   const step = value < 200 ? 5 : value < 1000 ? 10 : value < 5000 ? 50 : 100;
   return Math.max(0, Math.round(value / step) * step);
 }
 
-function estimateOptimisedProfit(input: RouteOptimisationInput, flightsPerWeek: number, priceEconomy: number, priceBusiness: number) {
-  const { route, aircraft, aircraftType, origin, destination, globalFuelPrice, playerAirline, competitorAirlines, competitorRoutes } = input;
-  const candidateRoute = { ...route, flightsPerWeek, priceEconomy, priceBusiness };
-  const costs = computeFlightCost(candidateRoute, aircraft, aircraftType, origin, destination, globalFuelPrice);
-  const flightsPerDay = flightsPerWeek / 7;
-  const dailyCost = costs.totalCost * flightsPerDay;
-
+function getMarketContext(input: RouteOptimisationInput): MarketContext {
+  const { route, aircraft, aircraftType, origin, destination, globalFuelPrice, playerAirline, competitorRoutes } = input;
+  const costs = computeFlightCost(route, aircraft, aircraftType, origin, destination, globalFuelPrice);
   const totalSeats = aircraftType.seatsEconomy + aircraftType.seatsBusiness;
   const referencePrice = totalSeats > 0 ? Math.round(costs.totalCost / totalSeats * 1.3) : 200;
   const referencePriceBiz = referencePrice * 4;
@@ -53,71 +61,142 @@ function estimateOptimisedProfit(input: RouteOptimisationInput, flightsPerWeek: 
     routePairKey(candidate.originIata, candidate.destinationIata) === pair,
   );
 
-  const getMarketShare = (price: number, referencePriceForCabin: number, cabin: 'economy' | 'business'): number => {
-    const getPrice = (candidate: Route) => cabin === 'business' ? candidate.priceBusiness : candidate.priceEconomy;
-    const cabinCompetitors = cabin === 'economy'
-      ? pairCompetitors
-      : pairCompetitors.filter(candidate => getPrice(candidate) > 0);
-    const playerPremium = playerAirline ? repPricePremium(playerAirline.reputationScore) : 1;
-    const ownEffectivePrice = price / playerPremium;
-
-    if (cabinCompetitors.length === 0) {
-      if (ownEffectivePrice <= 0) return 5;
-      return Math.min(5, Math.pow(ownEffectivePrice / referencePriceForCabin, PRICE_ELASTICITY));
-    }
-
-    const competitorEffectivePrices = cabinCompetitors.map(candidate => {
-      const airline = competitorAirlines[candidate.airlineId];
-      const premium = airline ? repPricePremium(airline.reputationScore) : 1;
-      return getPrice(candidate) / premium;
-    });
-    const avgPrice = (ownEffectivePrice + competitorEffectivePrices.reduce((sum, price) => sum + price, 0)) / (competitorEffectivePrices.length + 1);
-    const ownScore = getCompetitivenessScore(ownEffectivePrice, avgPrice);
-    const competitorScore = competitorEffectivePrices.reduce((sum, price) => sum + getCompetitivenessScore(price, avgPrice), 0);
-    return ownScore / Math.max(ownScore + competitorScore, 0.0001);
-  };
-
-  const baselinePax = getBaselineDailyPax(origin, destination) * (origin.isHub || destination.isHub ? HUB_DEMAND_BONUS : 1);
+  const gameYear = 1960 + Math.floor((input.gameDay ?? 0) / 365);
+  const originUtil = (input.airportDailyPax?.[origin.iata] ?? 0) / getAirportCapacity(origin.size, gameYear);
+  const destUtil = (input.airportDailyPax?.[destination.iata] ?? 0) / getAirportCapacity(destination.size, gameYear);
+  const saturationMod = airportSaturationMod(originUtil) * airportSaturationMod(destUtil);
+  const baselinePax = getBaselineDailyPax(origin, destination) * (origin.isHub || destination.isHub ? HUB_DEMAND_BONUS : 1) * saturationMod;
   const repMod = playerAirline ? 1 + (playerAirline.reputationScore - 50) * REPUTATION_DEMAND_FACTOR : 1;
   const condMod = conditionDemandMod(aircraft.condition);
+  const playerPremium = playerAirline ? repPricePremium(playerAirline.reputationScore) : 1;
 
-  const ecoCapacity = aircraftType.seatsEconomy * flightsPerDay;
-  const ecoShare = getMarketShare(priceEconomy, referencePrice, 'economy');
-  const ecoPax = Math.min(ecoCapacity, Math.floor(baselinePax * 0.90 * ecoShare * repMod * condMod));
+  return { pairCompetitors, referencePrice, referencePriceBiz, baselinePax, repMod, condMod, playerPremium };
+}
 
-  const bizCapacity = aircraftType.seatsBusiness * flightsPerDay;
-  const bizShare = aircraftType.seatsBusiness > 0
-    ? getMarketShare(priceBusiness, referencePriceBiz, 'business')
-    : 0;
-  const bizPax = Math.min(bizCapacity, Math.floor(baselinePax * 0.10 * bizShare * repMod * condMod));
+function getCabinMarketShare(
+  input: RouteOptimisationInput,
+  context: MarketContext,
+  price: number,
+  referencePriceForCabin: number,
+  cabin: 'economy' | 'business',
+): number {
+  const getPrice = (candidate: Route) => cabin === 'business' ? candidate.priceBusiness : candidate.priceEconomy;
+  const cabinCompetitors = cabin === 'economy'
+    ? context.pairCompetitors
+    : context.pairCompetitors.filter(candidate => getPrice(candidate) > 0);
+  const ownEffectivePrice = price / context.playerPremium;
 
-  const dailyRevenue = ecoPax * priceEconomy + bizPax * priceBusiness;
-  return { dailyProfit: dailyRevenue - dailyCost, referencePrice };
+  if (cabinCompetitors.length === 0) {
+    if (ownEffectivePrice <= 0) return 5;
+    return Math.min(5, Math.pow(ownEffectivePrice / referencePriceForCabin, PRICE_ELASTICITY));
+  }
+
+  const competitorEffectivePrices = cabinCompetitors.map(candidate => {
+    const airline = input.competitorAirlines[candidate.airlineId];
+    const premium = airline ? repPricePremium(airline.reputationScore) : 1;
+    return getPrice(candidate) / premium;
+  });
+  const avgPrice = (ownEffectivePrice + competitorEffectivePrices.reduce((sum, competitorPrice) => sum + competitorPrice, 0)) / (competitorEffectivePrices.length + 1);
+  const ownScore = getCompetitivenessScore(ownEffectivePrice, avgPrice);
+  const competitorScore = competitorEffectivePrices.reduce((sum, competitorPrice) => sum + getCompetitivenessScore(competitorPrice, avgPrice), 0);
+  return ownScore / Math.max(ownScore + competitorScore, 0.0001);
+}
+
+function estimateCabinRevenue(
+  input: RouteOptimisationInput,
+  context: MarketContext,
+  flightsPerWeek: number,
+  price: number,
+  cabin: 'economy' | 'business',
+): number {
+  const seats = cabin === 'business' ? input.aircraftType.seatsBusiness : input.aircraftType.seatsEconomy;
+  if (seats <= 0) return 0;
+
+  const flightsPerDay = flightsPerWeek / 7;
+  const capacity = seats * flightsPerDay;
+  const referencePrice = cabin === 'business' ? context.referencePriceBiz : context.referencePrice;
+  const demandShare = cabin === 'business' ? 0.10 : 0.90;
+  const marketShare = getCabinMarketShare(input, context, price, referencePrice, cabin);
+  const pax = Math.min(capacity, Math.floor(context.baselinePax * demandShare * marketShare * context.repMod * context.condMod));
+  return pax * price;
+}
+
+function estimateOptimisedProfit(
+  input: RouteOptimisationInput,
+  context: MarketContext,
+  flightsPerWeek: number,
+  priceEconomy: number,
+  priceBusiness: number,
+) {
+  const costs = computeFlightCost({ ...input.route, flightsPerWeek, priceEconomy, priceBusiness }, input.aircraft, input.aircraftType, input.origin, input.destination, input.globalFuelPrice);
+  const dailyCost = costs.totalCost * (flightsPerWeek / 7);
+  const dailyRevenue =
+    estimateCabinRevenue(input, context, flightsPerWeek, priceEconomy, 'economy') +
+    estimateCabinRevenue(input, context, flightsPerWeek, priceBusiness, 'business');
+
+  return { dailyProfit: dailyRevenue - dailyCost };
+}
+
+function buildPriceCandidates(
+  input: RouteOptimisationInput,
+  context: MarketContext,
+  flightsPerWeek: number,
+  currentPrice: number,
+  cabin: 'economy' | 'business',
+): number[] {
+  const seats = cabin === 'business' ? input.aircraftType.seatsBusiness : input.aircraftType.seatsEconomy;
+  if (seats <= 0) return [0];
+
+  const referencePrice = cabin === 'business' ? context.referencePriceBiz : context.referencePrice;
+  const demandShare = cabin === 'business' ? 0.10 : 0.90;
+  const competitorPrices = context.pairCompetitors
+    .map(route => cabin === 'business' ? route.priceBusiness : route.priceEconomy)
+    .filter(price => price > 0);
+  const competitorMax = competitorPrices.length > 0 ? Math.max(...competitorPrices) : 0;
+  const dailyCapacity = seats * (flightsPerWeek / 7);
+  const unconstrainedDemand = context.baselinePax * demandShare * context.repMod * context.condMod;
+  const soloCapacityPrice = dailyCapacity > 0 && unconstrainedDemand > 0
+    ? referencePrice * Math.pow(Math.max(unconstrainedDemand / dailyCapacity, 0.0001), 1 / Math.abs(PRICE_ELASTICITY)) * context.playerPremium
+    : referencePrice;
+  const maxPrice = Math.max(referencePrice * 30, soloCapacityPrice * 2.5, competitorMax * 3, currentPrice, 500);
+  const prices = new Set<number>([0, currentPrice, referencePrice, soloCapacityPrice]);
+
+  for (let multiplier = 0.05; multiplier <= 3.0001; multiplier += 0.05) prices.add(referencePrice * multiplier);
+  for (let multiplier = 3.1; multiplier <= 10.0001; multiplier += 0.1) prices.add(referencePrice * multiplier);
+  for (let multiplier = 10.5; multiplier <= 30.0001; multiplier += 0.5) prices.add(referencePrice * multiplier);
+  competitorPrices.forEach(price => {
+    prices.add(price);
+    prices.add(price * 0.9);
+    prices.add(price * 1.1);
+  });
+  prices.add(maxPrice);
+
+  return Array.from(prices)
+    .map(normaliseOptimisedPrice)
+    .filter(price => price >= 0 && price <= maxPrice)
+    .sort((a, b) => a - b);
+}
+
+function optimiseCabinPrice(
+  input: RouteOptimisationInput,
+  context: MarketContext,
+  flightsPerWeek: number,
+  currentPrice: number,
+  cabin: 'economy' | 'business',
+): { price: number; revenue: number } {
+  let best = { price: currentPrice, revenue: estimateCabinRevenue(input, context, flightsPerWeek, currentPrice, cabin) };
+
+  for (const price of buildPriceCandidates(input, context, flightsPerWeek, currentPrice, cabin)) {
+    const revenue = estimateCabinRevenue(input, context, flightsPerWeek, price, cabin);
+    if (revenue > best.revenue) best = { price, revenue };
+  }
+
+  return best;
 }
 
 export function optimiseRouteSettings(input: RouteOptimisationInput): RouteOptimisationResult {
-  const baseEstimate = estimateOptimisedProfit(input, input.route.flightsPerWeek, input.route.priceEconomy, input.route.priceBusiness);
-  const ecoReference = baseEstimate.referencePrice;
-  const bizReference = ecoReference * 4;
-  const maxEco = ecoReference * 6;
-  const maxBiz = bizReference * 6;
-  const multipliers = [
-    0.15, 0.20, 0.25, 0.30, 0.35, 0.40, 0.45, 0.50, 0.60, 0.70,
-    0.80, 0.90, 1.00, 1.10, 1.20, 1.35, 1.50, 1.75, 2.00, 2.25,
-    2.50, 2.75, 3.00, 3.50, 4.00, 4.50, 5.00, 5.50, 6.00,
-  ];
-  const ecoPrices = Array.from(new Set([
-    input.route.priceEconomy,
-    ecoReference,
-    ...multipliers.map(multiplier => normalisePrice(ecoReference * multiplier)),
-  ])).filter(price => price >= 0 && price <= maxEco);
-  const bizPrices = input.aircraftType.seatsBusiness > 0
-    ? Array.from(new Set([
-        input.route.priceBusiness,
-        bizReference,
-        ...multipliers.map(multiplier => normalisePrice(bizReference * multiplier)),
-      ])).filter(price => price >= 0 && price <= maxBiz)
-    : [0];
+  const context = getMarketContext(input);
+  const baseEstimate = estimateOptimisedProfit(input, context, input.route.flightsPerWeek, input.route.priceEconomy, input.route.priceBusiness);
 
   let best: RouteOptimisationResult = {
     flightsPerWeek: input.route.flightsPerWeek,
@@ -127,18 +206,18 @@ export function optimiseRouteSettings(input: RouteOptimisationInput): RouteOptim
   };
 
   for (let candidateFlights = 1; candidateFlights <= 21; candidateFlights++) {
-    for (const candidateEco of ecoPrices) {
-      for (const candidateBiz of bizPrices) {
-        const estimate = estimateOptimisedProfit(input, candidateFlights, candidateEco, candidateBiz);
-        if (estimate.dailyProfit > best.dailyProfit) {
-          best = {
-            flightsPerWeek: candidateFlights,
-            priceEconomy: candidateEco,
-            priceBusiness: candidateBiz,
-            dailyProfit: estimate.dailyProfit,
-          };
-        }
-      }
+    const economy = optimiseCabinPrice(input, context, candidateFlights, input.route.priceEconomy, 'economy');
+    const business = input.aircraftType.seatsBusiness > 0
+      ? optimiseCabinPrice(input, context, candidateFlights, input.route.priceBusiness, 'business')
+      : { price: 0, revenue: 0 };
+    const estimate = estimateOptimisedProfit(input, context, candidateFlights, economy.price, business.price);
+    if (estimate.dailyProfit > best.dailyProfit) {
+      best = {
+        flightsPerWeek: candidateFlights,
+        priceEconomy: economy.price,
+        priceBusiness: business.price,
+        dailyProfit: estimate.dailyProfit,
+      };
     }
   }
 
