@@ -27,7 +27,10 @@ export const BottomBar: React.FC = () => {
     : isFleetAlert
       ? 'text-orange-200 font-semibold'
       : 'text-gray-300';
-  const tickerText = linkedArticleId ? `${latestNews.text} Read the article` : latestNews.text;
+  const tickerPrefix = isFleetAlert ? '‼️ ' : '';
+  const tickerText = linkedArticleId
+    ? `${tickerPrefix}${latestNews.text} Read the article`
+    : `${tickerPrefix}${latestNews.text}`;
 
   function handleClick() {
     if (linkedArticleId) openModalById('newspaper', { articleId: linkedArticleId, readOnly: true });
