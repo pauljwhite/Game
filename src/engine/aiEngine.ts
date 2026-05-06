@@ -115,12 +115,22 @@ function trySpawnNewAirline(store: StoreState, gameDay: number): void {
 }
 
 const AI_EXPAND_INTERVAL_DAYS: Record<string, number> = {
-  aggressive: 3,
-  balanced: 7,
-  budget: 7,
-  premium: 10,
-  conservative: 14,
+  aggressive: 5,
+  balanced: 8,
+  budget: 8,
+  premium: 12,
+  conservative: 16,
 };
+
+const AI_PURCHASE_CASH_SHARE: Record<string, number> = {
+  aggressive: 0.34,
+  balanced: 0.28,
+  budget: 0.30,
+  premium: 0.30,
+  conservative: 0.24,
+};
+
+const AI_MIN_CASH_RESERVE_AFTER_PURCHASE = 12_000_000;
 
 const AI_PRICE_MULTIPLIER: Record<string, number> = {
   aggressive: 0.90,
@@ -309,8 +319,13 @@ function tryExpand(
   gameDay: number,
 ): void {
   const currentGameYear = 1960 + Math.floor(gameDay / 365);
+  const maxPurchaseShare = AI_PURCHASE_CASH_SHARE[airline.personality] ?? 0.28;
   const affordableTypes = AIRCRAFT_TYPES
-    .filter(t => t.yearIntroduced <= currentGameYear && t.purchasePrice <= airline.cashUSD * 0.4)
+    .filter(t =>
+      t.yearIntroduced <= currentGameYear &&
+      t.purchasePrice <= airline.cashUSD * maxPurchaseShare &&
+      airline.cashUSD - t.purchasePrice >= AI_MIN_CASH_RESERVE_AFTER_PURCHASE
+    )
     .sort((a, b) => b.seatsEconomy - a.seatsEconomy);
 
   if (affordableTypes.length === 0) return;

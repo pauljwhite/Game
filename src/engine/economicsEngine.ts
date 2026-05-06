@@ -292,27 +292,35 @@ export function runDailyTick(store: ReturnType<typeof import('@/store/index')['u
       const flightCosts = computeFlightCost(route, ac, aircraftType, origin, dest, globalFuelPrice);
       const flightsPerDay = route.flightsPerWeek / 7;
 
-      // Reference price for solo-route elasticity (same formula as player)
+      // Reference prices: cost-per-seat basis; business at 4x economy.
       const totalSeats = aircraftType.seatsEconomy + aircraftType.seatsBusiness;
-      const referencePrice = totalSeats > 0 ? Math.round(flightCosts.totalCost / totalSeats * 1.4) : 200;
+      const ecoReferencePrice = totalSeats > 0 ? Math.round(flightCosts.totalCost / totalSeats * 1.3) : 200;
+      const bizReferencePrice = ecoReferencePrice * 4;
 
       const aiOriginUtil = (prevAirportPax[route.originIata] ?? 0) / getAirportCapacity(origin.size, currentYear);
       const aiDestUtil   = (prevAirportPax[route.destinationIata] ?? 0) / getAirportCapacity(dest.size, currentYear);
       const aiSatMod     = airportSaturationMod(aiOriginUtil) * airportSaturationMod(aiDestUtil);
-      const baselinePax = getBaselineDailyPax(origin, dest) * aiSatMod;
+      const baselinePax = getBaselineDailyPax(origin, dest) * (origin.isHub || dest.isHub ? HUB_DEMAND_BONUS : 1) * aiSatMod;
       const aiRepMod = 1 + (aiAirline.reputationScore - 50) * REPUTATION_DEMAND_FACTOR;
       const aiCondMod = conditionDemandMod(ac.condition);
-      const marketShare = getMarketShare(route.originIata, route.destinationIata, route.priceEconomy, referencePrice, aiAirline.id);
-      const demandPax = Math.floor(baselinePax * marketShare * aiRepMod * aiCondMod);
 
-      // Cap to actual seat capacity
+      // Economy and business cabins use independent demand, matching player route economics.
+      const ecoMarketShare = getMarketShare(route.originIata, route.destinationIata, route.priceEconomy, ecoReferencePrice, aiAirline.id);
       const ecoCapacity = Math.floor(aircraftType.seatsEconomy * flightsPerDay);
-      const dailyPax = Math.min(demandPax, ecoCapacity);
-      const loadFactor = ecoCapacity > 0 ? dailyPax / ecoCapacity : 0;
+      const ecoPax = Math.min(ecoCapacity, Math.floor(baselinePax * 0.90 * ecoMarketShare * aiRepMod * aiCondMod));
 
-      const dailyRevenue = dailyPax * route.priceEconomy;
+      const bizCapacity = Math.floor(aircraftType.seatsBusiness * flightsPerDay);
+      const bizMarketShare = aircraftType.seatsBusiness > 0
+        ? getMarketShare(route.originIata, route.destinationIata, route.priceBusiness, bizReferencePrice, aiAirline.id, 'business')
+        : 0;
+      const bizPax = Math.min(bizCapacity, Math.floor(baselinePax * 0.10 * bizMarketShare * aiRepMod * aiCondMod));
+
+      const dailyRevenue = ecoPax * route.priceEconomy + bizPax * route.priceBusiness;
       const dailyCost = flightCosts.totalCost * flightsPerDay;
       const dailyProfit = dailyRevenue - dailyCost;
+      const dailyPax = ecoPax + bizPax;
+      const loadFactorEconomy = ecoCapacity > 0 ? ecoPax / ecoCapacity : 0;
+      const loadFactorBusiness = bizCapacity > 0 ? bizPax / bizCapacity : 0;
 
       aiRevenue += dailyRevenue;
       aiCost += dailyCost;
@@ -320,7 +328,8 @@ export function runDailyTick(store: ReturnType<typeof import('@/store/index')['u
 
       aiRouteUpdates[routeId] = {
         dailyRevenue, dailyCost, dailyProfit,
-        loadFactorEconomy: loadFactor,
+        loadFactorEconomy,
+        loadFactorBusiness,
         dailyPassengers: dailyPax,
       };
 
