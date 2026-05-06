@@ -48,7 +48,7 @@ export interface PlayerSlice {
   applyReputationHit: (airlineId: string, delta: number) => void;
   recoverReputation: (airlineId: string) => void;
   setPRCampaign: (airlineId: string) => void;
-  rebrandAirline: (newName: string | null, newColor: string | null, cost: number) => void;
+  rebrandAirline: (newName: string | null, newColor: string | null, newLogo: string | null, cost: number) => void;
   buyShares: (targetId: string, percent: number, source: 'market' | string) => void;
   sellShares: (targetId: string, percent: number) => void;
   applyDividend: (amount: number) => void;
@@ -462,13 +462,14 @@ export const createPlayerSlice: StateCreator<GameStore, [['zustand/immer', never
       airline.reputationScore = Math.min(100, airline.reputationScore + 10);
     }),
 
-  rebrandAirline: (newName, newColor, cost) =>
+  rebrandAirline: (newName, newColor, newLogo, cost) =>
     set((state) => {
       const airline = state.airlines[PLAYER_ID];
       if (!airline || airline.cashUSD < cost) return;
       airline.cashUSD -= cost;
       if (newName) airline.name = newName;
       if (newColor) airline.color = newColor;
+      if (newLogo) airline.logoEmoji = newLogo;
     }),
 
   buyShares: (targetId, percent, source) => {

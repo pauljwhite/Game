@@ -3,6 +3,7 @@ import { useGameStore } from '@/store';
 import { formatCurrency, formatGameDate } from '@/utils/format';
 import { GAME_EPOCH_YEAR } from '@/utils/constants';
 import { startGameLoop } from '@/engine/gameLoop';
+import { AirlineLogo } from '@/ui/components/AirlineLogo';
 
 export const GameOverModal: React.FC = () => {
   const modalPayload = useGameStore(s => s.modalPayload);
@@ -55,8 +56,9 @@ export const GameOverModal: React.FC = () => {
 
           <div className="flex justify-between items-center text-sm">
             <span className="text-gray-400">Airline</span>
-            <span className="text-white font-semibold">
-              {playerAirline.logoEmoji} {playerAirline.name}
+            <span className="text-white font-semibold inline-flex items-center gap-1.5">
+              <AirlineLogo logo={playerAirline.logoEmoji} className="text-base" imageClassName="h-5 w-5 rounded-full object-cover border border-white/10 bg-white/10" />
+              {playerAirline.name}
             </span>
           </div>
 

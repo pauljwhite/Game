@@ -4,6 +4,7 @@ import { SpeedControl } from './components/SpeedControl';
 import { formatCurrency, formatGameClock, formatGameDate, formatNumber } from '@/utils/format';
 import { clearSave } from '@/utils/persistence';
 import type { PanelId } from '@/store/uiSlice';
+import { AirlineLogo } from './components/AirlineLogo';
 
 const NAV_ITEMS: { id: PanelId; label: string }[] = [
   { id: 'fleet', label: 'Fleet' },
@@ -68,7 +69,7 @@ const AirlineMenu: React.FC<{ onClose: () => void }> = ({ onClose }) => {
       {/* Header */}
       <div className="px-4 py-3 border-b border-white/10 bg-white/[0.035]" style={{ borderLeftColor: player.color, borderLeftWidth: 3 }}>
         <div className="flex items-center gap-2">
-          <span className="text-lg">{player.logoEmoji}</span>
+          <AirlineLogo logo={player.logoEmoji} className="text-lg" />
           <div>
             <div className="text-white font-bold text-sm">{player.name}</div>
             <div className="text-gray-500 text-xs">Founded {formatGameDate(0)} · IATA: {player.iataPrefix}</div>
@@ -199,7 +200,7 @@ export const TopBar: React.FC = () => {
             onClick={() => setMenuOpen(v => !v)}
             className="flex items-center gap-1.5 min-w-0 rounded-full border border-white/10 bg-white/[0.045] px-2 py-1 transition-all hover:bg-white/[0.09]"
           >
-            <span className="text-lg">{playerAirline?.logoEmoji ?? '✈'}</span>
+            <AirlineLogo logo={playerAirline?.logoEmoji ?? '✈'} className="text-lg" imageClassName="h-6 w-6 rounded-full object-cover border border-white/10 bg-white/10" />
             <div className="leading-none min-w-0 text-left">
               <div className="text-white font-bold text-xs truncate max-w-[56px] min-[380px]:max-w-[80px] sm:max-w-[160px]">
                 {playerAirline?.name ?? 'Mighty Airline Empire'}

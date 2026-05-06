@@ -6,6 +6,7 @@ import { AIRPORTS } from '@/data/airports';
 import { AIRCRAFT_TYPES } from '@/data/aircraftTypes';
 import { AirportSearchInput } from '@/ui/components/AirportSearchInput';
 import { findAirportByQuery } from '@/utils/airportSearch';
+import { AirlineLogoPicker } from '@/ui/components/AirlineLogoPicker';
 
 const DIFFICULTIES = [
   { id: 'easy',   label: 'Easy',   cash: 50_000_000, desc: '$50M starting cash' },
@@ -31,6 +32,7 @@ function yearToGameTimeMs(year: number): number {
 export const NewGameModal: React.FC = () => {
   const [airlineName, setAirlineName] = useState('My Airline');
   const [airlineColor, setAirlineColor] = useState('#3b82f6');
+  const [airlineLogo, setAirlineLogo] = useState('✈️');
   const [hubQuery, setHubQuery] = useState('JFK');
   const [difficulty, setDifficulty] = useState<'easy' | 'normal' | 'hard'>('normal');
   const [startingYear, setStartingYear] = useState(1960);
@@ -65,7 +67,7 @@ export const NewGameModal: React.FC = () => {
     const settings: GameSettings = {
       playerAirlineName:  airlineName,
       playerAirlineColor: airlineColor,
-      playerAirlineEmoji: '✈',
+      playerAirlineEmoji: airlineLogo,
       startingCash,
       difficulty,
       aiCount:            6,
@@ -75,7 +77,7 @@ export const NewGameModal: React.FC = () => {
     initWorld();
     initGameSettings(settings);
     advanceTime(startingGameTimeMs, startingGameDay);
-    initPlayer({ name: airlineName, color: airlineColor, emoji: '✈', startingCash, gameDay: startingGameDay });
+    initPlayer({ name: airlineName, color: airlineColor, emoji: airlineLogo, startingCash, gameDay: startingGameDay });
     setAirportHub(startingHub.iata, true);
     designateHub(startingHub.iata);
 
@@ -146,6 +148,8 @@ export const NewGameModal: React.FC = () => {
               <span className="text-gray-400 text-sm">{airlineColor}</span>
             </div>
           </div>
+
+          <AirlineLogoPicker value={airlineLogo} onChange={setAirlineLogo} />
 
           <AirportSearchInput
             label="Starting Hub"

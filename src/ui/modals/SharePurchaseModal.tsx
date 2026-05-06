@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { useGameStore } from '@/store';
 import { formatCurrency } from '@/utils/format';
 import { calculateSharePrice, rawCompanyValue } from '@/engine/valuation';
+import { AirlineLogo } from '@/ui/components/AirlineLogo';
 
 const QUICK_AMOUNTS = [1, 5, 10, 25, 50];
 
@@ -81,7 +82,7 @@ export const SharePurchaseModal: React.FC = () => {
 
         {/* Header */}
         <div className="flex items-center gap-3 mb-4 pr-8">
-          <span className="text-3xl">{target.logoEmoji}</span>
+          <AirlineLogo logo={target.logoEmoji} className="text-3xl" imageClassName="h-12 w-12 rounded-full object-cover border border-white/10 bg-white/10" />
           <div>
             <h2 className="text-xl font-bold text-white">{target.name}</h2>
             <p className="text-gray-400 text-sm capitalize">{target.personality} · Hub: {target.hubIatas.join(', ')}</p>

@@ -3,6 +3,8 @@ import { useGameStore } from '@/store';
 import { formatCurrency } from '@/utils/format';
 import { AIRCRAFT_TYPES } from '@/data/aircraftTypes';
 import { computeAircraftValue } from '@/engine/valuation';
+import { AirlineLogo } from '@/ui/components/AirlineLogo';
+import { AirlineLogoPicker } from '@/ui/components/AirlineLogoPicker';
 
 function computeCompanyValue(
   cashUSD: number,
@@ -33,6 +35,9 @@ function nameCost(companyValue: number): number {
 function bothCost(companyValue: number): number {
   return Math.round(Math.max(1_200_000, companyValue * 0.05));
 }
+function logoCost(companyValue: number): number {
+  return Math.round(Math.max(500_000, companyValue * 0.02));
+}
 
 export const RebrandModal: React.FC = () => {
   const airlines       = useGameStore(s => s.airlines);
@@ -46,6 +51,7 @@ export const RebrandModal: React.FC = () => {
 
   const [newName,  setNewName]  = useState(player?.name  ?? '');
   const [newColor, setNewColor] = useState(player?.color ?? '#3b82f6');
+  const [newLogo,  setNewLogo]  = useState(player?.logoEmoji ?? '✈️');
 
   const companyValue = useMemo(
     () => computeCompanyValue(player?.cashUSD ?? 0, aircraft, routes, gameDay),
@@ -57,23 +63,26 @@ export const RebrandModal: React.FC = () => {
 
   const nameChanged  = newName.trim() !== '' && newName.trim() !== player.name;
   const colorChanged = newColor !== player.color;
+  const logoChanged  = newLogo !== player.logoEmoji;
 
-  const cost = nameChanged && colorChanged
+  const baseCost = nameChanged && colorChanged
     ? bothCost(companyValue)
     : nameChanged
     ? nameCost(companyValue)
     : colorChanged
     ? colorCost(companyValue)
     : 0;
+  const cost = baseCost + (logoChanged ? logoCost(companyValue) : 0);
 
   const canAfford = player.cashUSD >= cost;
-  const hasChange = nameChanged || colorChanged;
+  const hasChange = nameChanged || colorChanged || logoChanged;
 
   function handleConfirm() {
     if (!hasChange || !canAfford) return;
     rebrandAirline(
       nameChanged  ? newName.trim() : null,
       colorChanged ? newColor       : null,
+      logoChanged  ? newLogo        : null,
       cost,
     );
     closeModal();
@@ -97,7 +106,11 @@ export const RebrandModal: React.FC = () => {
           className="flex items-center gap-3 mb-5 p-3 rounded-lg border border-white/10"
           style={{ borderLeftColor: newColor, borderLeftWidth: 4 }}
         >
-          <div className="w-5 h-5 rounded-full shrink-0" style={{ background: newColor }} />
+          <AirlineLogo
+            logo={newLogo}
+            className="text-2xl leading-none"
+            imageClassName="h-10 w-10 rounded-full object-cover border border-white/10 bg-white/10 shrink-0"
+          />
           <div>
             <div className="text-white font-bold text-sm">{newName.trim() || player.name}</div>
             <div className="text-gray-500 text-xs">{player.iataPrefix}</div>
@@ -105,6 +118,14 @@ export const RebrandModal: React.FC = () => {
         </div>
 
         <div className="space-y-4 mb-5">
+          <div>
+            <div className="flex items-baseline justify-between mb-2">
+              <span className="text-gray-300 text-sm">Logo</span>
+              <span className="text-gray-500 text-xs">logo change: {formatCurrency(logoCost(companyValue))}</span>
+            </div>
+            <AirlineLogoPicker value={newLogo} onChange={setNewLogo} showLabel={false} />
+          </div>
+
           {/* Name */}
           <div>
             <label className="text-gray-300 text-sm block mb-1">
@@ -159,9 +180,13 @@ export const RebrandModal: React.FC = () => {
               ? 'border-yellow-500/30 bg-yellow-500/10 text-yellow-200'
               : 'border-red-500/30 bg-red-500/10 text-red-300'
           }`}>
-            {nameChanged && colorChanged
-              ? `Full rebrand (name + colour)`
-              : nameChanged ? 'Name change only' : 'Colour change only'}
+            {nameChanged && colorChanged && logoChanged
+              ? 'Full rebrand (name + colour + logo)'
+              : [
+                  nameChanged ? 'name' : null,
+                  colorChanged ? 'colour' : null,
+                  logoChanged ? 'logo' : null,
+                ].filter(Boolean).join(' + ')}
             {' — '}
             <span className="font-bold">{formatCurrency(cost)}</span>
             {!canAfford && <span className="ml-2 text-xs">(insufficient funds)</span>}

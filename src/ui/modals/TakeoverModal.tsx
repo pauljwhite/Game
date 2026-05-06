@@ -3,6 +3,7 @@ import { useGameStore } from '@/store';
 import { formatCurrency } from '@/utils/format';
 import { AIRCRAFT_TYPES } from '@/data/aircraftTypes';
 import { calculateBuyoutPrice, rawCompanyValue } from '@/engine/valuation';
+import { AirlineLogo } from '@/ui/components/AirlineLogo';
 
 const typeMap = Object.fromEntries(AIRCRAFT_TYPES.map(t => [t.id, t]));
 
@@ -73,7 +74,7 @@ export const TakeoverModal: React.FC = () => {
 
         {/* Header */}
         <div className="flex items-center gap-3 mb-4 pr-8">
-          <span className="text-3xl">{target.logoEmoji}</span>
+          <AirlineLogo logo={target.logoEmoji} className="text-3xl" imageClassName="h-12 w-12 rounded-full object-cover border border-white/10 bg-white/10" />
           <div>
             <h2 className="text-xl font-bold text-white">Acquire {target.name}</h2>
             <p className="text-gray-400 text-sm">
