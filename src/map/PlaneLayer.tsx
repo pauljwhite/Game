@@ -101,15 +101,16 @@ export function PlaneLayer({ map, svgOverlay }: PlaneLayerProps) {
         planeG.setAttribute('class', 'route-plane');
 
         const halo = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-        halo.setAttribute('r', '9');
+        halo.setAttribute('r', '5');
         halo.setAttribute('fill', color);
         halo.setAttribute('opacity', '0.18');
 
         const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
         path.setAttribute('d', PLANE_PATH);
+        path.setAttribute('transform', 'scale(0.5)');
         path.setAttribute('fill', color);
         path.setAttribute('stroke', 'rgba(0,0,0,0.35)');
-        path.setAttribute('stroke-width', '0.5');
+        path.setAttribute('stroke-width', '1');
         path.setAttribute('stroke-linejoin', 'round');
         path.setAttribute('fill-rule', 'evenodd');
         planeG.appendChild(halo);
