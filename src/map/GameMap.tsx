@@ -16,12 +16,24 @@ export const GameMap: React.FC = () => {
   useEffect(() => {
     if (!map || listenerRef.current) return;
     listenerRef.current = true;
-    const bump = () => setMapVersion(v => v + 1);
+    let raf = 0;
+    const bump = () => {
+      if (raf) return;
+      raf = requestAnimationFrame(() => {
+        raf = 0;
+        setMapVersion(v => v + 1);
+      });
+    };
+    map.on('move', bump);
+    map.on('zoom', bump);
     map.on('moveend', bump);
     map.on('zoomend', bump);
     map.on('resize', bump);
     return () => {
+      if (raf) cancelAnimationFrame(raf);
       listenerRef.current = false;
+      map.off('move', bump);
+      map.off('zoom', bump);
       map.off('moveend', bump);
       map.off('zoomend', bump);
       map.off('resize', bump);
