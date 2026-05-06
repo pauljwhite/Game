@@ -54,6 +54,7 @@ export interface PlayerSlice {
   sellShares: (targetId: string, percent: number) => void;
   applyDividend: (amount: number) => void;
   applyLoan: (amountUSD: number) => void;
+  repayLoan: (loanId: string, amountUSD: number) => void;
   setMaintenancePolicy: (policy: Airline['maintenancePolicy']) => void;
   setAircraftPolicyExclusion: (aircraftId: string, excluded: boolean) => void;
 }
@@ -609,6 +610,33 @@ export const createPlayerSlice: StateCreator<GameStore, [['zustand/immer', never
         new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(offer.amountUSD)
       } at ${(offer.annualInterestRate * 100).toFixed(2)}% annual interest.`,
     );
+  },
+
+  repayLoan: (loanId, amountUSD) => {
+    let amountPaid = 0;
+
+    set((state) => {
+      const airline = state.airlines[PLAYER_ID];
+      if (!airline?.loans?.length || amountUSD <= 0 || airline.cashUSD <= 0) return;
+      const loan = airline.loans.find(loan => loan.id === loanId);
+      if (!loan) return;
+
+      amountPaid = Math.min(amountUSD, loan.principalUSD, airline.cashUSD);
+      if (amountPaid <= 0) return;
+
+      loan.principalUSD = Math.max(0, loan.principalUSD - amountPaid);
+      airline.cashUSD -= amountPaid;
+      airline.loans = airline.loans.filter(loan => loan.principalUSD > 1);
+      airline.totalDebt = airline.loans.reduce((sum, loan) => sum + loan.principalUSD, 0);
+    });
+
+    if (amountPaid > 0) {
+      get().pushNewsItem(
+        `Loan repayment made: ${
+          new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(amountPaid)
+        } principal paid down early.`,
+      );
+    }
   },
 
   setMaintenancePolicy: (policy) =>
