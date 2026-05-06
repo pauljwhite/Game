@@ -6,12 +6,13 @@ import { createGameSlice, type GameSlice } from './gameSlice';
 import { createPlayerSlice, type PlayerSlice } from './playerSlice';
 import { createWorldSlice, type WorldSlice } from './worldSlice';
 import { createUISlice, type UISlice } from './uiSlice';
+import { calculateDailyLoanPayment } from '@/engine/finance';
 
 export type GameStore = GameSlice & PlayerSlice & WorldSlice & UISlice;
 
 const VALID_GAME_SPEEDS = new Set([0, 60, 300, 1200, 3600, 14400]);
 const DEFAULT_GAME_SPEED = 300;
-const SAVE_VERSION = 8;
+const SAVE_VERSION = 9;
 
 function uniqueExistingIds(ids: unknown, exists: (id: string) => boolean): string[] {
   if (!Array.isArray(ids)) return [];
@@ -24,6 +25,28 @@ function uniqueExistingIds(ids: unknown, exists: (id: string) => boolean): strin
     result.push(id);
   });
   return result;
+}
+
+function sanitizeLoans(loans: unknown): NonNullable<GameStore['airlines'][string]['loans']> {
+  if (!Array.isArray(loans)) return [];
+
+  return loans.flatMap((loan) => {
+    const raw = loan as Record<string, unknown>;
+    const principalUSD = typeof raw.principalUSD === 'number' ? raw.principalUSD : 0;
+    const annualInterestRate = typeof raw.annualInterestRate === 'number' ? raw.annualInterestRate : 0;
+    const termYears = typeof raw.termYears === 'number' ? raw.termYears : 5;
+    if (principalUSD <= 1 || annualInterestRate < 0 || termYears <= 0) return [];
+    return [{
+      id: typeof raw.id === 'string' ? raw.id : `loan-${Math.random().toString(36).slice(2)}`,
+      principalUSD,
+      annualInterestRate,
+      termYears,
+      dailyPaymentUSD: typeof raw.dailyPaymentUSD === 'number'
+        ? raw.dailyPaymentUSD
+        : calculateDailyLoanPayment(principalUSD, annualInterestRate, termYears),
+      issuedGameDay: typeof raw.issuedGameDay === 'number' ? raw.issuedGameDay : 0,
+    }];
+  });
 }
 
 function sanitizePersistedState(state: Partial<GameStore>): Partial<GameStore> {
@@ -57,10 +80,15 @@ function sanitizePersistedState(state: Partial<GameStore>): Partial<GameStore> {
     Object.entries(state.airlines ?? {}).map(([id, airline]) => {
       const raw = airline as unknown as Record<string, unknown>;
       const rawPolicy = raw.maintenancePolicy as { enabled?: boolean; threshold?: number; tier?: string } | undefined;
+      const loans = sanitizeLoans(raw.loans);
       return [
         id,
         {
           ...airline,
+          loans,
+          totalDebt: loans.length > 0
+            ? loans.reduce((sum, loan) => sum + loan.principalUSD, 0)
+            : (typeof raw.totalDebt === 'number' ? raw.totalDebt : 0),
           totalPassengersAllTime: typeof raw.totalPassengersAllTime === 'number' ? raw.totalPassengersAllTime : 0,
           crashPenaltyDaysLeft: typeof raw.crashPenaltyDaysLeft === 'number' ? raw.crashPenaltyDaysLeft : 0,
           shareholders: (raw.shareholders as Record<string, number> | undefined) ?? {},

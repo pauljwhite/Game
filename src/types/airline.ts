@@ -14,6 +14,15 @@ export interface DailySnapshot {
   cashEnd: number;
 }
 
+export interface Loan {
+  id: string;
+  principalUSD: number;
+  annualInterestRate: number;
+  termYears: number;
+  dailyPaymentUSD: number;
+  issuedGameDay: number;
+}
+
 export interface Airline {
   id: string;
   name: string;
@@ -37,6 +46,7 @@ export interface Airline {
   crashPenaltyDaysLeft: number;
   shareholders: Record<string, number>; // ownerId ('player' | aiId) → % owned
   lastDailyProfit: number;
+  loans?: Loan[];
   maintenancePolicy: {
     enabled: boolean;
     threshold: number;

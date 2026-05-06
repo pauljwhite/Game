@@ -6,6 +6,7 @@ import { haversineKm } from '@/utils/geo';
 import { AIRCRAFT_TYPES } from '@/data/aircraftTypes';
 import { computeMaintenanceCost, MAINTENANCE_TIERS } from '@/utils/constants';
 import { computeAircraftValue, calculateBuyoutPrice, rawCompanyValue, calculateSharePrice } from '@/engine/valuation';
+import { calculateDailyLoanPayment, getLoanOffer } from '@/engine/finance';
 import { canAirportHandleAircraft } from '@/utils/runway';
 import type { GameStore } from './index';
 
@@ -52,6 +53,7 @@ export interface PlayerSlice {
   buyShares: (targetId: string, percent: number, source: 'market' | string) => void;
   sellShares: (targetId: string, percent: number) => void;
   applyDividend: (amount: number) => void;
+  applyLoan: (amountUSD: number) => void;
   setMaintenancePolicy: (policy: Airline['maintenancePolicy']) => void;
   setAircraftPolicyExclusion: (aircraftId: string, excluded: boolean) => void;
 }
@@ -89,6 +91,7 @@ export const createPlayerSlice: StateCreator<GameStore, [['zustand/immer', never
         crashPenaltyDaysLeft: 0,
         shareholders: {},
         lastDailyProfit: 0,
+        loans: [],
         maintenancePolicy: { enabled: false, threshold: 40, tier: 'standard' },
       };
       state.airlines[PLAYER_ID] = airline;
@@ -227,13 +230,27 @@ export const createPlayerSlice: StateCreator<GameStore, [['zustand/immer', never
     set((state) => {
       const airline = state.airlines[airlineId];
       if (!airline) return;
-      airline.cashUSD += netProfit;
+      let debtService = 0;
+      if (airline.loans?.length) {
+        airline.loans.forEach(loan => {
+          const interest = (loan.principalUSD * loan.annualInterestRate) / 365;
+          const scheduledPayment = loan.dailyPaymentUSD || calculateDailyLoanPayment(loan.principalUSD, loan.annualInterestRate, loan.termYears);
+          const payment = Math.min(loan.principalUSD + interest, scheduledPayment);
+          const principalPaid = Math.max(0, payment - interest);
+          debtService += payment;
+          loan.principalUSD = Math.max(0, loan.principalUSD - principalPaid);
+        });
+        airline.loans = airline.loans.filter(loan => loan.principalUSD > 1);
+        airline.totalDebt = airline.loans.reduce((sum, loan) => sum + loan.principalUSD, 0);
+      }
+      const profitAfterDebt = netProfit - debtService;
+      airline.cashUSD += profitAfterDebt;
       airline.totalPassengersAllTime += passengers;
       airline.dailyStats.push({
         gameDay: state.gameDay,
         revenue: snapshot.revenue,
-        costs: snapshot.costs,
-        profit: netProfit,
+        costs: snapshot.costs + debtService,
+        profit: profitAfterDebt,
         passengers,
         cashEnd: airline.cashUSD,
       });
@@ -552,6 +569,47 @@ export const createPlayerSlice: StateCreator<GameStore, [['zustand/immer', never
         state.airlines[PLAYER_ID].cashUSD += amount;
       }
     }),
+
+  applyLoan: (amountUSD) => {
+    const offer = getLoanOffer(amountUSD);
+    if (!offer) return;
+    const state = get();
+    const player = state.airlines[PLAYER_ID];
+    if (!player) return;
+    const currentDebt = (player.loans ?? []).reduce((sum, loan) => sum + loan.principalUSD, 0) || player.totalDebt;
+    const recentStats = player.dailyStats.slice(-14);
+    const averageDailyProfit = recentStats.length > 0
+      ? recentStats.reduce((sum, snapshot) => sum + snapshot.profit, 0) / recentStats.length
+      : 0;
+    const companyValue = rawCompanyValue(player, state.aircraft, state.routes);
+    const cashCollateral = Math.max(0, player.cashUSD) * 0.25;
+    const operatingAssetValue = Math.max(0, companyValue - Math.max(0, player.cashUSD));
+    const creditLimit = Math.max(25_000_000, operatingAssetValue * 1.2 + cashCollateral + Math.max(0, averageDailyProfit) * 365 * 2);
+    if (currentDebt + offer.amountUSD > creditLimit) return;
+
+    set((state) => {
+      const airline = state.airlines[PLAYER_ID];
+      if (!airline) return;
+      const loan = {
+        id: uuid(),
+        principalUSD: offer.amountUSD,
+        annualInterestRate: offer.annualInterestRate,
+        termYears: offer.termYears,
+        dailyPaymentUSD: calculateDailyLoanPayment(offer.amountUSD, offer.annualInterestRate, offer.termYears),
+        issuedGameDay: state.gameDay,
+      };
+      airline.loans ??= [];
+      airline.loans.push(loan);
+      airline.cashUSD += offer.amountUSD;
+      airline.totalDebt += offer.amountUSD;
+    });
+
+    get().pushNewsItem(
+      `Loan approved: ${
+        new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(offer.amountUSD)
+      } at ${(offer.annualInterestRate * 100).toFixed(2)}% annual interest.`,
+    );
+  },
 
   setMaintenancePolicy: (policy) =>
     set((state) => {

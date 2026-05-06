@@ -1,22 +1,30 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useGameStore } from '@/store';
 import { formatCurrency } from '@/utils/format';
 import { PnLChart } from '@/ui/components/PnLChart';
+import { calculateDailyDebtService, calculateDailyLoanPayment, formatInterestRate, LOAN_OFFERS } from '@/engine/finance';
+import { rawCompanyValue } from '@/engine/valuation';
 
 export const FinancePanel: React.FC = () => {
   const airlines   = useGameStore(s => s.airlines);
+  const aircraft   = useGameStore(s => s.aircraft);
   const routes     = useGameStore(s => s.routes);
   const aiAirlines = useGameStore(s => s.aiAirlines);
   const isDark     = useGameStore(s => s.themeMode) !== 'light';
 
   const closePanel = useGameStore(s => s.closePanel);
+  const applyLoan  = useGameStore(s => s.applyLoan);
+  const [selectedLoanAmount, setSelectedLoanAmount] = useState(LOAN_OFFERS[0].amountUSD);
   const playerAirline = airlines['player'];
   if (!playerAirline) return null;
 
   const playerRoutes = Object.values(routes).filter(r => r.airlineId === 'player');
   const totalDailyRevenue = playerRoutes.reduce((s, r) => s + r.dailyRevenue, 0);
   const totalDailyCost = playerRoutes.reduce((s, r) => s + r.dailyCost, 0);
-  const totalDailyProfit = totalDailyRevenue - totalDailyCost;
+  const dailyDebtService = calculateDailyDebtService(playerAirline);
+  const totalDailyProfit = totalDailyRevenue - totalDailyCost - dailyDebtService;
+  const activeLoans = playerAirline.loans ?? [];
+  const totalDebt = activeLoans.reduce((sum, loan) => sum + loan.principalUSD, 0) || playerAirline.totalDebt;
 
   const aiHoldings = Object.values(aiAirlines)
     .map(ai => ({ ai, stake: (ai.shareholders ?? {})['player'] ?? 0 }))
@@ -24,6 +32,19 @@ export const FinancePanel: React.FC = () => {
 
   const dailyDividends = aiHoldings.reduce((sum, { ai, stake }) =>
     sum + (stake / 100) * Math.max(0, ai.lastDailyProfit ?? 0), 0);
+
+  const companyValue = rawCompanyValue(playerAirline, aircraft, routes);
+  const recentStats = playerAirline.dailyStats.slice(-14);
+  const averageDailyProfit = recentStats.length > 0
+    ? recentStats.reduce((sum, snapshot) => sum + snapshot.profit, 0) / recentStats.length
+    : 0;
+  const annualizedProfit = Math.max(0, averageDailyProfit * 365);
+  const cashCollateral = Math.max(0, playerAirline.cashUSD) * 0.25;
+  const operatingAssetValue = Math.max(0, companyValue - Math.max(0, playerAirline.cashUSD));
+  const creditLimit = Math.max(25_000_000, operatingAssetValue * 1.2 + cashCollateral + annualizedProfit * 2);
+  const selectedOffer = LOAN_OFFERS.find(offer => offer.amountUSD === selectedLoanAmount) ?? LOAN_OFFERS[0];
+  const projectedDebt = totalDebt + selectedOffer.amountUSD;
+  const canApplyForLoan = projectedDebt <= creditLimit;
 
   const dividendSources = aiHoldings
     .map(({ ai, stake }) => ({
@@ -62,6 +83,15 @@ export const FinancePanel: React.FC = () => {
           </div>
         </div>
         <div className="glass-card p-2">
+          <div className="text-gray-400 text-xs">Debt</div>
+          <div className={`text-lg font-bold ${totalDebt > 0 ? 'text-red-400' : 'text-gray-300'}`}>
+            {totalDebt > 0 ? formatCurrency(totalDebt) : 'None'}
+          </div>
+          <div className="text-[10px] text-gray-500 mt-0.5">
+            {dailyDebtService > 0 ? `${formatCurrency(dailyDebtService)}/day service` : 'No debt service'}
+          </div>
+        </div>
+        <div className="glass-card p-2">
           <div className="text-gray-400 text-xs">Reputation</div>
           <div className={`text-lg font-bold ${playerAirline.reputationScore >= 60 ? 'text-green-400' : playerAirline.reputationScore >= 30 ? 'text-yellow-400' : 'text-red-400'}`}>
             {playerAirline.reputationScore.toFixed(0)}/100
@@ -82,6 +112,63 @@ export const FinancePanel: React.FC = () => {
         )}
       </div>
 
+      <div className="glass-card p-2">
+        <div className="flex items-center justify-between gap-2 mb-2">
+          <div>
+            <div className="text-gray-300 text-xs font-semibold">Loan Application</div>
+            <div className="text-[10px] text-gray-500">Larger facilities get lower institutional rates.</div>
+          </div>
+          <div className="text-right text-[10px] text-gray-500">
+            Credit line
+            <div className="text-gray-300 font-semibold">{formatCurrency(creditLimit)}</div>
+          </div>
+        </div>
+        <div className="grid grid-cols-2 min-[420px]:grid-cols-4 gap-1.5 mb-2">
+          {LOAN_OFFERS.map(offer => {
+            const selected = offer.amountUSD === selectedLoanAmount;
+            const available = totalDebt + offer.amountUSD <= creditLimit;
+            return (
+              <button
+                key={offer.amountUSD}
+                type="button"
+                onClick={() => setSelectedLoanAmount(offer.amountUSD)}
+                className={`rounded border px-2 py-1.5 text-left transition-colors ${
+                  selected
+                    ? 'border-blue-400 bg-blue-500/20 text-white'
+                    : available
+                      ? 'border-gray-700 bg-gray-900/40 text-gray-300 hover:border-gray-500'
+                      : 'border-gray-800 bg-gray-950/30 text-gray-600'
+                }`}
+              >
+                <div className="text-xs font-semibold">{formatCurrency(offer.amountUSD)}</div>
+                <div className="text-[10px]">{formatInterestRate(offer.annualInterestRate)}</div>
+              </button>
+            );
+          })}
+        </div>
+        <div className="flex flex-col min-[420px]:flex-row min-[420px]:items-center justify-between gap-2 text-xs">
+          <div className="space-y-0.5">
+            <div className="text-gray-400">
+              Term: <span className="text-gray-200">{selectedOffer.termYears} years</span>
+            </div>
+            <div className="text-gray-400">
+              Daily service: <span className="text-red-300">{formatCurrency(calculateDailyLoanPayment(selectedOffer.amountUSD, selectedOffer.annualInterestRate, selectedOffer.termYears))}</span>
+            </div>
+            {!canApplyForLoan && (
+              <div className="text-red-400">This would exceed your current credit line.</div>
+            )}
+          </div>
+          <button
+            type="button"
+            disabled={!canApplyForLoan}
+            onClick={() => applyLoan(selectedOffer.amountUSD)}
+            className="rounded bg-green-600 px-3 py-2 text-xs font-semibold text-white hover:bg-green-500 disabled:cursor-not-allowed disabled:bg-gray-700 disabled:text-gray-400"
+          >
+            Apply
+          </button>
+        </div>
+      </div>
+
       <div>
         <div className="text-gray-400 text-xs mb-1">30-Day Profit Trend</div>
         <div className="overflow-hidden">
@@ -98,6 +185,7 @@ export const FinancePanel: React.FC = () => {
             { label: 'Maintenance', value: -playerRoutes.reduce((s, r) => s + r.dailyCost * 0.25, 0), color: 'text-orange-400' },
             { label: 'Crew', value: -playerRoutes.reduce((s, r) => s + r.dailyCost * 0.25, 0), color: 'text-yellow-400' },
             { label: 'Airport Fees', value: -playerRoutes.reduce((s, r) => s + r.dailyCost * 0.15, 0), color: 'text-blue-400' },
+            { label: 'Debt Service', value: -dailyDebtService, color: 'text-red-300' },
           ].map(({ label, value, color }) => (
             <div key={label} className="flex justify-between">
               <span className="text-gray-400">{label}</span>
