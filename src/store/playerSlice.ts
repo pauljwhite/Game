@@ -181,6 +181,7 @@ export const createPlayerSlice: StateCreator<GameStore, [['zustand/immer', never
 
   applyRouteOptimisation: (updates, cost) => {
     const airline = get().airlines[PLAYER_ID];
+    if (Object.keys(updates).length === 0) return false;
     if (!airline || airline.cashUSD < cost) return false;
     set((state) => {
       const player = state.airlines[PLAYER_ID];

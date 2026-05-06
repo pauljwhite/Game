@@ -3,7 +3,7 @@ import { useGameStore } from '@/store';
 import { formatCurrency } from '@/utils/format';
 import { LoadFactorBar } from '@/ui/components/LoadFactorBar';
 import { AIRCRAFT_TYPES } from '@/data/aircraftTypes';
-import { optimiseRouteSettings } from '@/engine/routeOptimizer';
+import { getRouteOptimisationChanges } from '@/engine/routeOptimizer';
 import type { Route } from '@/types';
 
 const OPTIMISE_ALL_BASE_COST = 2_000_000;
@@ -26,29 +26,19 @@ export const RoutesPanel: React.FC = () => {
   const closePanel  = useGameStore(s => s.closePanel);
 
   const playerRoutes = Object.values(routes).filter(r => r.airlineId === 'player');
-  const optimisableRoutes = playerRoutes.filter(route => {
-    const ac = route.aircraftId ? aircraft[route.aircraftId] : null;
-    const type = ac ? AIRCRAFT_TYPES.find(candidate => candidate.id === ac.typeId) : null;
-    return !!ac && !!type && !!airports[route.originIata] && !!airports[route.destinationIata];
-  });
-  const optimiseAllCost = optimisableRoutes.length > 0
-    ? OPTIMISE_ALL_BASE_COST + optimisableRoutes.length * OPTIMISE_ALL_COST_PER_ROUTE
-    : 0;
-  const playerCash = airlines['player']?.cashUSD ?? 0;
-  const canOptimiseAll = optimisableRoutes.length > 0 && playerCash >= optimiseAllCost;
-
-  function handleOptimiseAll() {
-    if (!canOptimiseAll) return;
+  const optimisationUpdates = React.useMemo(() => {
     const updates: Record<string, Partial<Route>> = {};
+    let eligibleCount = 0;
 
-    optimisableRoutes.forEach(route => {
+    playerRoutes.forEach(route => {
       const ac = route.aircraftId ? aircraft[route.aircraftId] : null;
       const type = ac ? AIRCRAFT_TYPES.find(candidate => candidate.id === ac.typeId) : null;
       const origin = airports[route.originIata];
       const destination = airports[route.destinationIata];
       if (!ac || !type || !origin || !destination) return;
+      eligibleCount += 1;
 
-      const optimised = optimiseRouteSettings({
+      const changes = getRouteOptimisationChanges({
         route,
         aircraft: ac,
         aircraftType: type,
@@ -62,14 +52,22 @@ export const RoutesPanel: React.FC = () => {
         gameDay,
       });
 
-      updates[route.id] = {
-        flightsPerWeek: optimised.flightsPerWeek,
-        priceEconomy: optimised.priceEconomy,
-        priceBusiness: type.seatsBusiness > 0 ? optimised.priceBusiness : 0,
-      };
+      if (changes) updates[route.id] = changes;
     });
 
-    applyRouteOptimisation(updates, optimiseAllCost);
+    return { updates, eligibleCount };
+  }, [playerRoutes, aircraft, airports, globalFuelPrice, airlines, aiAirlines, routes, aiRoutes, airportDailyPax, gameDay]);
+
+  const optimisableCount = Object.keys(optimisationUpdates.updates).length;
+  const optimiseAllCost = optimisableCount > 0
+    ? OPTIMISE_ALL_BASE_COST + optimisableCount * OPTIMISE_ALL_COST_PER_ROUTE
+    : 0;
+  const playerCash = airlines['player']?.cashUSD ?? 0;
+  const canOptimiseAll = optimisableCount > 0 && playerCash >= optimiseAllCost;
+
+  function handleOptimiseAll() {
+    if (!canOptimiseAll) return;
+    applyRouteOptimisation(optimisationUpdates.updates, optimiseAllCost);
   }
 
   return (
@@ -94,7 +92,7 @@ export const RoutesPanel: React.FC = () => {
               <div>
                 <div className="text-gray-300 text-sm font-semibold">Network optimiser</div>
                 <div className="text-xs text-gray-500">
-                  {optimisableRoutes.length} eligible routes · {formatCurrency(optimiseAllCost)} consulting fee
+                  {optimisableCount} routes can improve · {formatCurrency(optimiseAllCost)} consulting fee
                 </div>
               </div>
               <button
@@ -106,10 +104,13 @@ export const RoutesPanel: React.FC = () => {
                 Optimise all
               </button>
             </div>
-            {optimisableRoutes.length === 0 && (
+            {optimisationUpdates.eligibleCount === 0 && (
               <div className="mt-1 text-[10px] text-gray-500">Assign aircraft to routes before optimising.</div>
             )}
-            {optimisableRoutes.length > 0 && playerCash < optimiseAllCost && (
+            {optimisationUpdates.eligibleCount > 0 && optimisableCount === 0 && (
+              <div className="mt-1 text-[10px] text-gray-500">All eligible routes are already optimised.</div>
+            )}
+            {optimisableCount > 0 && playerCash < optimiseAllCost && (
               <div className="mt-1 text-[10px] text-red-400">
                 Need {formatCurrency(optimiseAllCost - playerCash)} more cash.
               </div>

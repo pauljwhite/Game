@@ -5,7 +5,7 @@ import { LoadFactorBar } from '@/ui/components/LoadFactorBar';
 import { PriceInput } from '@/ui/components/PriceInput';
 import { AIRCRAFT_TYPES } from '@/data/aircraftTypes';
 import { computeFlightCost } from '@/engine/economicsEngine';
-import { optimiseRouteSettings } from '@/engine/routeOptimizer';
+import { getRouteOptimisationChanges } from '@/engine/routeOptimizer';
 import { getPlayerMarketShare, getBaselineDailyPax, conditionDemandMod } from '@/engine/demandModel';
 import { HUB_DEMAND_BONUS, REPUTATION_DEMAND_FACTOR } from '@/utils/constants';
 import { canAirportHandleAircraft, formatRunwayLength } from '@/utils/runway';
@@ -120,6 +120,27 @@ export const RouteDetailModal: React.FC = () => {
   }, [priceEconomy, priceBusiness, flightsPerWeek, assignedAircraft, assignedType, origin, destination,
       routes, aiRoutes, airlines, aiAirlines, globalFuelPrice]);
 
+  const optimisationChanges = useMemo(() => {
+    if (!route || !assignedAircraft || !assignedType || !origin || !destination) return null;
+    return getRouteOptimisationChanges({
+      route: { ...route, flightsPerWeek, priceEconomy, priceBusiness: hasBusinessSeats ? priceBusiness : 0 },
+      aircraft: assignedAircraft,
+      aircraftType: assignedType,
+      origin,
+      destination,
+      globalFuelPrice,
+      playerAirline: airlines['player'],
+      competitorAirlines: { ...airlines, ...aiAirlines },
+      competitorRoutes: [...Object.values(routes), ...Object.values(aiRoutes)],
+      airportDailyPax,
+      gameDay,
+    });
+  }, [
+    route, assignedAircraft, assignedType, origin, destination, flightsPerWeek,
+    priceEconomy, priceBusiness, hasBusinessSeats, globalFuelPrice, airlines,
+    aiAirlines, routes, aiRoutes, airportDailyPax, gameDay,
+  ]);
+
   const assignedRunwayLimited = !!assignedType && (
     !canAirportHandleAircraft(origin, assignedType) ||
     !canAirportHandleAircraft(destination, assignedType)
@@ -151,23 +172,11 @@ export const RouteDetailModal: React.FC = () => {
   function handleOptimiseRoute() {
     if (!route || !assignedAircraft || !assignedType || !origin || !destination) return;
 
-    const optimised = optimiseRouteSettings({
-      route: { ...route, flightsPerWeek, priceEconomy, priceBusiness: hasBusinessSeats ? priceBusiness : 0 },
-      aircraft: assignedAircraft,
-      aircraftType: assignedType,
-      origin,
-      destination,
-      globalFuelPrice,
-      playerAirline: airlines['player'],
-      competitorAirlines: { ...airlines, ...aiAirlines },
-      competitorRoutes: [...Object.values(routes), ...Object.values(aiRoutes)],
-      airportDailyPax,
-      gameDay,
-    });
+    if (!optimisationChanges) return;
 
-    setFlightsPerWeek(optimised.flightsPerWeek);
-    setPriceEconomy(optimised.priceEconomy);
-    setPriceBusiness(hasBusinessSeats ? optimised.priceBusiness : 0);
+    setFlightsPerWeek(optimisationChanges.flightsPerWeek);
+    setPriceEconomy(optimisationChanges.priceEconomy);
+    setPriceBusiness(optimisationChanges.priceBusiness);
   }
 
   function handleToggleActive() {
@@ -360,10 +369,10 @@ export const RouteDetailModal: React.FC = () => {
                 <button
                   type="button"
                   onClick={handleOptimiseRoute}
-                  disabled={!assignedAircraft || !assignedType || assignedRunwayLimited}
+                  disabled={!assignedAircraft || !assignedType || assignedRunwayLimited || !optimisationChanges}
                   className="text-xs text-emerald-400 hover:text-emerald-300 transition-colors disabled:text-gray-600 disabled:cursor-not-allowed"
                 >
-                  Optimise
+                  {optimisationChanges ? 'Optimise' : 'Optimised'}
                 </button>
                 <button
                   type="button"

@@ -223,3 +223,23 @@ export function optimiseRouteSettings(input: RouteOptimisationInput): RouteOptim
 
   return best;
 }
+
+export function getRouteOptimisationChanges(input: RouteOptimisationInput): Pick<Route, 'flightsPerWeek' | 'priceEconomy' | 'priceBusiness'> | null {
+  const optimised = optimiseRouteSettings(input);
+  const currentBusinessPrice = input.aircraftType.seatsBusiness > 0 ? input.route.priceBusiness : 0;
+  const optimisedBusinessPrice = input.aircraftType.seatsBusiness > 0 ? optimised.priceBusiness : 0;
+
+  if (
+    optimised.flightsPerWeek === input.route.flightsPerWeek &&
+    optimised.priceEconomy === input.route.priceEconomy &&
+    optimisedBusinessPrice === currentBusinessPrice
+  ) {
+    return null;
+  }
+
+  return {
+    flightsPerWeek: optimised.flightsPerWeek,
+    priceEconomy: optimised.priceEconomy,
+    priceBusiness: optimisedBusinessPrice,
+  };
+}
