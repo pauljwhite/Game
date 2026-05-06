@@ -682,6 +682,20 @@ export const NewRouteModal: React.FC = () => {
                       value={priceEconomy} min={1} max={maxEco}
                       onChange={v => setPriceEconomy(v)}
                     />
+                    <input
+                      type="range"
+                      min={1}
+                      max={maxEco}
+                      step={1}
+                      value={Math.min(maxEco, priceEconomy)}
+                      onChange={e => setPriceEconomy(Math.min(maxEco, normalisePrice(Number(e.target.value))))}
+                      className="mt-2 w-full accent-blue-500"
+                    />
+                    <div className="flex justify-between text-[10px] text-gray-500 mt-1">
+                      <span>$1</span>
+                      {refPrice && <span>Suggested {formatUSD(refPrice)}</span>}
+                      <span>{formatUSD(maxEco)}</span>
+                    </div>
                   </div>
                   <div>
                     <label className="text-gray-400 text-xs block mb-1">Business (max {formatUSD(maxBiz)})</label>
@@ -689,6 +703,20 @@ export const NewRouteModal: React.FC = () => {
                       value={priceBusiness} min={1} max={maxBiz}
                       onChange={v => setPriceBusiness(v)}
                     />
+                    <input
+                      type="range"
+                      min={1}
+                      max={maxBiz}
+                      step={1}
+                      value={Math.min(maxBiz, priceBusiness)}
+                      onChange={e => setPriceBusiness(Math.min(maxBiz, normalisePrice(Number(e.target.value))))}
+                      className="mt-2 w-full accent-blue-500"
+                    />
+                    <div className="flex justify-between text-[10px] text-gray-500 mt-1">
+                      <span>$1</span>
+                      {refPrice && <span>Suggested {formatUSD(refPrice * 4)}</span>}
+                      <span>{formatUSD(maxBiz)}</span>
+                    </div>
                   </div>
                 </div>
               </div>
