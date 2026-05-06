@@ -1,5 +1,11 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useGameStore } from '@/store';
+import type { NewsTickerItem } from '@/store/uiSlice';
+
+const FALLBACK_NEWS: NewsTickerItem = {
+  id: 'fallback',
+  text: 'Welcome to Mighty Airline Empire!',
+};
 
 export const BottomBar: React.FC = () => {
   const newsTicker = useGameStore(s => s.newsTicker);
@@ -7,12 +13,11 @@ export const BottomBar: React.FC = () => {
   const openModalById = useGameStore(s => s.openModalById);
   const speed = useGameStore(s => s.speed);
   const tickerItems = useMemo(
-    () => newsTicker.length > 0 ? newsTicker.slice(0, 8) : [{ id: 'fallback', text: 'Welcome to Mighty Airline Empire!' }],
+    () => newsTicker.length > 0 ? newsTicker.slice(0, 8) : [FALLBACK_NEWS],
     [newsTicker],
   );
   const tickerDuration = speed >= 14400 ? 5 : speed >= 3600 ? 7 : speed >= 1200 ? 10 : speed >= 300 ? 15 : 22;
-  const [currentId, setCurrentId] = useState(tickerItems[0].id);
-  const latestNews = tickerItems.find(item => item.id === currentId) ?? tickerItems[0];
+  const [latestNews, setLatestNews] = useState<NewsTickerItem>(tickerItems[0]);
   const isFleetAlert = latestNews.severity === 'fleet' || latestNews.severity === 'breaking';
   const linkedArticleId = latestNews.articleId && newspaperQueue.some(article => article.id === latestNews.articleId)
     ? latestNews.articleId
@@ -28,23 +33,13 @@ export const BottomBar: React.FC = () => {
     if (linkedArticleId) openModalById('newspaper', { articleId: linkedArticleId, readOnly: true });
   }
 
-  useEffect(() => {
-    if (!tickerItems.some(item => item.id === currentId)) {
-      setCurrentId(tickerItems[0].id);
-    }
-  }, [currentId, tickerItems]);
-
-  useEffect(() => {
-    if (tickerItems.length <= 1) return;
-    const timer = window.setInterval(() => {
-      setCurrentId(previousId => {
-        const currentIndex = tickerItems.findIndex(item => item.id === previousId);
-        const nextIndex = currentIndex < 0 ? 0 : (currentIndex + 1) % tickerItems.length;
-        return tickerItems[nextIndex].id;
-      });
-    }, tickerDuration * 1000);
-    return () => window.clearInterval(timer);
-  }, [tickerItems, tickerDuration]);
+  function advanceTicker() {
+    setLatestNews(current => {
+      const currentIndex = tickerItems.findIndex(item => item.id === current.id);
+      const nextIndex = currentIndex < 0 ? 0 : (currentIndex + 1) % tickerItems.length;
+      return tickerItems[nextIndex];
+    });
+  }
 
   return (
     <footer className="h-10 glass-nav border-t flex items-center px-2 sm:px-4 shrink-0 z-40 overflow-hidden">
@@ -62,6 +57,7 @@ export const BottomBar: React.FC = () => {
           key={latestNews.id}
           className={`news-ticker-track text-xs whitespace-nowrap ${tickerClass}`}
           style={{ animationDuration: `${tickerDuration}s` }}
+          onAnimationIteration={advanceTicker}
         >
           <span className="news-ticker-item">{tickerText}</span>
           <span className="news-ticker-item" aria-hidden="true">{tickerText}</span>
