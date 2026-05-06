@@ -109,9 +109,25 @@ export const createWorldSlice: StateCreator<GameStore, [['zustand/immer', never]
 
   pushNewsItem: (item) =>
     set((state) => {
-      const newsItem = typeof item === 'string'
+      const baseItem = typeof item === 'string'
         ? { id: `news_${Date.now()}_${Math.random().toString(36).slice(2)}`, text: item }
         : { id: `news_${Date.now()}_${Math.random().toString(36).slice(2)}`, ...item };
+      const shouldCreateArticle = baseItem.playerRelated && !baseItem.articleId;
+      const newsItem = shouldCreateArticle
+        ? { ...baseItem, articleId: `${baseItem.id}_article`, severity: baseItem.severity ?? 'fleet' as const }
+        : baseItem;
+      if (shouldCreateArticle && newsItem.articleId) {
+        state.newspaperQueue.push({
+          id: newsItem.articleId,
+          headline: state.airlines.player?.name ?? 'Airline Operations Update',
+          subheadline: newsItem.text,
+          paragraphs: [newsItem.text],
+          severity: newsItem.severity === 'breaking' ? 'crash' : 'incident',
+          gameDay: state.gameDay,
+          suppressAutoOpen: true,
+        });
+        if (state.newspaperQueue.length > 8) state.newspaperQueue.shift();
+      }
       state.newsTicker.unshift(newsItem);
       if (state.newsTicker.length > 20) state.newsTicker.pop();
     }),

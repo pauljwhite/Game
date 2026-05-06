@@ -125,7 +125,10 @@ export function runDailyTick(store: ReturnType<typeof import('@/store/index')['u
         const durationDays = MAINTENANCE_TIERS[tier].durationDays;
         if (gameDay - ac.lastMaintenanceGameDay >= durationDays) {
           store.completeMaintenance(ac.id);
-          store.pushNewsItem(`${ac.name} has completed ${MAINTENANCE_TIERS[tier].label.toLowerCase()} maintenance and returned to service.`);
+          store.pushNewsItem({
+            text: `${ac.name} has completed ${MAINTENANCE_TIERS[tier].label.toLowerCase()} maintenance and returned to service.`,
+            playerRelated: true,
+          });
         }
       }
       // Auto-maintenance trigger — cooldown: don't re-trigger until after the last maintenance duration
@@ -144,7 +147,10 @@ export function runDailyTick(store: ReturnType<typeof import('@/store/index')['u
         const reason = groundedNeedsFix
           ? `grounded (${ac.groundedReason ?? 'incident'})`
           : `condition ${ac.condition.toFixed(0)}%`;
-        store.pushNewsItem(`Auto-maintenance triggered for ${ac.name} (${reason}).`);
+        store.pushNewsItem({
+          text: `Auto-maintenance triggered for ${ac.name} (${reason}).`,
+          playerRelated: true,
+        });
       }
     });
 
@@ -237,9 +243,15 @@ export function runDailyTick(store: ReturnType<typeof import('@/store/index')['u
       if (ac.crashRisk > 0.001 && Math.random() < ac.crashRisk * riskMod * flightsPerDay * 0.0008) {
         store.triggerCrash(ac.id);
         const crashRoute = `${route.originIata}–${route.destinationIata}`;
-        store.pushNewsItem(`BREAKING: ${playerAirline.name} ${aircraftType.model} crashes on ${route.originIata}->${route.destinationIata} route!`);
+        const articleId = `crash_${store.gameDay}_${ac.id}`;
+        store.pushNewsItem({
+          text: `BREAKING: ${playerAirline.name} ${aircraftType.model} crashes on ${route.originIata}->${route.destinationIata} route!`,
+          severity: 'breaking',
+          articleId,
+          playerRelated: true,
+        });
         store.pushNewspaper({
-          id: `crash_${store.gameDay}_${ac.id}`,
+          id: articleId,
           headline: `${playerAirline.name} ${aircraftType.model} lost`,
           subheadline: `Aviation authorities launch emergency investigation into accident on the ${crashRoute} corridor`,
           paragraphs: [
@@ -395,7 +407,10 @@ export function runDailyTick(store: ReturnType<typeof import('@/store/index')['u
     });
   });
   if (playerDividendTotal > 500_000) {
-    store.pushNewsItem(`Dividends: ${formatCurrency(playerDividendTotal)} received from shareholdings today.`);
+    store.pushNewsItem({
+      text: `Dividends: ${formatCurrency(playerDividendTotal)} received from shareholdings today.`,
+      playerRelated: true,
+    });
   }
 
   void gameDay;

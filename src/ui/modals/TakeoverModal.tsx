@@ -55,7 +55,10 @@ export const TakeoverModal: React.FC = () => {
     if (!confirmed) { setConfirmed(true); return; }
     takeoverAirline(targetId, aiAirlines, aiRoutes, aiAircraft);
     removeAIAirline(targetId);
-    pushNewsItem(`${playerAirline.name} has acquired ${target!.name} for ${formatCurrency(adjustedPrice)}.`);
+    pushNewsItem({
+      text: `${playerAirline.name} has acquired ${target!.name} for ${formatCurrency(adjustedPrice)}.`,
+      playerRelated: true,
+    });
     closeModal();
   }
 

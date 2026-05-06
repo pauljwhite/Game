@@ -191,13 +191,14 @@ export const createPlayerSlice: StateCreator<GameStore, [['zustand/immer', never
         if (state.routes[routeId]) Object.assign(state.routes[routeId], changes);
       });
     });
-    get().pushNewsItem(
-      `Network optimisation completed for ${
+    get().pushNewsItem({
+      text: `Network optimisation completed for ${
         Object.keys(updates).length
       } routes at a consulting cost of ${
         new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(cost)
       }.`,
-    );
+      playerRelated: true,
+    });
     return true;
   },
 
@@ -551,11 +552,12 @@ export const createPlayerSlice: StateCreator<GameStore, [['zustand/immer', never
       p.cashUSD -= cost;
     });
 
-    get().pushNewsItem(
-      `You acquired ${percent}% stake in ${target.name} for ${
+    get().pushNewsItem({
+      text: `You acquired ${percent}% stake in ${target.name} for ${
         new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(cost)
       }.`,
-    );
+      playerRelated: true,
+    });
   },
 
   sellShares: (targetId, percent) => {
@@ -580,11 +582,12 @@ export const createPlayerSlice: StateCreator<GameStore, [['zustand/immer', never
       p.cashUSD += proceeds;
     });
 
-    get().pushNewsItem(
-      `You sold ${percent}% stake in ${target.name} for ${
+    get().pushNewsItem({
+      text: `You sold ${percent}% stake in ${target.name} for ${
         new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(proceeds)
       }.`,
-    );
+      playerRelated: true,
+    });
   },
 
   applyDividend: (amount) =>
@@ -628,11 +631,12 @@ export const createPlayerSlice: StateCreator<GameStore, [['zustand/immer', never
       airline.totalDebt += offer.amountUSD;
     });
 
-    get().pushNewsItem(
-      `Loan approved: ${
+    get().pushNewsItem({
+      text: `Loan approved: ${
         new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(offer.amountUSD)
       } at ${(offer.annualInterestRate * 100).toFixed(2)}% annual interest.`,
-    );
+      playerRelated: true,
+    });
   },
 
   repayLoan: (loanId, amountUSD) => {
@@ -654,11 +658,12 @@ export const createPlayerSlice: StateCreator<GameStore, [['zustand/immer', never
     });
 
     if (amountPaid > 0) {
-      get().pushNewsItem(
-        `Loan repayment made: ${
+      get().pushNewsItem({
+        text: `Loan repayment made: ${
           new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(amountPaid)
         } principal paid down early.`,
-      );
+        playerRelated: true,
+      });
     }
   },
 

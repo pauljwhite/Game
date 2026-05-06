@@ -23,6 +23,7 @@ export interface NewsTickerItem {
   text: string;
   severity?: 'normal' | 'fleet' | 'breaking';
   articleId?: string;
+  playerRelated?: boolean;
 }
 
 export interface UISlice {

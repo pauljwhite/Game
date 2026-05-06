@@ -504,6 +504,7 @@ export function runRandomEventsTick(
           text: msg,
           severity: evt.ground ? 'fleet' : evt.reputationDelta < 0 ? 'fleet' : 'normal',
           articleId: evt.ground ? articleId : undefined,
+          playerRelated: true,
         });
         store.updateAircraftCondition(ac.id, evt.conditionDelta, 0);
 
@@ -527,6 +528,7 @@ export function runRandomEventsTick(
               text: `Auto-maintenance sent ${ac.name} to the hangar after ${reason.toLowerCase()}.`,
               severity: 'fleet',
               articleId,
+              playerRelated: true,
             });
           }
         }

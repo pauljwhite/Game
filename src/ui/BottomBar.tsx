@@ -19,6 +19,7 @@ export const BottomBar: React.FC = () => {
   const tickerDuration = speed >= 14400 ? 5 : speed >= 3600 ? 7 : speed >= 1200 ? 10 : speed >= 300 ? 15 : 22;
   const [latestNews, setLatestNews] = useState<NewsTickerItem>(tickerItems[0]);
   const isFleetAlert = latestNews.severity === 'fleet' || latestNews.severity === 'breaking';
+  const isPlayerAlert = !!latestNews.playerRelated || isFleetAlert;
   const linkedArticleId = latestNews.articleId && newspaperQueue.some(article => article.id === latestNews.articleId)
     ? latestNews.articleId
     : undefined;
@@ -27,7 +28,7 @@ export const BottomBar: React.FC = () => {
     : isFleetAlert
       ? 'text-orange-200 font-semibold'
       : 'text-gray-300';
-  const tickerPrefix = isFleetAlert ? '‼️ ' : '';
+  const tickerPrefix = isPlayerAlert ? '‼️ ' : '';
   const tickerText = linkedArticleId
     ? `${tickerPrefix}${latestNews.text} Read the article`
     : `${tickerPrefix}${latestNews.text}`;
@@ -46,8 +47,8 @@ export const BottomBar: React.FC = () => {
 
   return (
     <footer className="h-10 glass-nav border-t flex items-center px-2 sm:px-4 shrink-0 z-40 overflow-hidden">
-      <span className={`soft-tag mr-2 shrink-0 ${isFleetAlert ? 'text-orange-100 border-orange-300/30 bg-orange-500/20' : 'text-yellow-200'}`}>
-        {isFleetAlert ? 'FLEET ALERT' : 'NEWS'}
+      <span className={`soft-tag mr-2 shrink-0 ${isPlayerAlert ? 'text-orange-100 border-orange-300/30 bg-orange-500/20' : 'text-yellow-200'}`}>
+        {isPlayerAlert ? 'FLEET ALERT' : 'NEWS'}
       </span>
       <button
         type="button"
