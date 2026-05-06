@@ -10,7 +10,12 @@ export const BottomBar: React.FC = () => {
   const linkedArticleId = latestNews.articleId && newspaperQueue.some(article => article.id === latestNews.articleId)
     ? latestNews.articleId
     : undefined;
-  const tickerClass = isFleetAlert ? 'text-orange-200 font-semibold' : 'text-gray-300';
+  const tickerClass = linkedArticleId
+    ? 'text-orange-100 font-bold underline decoration-orange-200/80 decoration-1 underline-offset-4'
+    : isFleetAlert
+      ? 'text-orange-200 font-semibold'
+      : 'text-gray-300';
+  const tickerText = linkedArticleId ? `${latestNews.text} Read the article` : latestNews.text;
 
   function handleClick() {
     if (linkedArticleId) openModalById('newspaper', { articleId: linkedArticleId, readOnly: true });
@@ -29,8 +34,8 @@ export const BottomBar: React.FC = () => {
         title={linkedArticleId ? 'Open Aviation Herald article' : undefined}
       >
         <div className={`news-ticker-track text-xs whitespace-nowrap ${tickerClass}`}>
-          <span className="news-ticker-item">{latestNews.text}</span>
-          <span className="news-ticker-item" aria-hidden="true">{latestNews.text}</span>
+          <span className="news-ticker-item">{tickerText}</span>
+          <span className="news-ticker-item" aria-hidden="true">{tickerText}</span>
         </div>
       </button>
     </footer>
