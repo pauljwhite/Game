@@ -13,7 +13,7 @@ export const BottomBar: React.FC = () => {
   const tickerClass = isFleetAlert ? 'text-orange-200 font-semibold' : 'text-gray-300';
 
   function handleClick() {
-    if (linkedArticleId) openModalById('newspaper', linkedArticleId);
+    if (linkedArticleId) openModalById('newspaper', { articleId: linkedArticleId, readOnly: true });
   }
 
   return (

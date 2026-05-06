@@ -20,7 +20,17 @@ export const NewspaperModal: React.FC = () => {
   const policy = useGameStore(s => s.airlines['player']?.maintenancePolicy);
   const setMaintenancePolicy = useGameStore(s => s.setMaintenancePolicy);
 
-  const requestedArticleId = typeof modalPayload === 'string' ? modalPayload : null;
+  const requestedArticleId = typeof modalPayload === 'string'
+    ? modalPayload
+    : modalPayload && typeof modalPayload === 'object' && 'articleId' in modalPayload && typeof modalPayload.articleId === 'string'
+      ? modalPayload.articleId
+      : null;
+  const readOnly = !!(
+    modalPayload &&
+    typeof modalPayload === 'object' &&
+    'readOnly' in modalPayload &&
+    modalPayload.readOnly === true
+  );
   const article = requestedArticleId
     ? newspaperQueue.find(item => item.id === requestedArticleId)
     : newspaperQueue.find(item => !item.suppressAutoOpen) ?? newspaperQueue[0];
@@ -30,11 +40,11 @@ export const NewspaperModal: React.FC = () => {
 
   const styles   = SEVERITY_STYLES[currentArticle.severity];
   const gameDate = formatGameDate(gameTimeMs);
-  const hasActions = !!currentArticle.actionAircraftId;
+  const hasActions = !!currentArticle.actionAircraftId && !readOnly;
 
   function dismiss() {
     closeModal();
-    popNewspaper(currentArticle.id);
+    if (!readOnly) popNewspaper(currentArticle.id);
   }
 
   function handleMaintenance() {
@@ -146,14 +156,14 @@ export const NewspaperModal: React.FC = () => {
             ) : (
               <div className="flex items-center justify-between">
                 <span className="text-[10px] opacity-40 italic" style={{ fontFamily: 'Georgia, "Times New Roman", serif' }}>
-                  Reported by our aviation correspondent · Click anywhere to dismiss
+                  Reported by our aviation correspondent
                 </span>
                 <button
                   onClick={dismiss}
                   className="px-4 py-1.5 text-xs font-bold uppercase tracking-wider rounded"
                   style={{ background: '#1a1008', color: '#f5f0e8' }}
                 >
-                  Dismiss
+                  Close
                 </button>
               </div>
             )}
