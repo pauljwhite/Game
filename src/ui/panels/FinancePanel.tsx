@@ -16,6 +16,7 @@ export const FinancePanel: React.FC = () => {
   const applyLoan  = useGameStore(s => s.applyLoan);
   const repayLoan  = useGameStore(s => s.repayLoan);
   const [selectedLoanAmount, setSelectedLoanAmount] = useState(LOAN_OFFERS[0].amountUSD);
+  const [loansOpen, setLoansOpen] = useState(false);
   const playerAirline = airlines['player'];
   if (!playerAirline) return null;
 
@@ -113,124 +114,153 @@ export const FinancePanel: React.FC = () => {
         )}
       </div>
 
-      <div className="glass-card p-2">
-        <div className="flex items-center justify-between gap-2 mb-2">
+      <div className="glass-card overflow-hidden">
+        <button
+          type="button"
+          onClick={() => setLoansOpen(open => !open)}
+          aria-expanded={loansOpen}
+          className="flex w-full items-center justify-between gap-3 p-2 text-left hover:bg-white/5"
+        >
           <div>
-            <div className="text-gray-300 text-xs font-semibold">Loan Application</div>
-            <div className="text-[10px] text-gray-500">Larger facilities get lower institutional rates.</div>
-          </div>
-          <div className="text-right text-[10px] text-gray-500">
-            Credit line
-            <div className="text-gray-300 font-semibold">{formatCurrency(creditLimit)}</div>
-          </div>
-        </div>
-        <div className="grid grid-cols-2 min-[420px]:grid-cols-4 gap-1.5 mb-2">
-          {LOAN_OFFERS.map(offer => {
-            const selected = offer.amountUSD === selectedLoanAmount;
-            const available = totalDebt + offer.amountUSD <= creditLimit;
-            return (
-              <button
-                key={offer.amountUSD}
-                type="button"
-                onClick={() => setSelectedLoanAmount(offer.amountUSD)}
-                className={`rounded border px-2 py-1.5 text-left transition-colors ${
-                  selected
-                    ? 'border-blue-400 bg-blue-500/20 text-white'
-                    : available
-                      ? 'border-gray-700 bg-gray-900/40 text-gray-300 hover:border-gray-500'
-                      : 'border-gray-800 bg-gray-950/30 text-gray-600'
-                }`}
-              >
-                <div className="text-xs font-semibold">{formatCurrency(offer.amountUSD)}</div>
-                <div className="text-[10px]">{formatInterestRate(offer.annualInterestRate)}</div>
-              </button>
-            );
-          })}
-        </div>
-        <div className="flex flex-col min-[420px]:flex-row min-[420px]:items-center justify-between gap-2 text-xs">
-          <div className="space-y-0.5">
-            <div className="text-gray-400">
-              Term: <span className="text-gray-200">{selectedOffer.termYears} years</span>
+            <div className="text-gray-300 text-xs font-semibold">Loans</div>
+            <div className="text-[10px] text-gray-500">
+              {totalDebt > 0
+                ? `${formatCurrency(totalDebt)} outstanding · ${formatCurrency(dailyDebtService)}/day service`
+                : `Credit line ${formatCurrency(creditLimit)}`}
             </div>
-            <div className="text-gray-400">
-              Daily service: <span className="text-red-300">{formatCurrency(calculateDailyLoanPayment(selectedOffer.amountUSD, selectedOffer.annualInterestRate, selectedOffer.termYears))}</span>
-            </div>
-            {!canApplyForLoan && (
-              <div className="text-red-400">This would exceed your current credit line.</div>
-            )}
           </div>
-          <button
-            type="button"
-            disabled={!canApplyForLoan}
-            onClick={() => applyLoan(selectedOffer.amountUSD)}
-            className="rounded bg-green-600 px-3 py-2 text-xs font-semibold text-white hover:bg-green-500 disabled:cursor-not-allowed disabled:bg-gray-700 disabled:text-gray-400"
-          >
-            Apply
-          </button>
-        </div>
-      </div>
-
-      {activeLoans.length > 0 && (
-        <div className="glass-card p-2">
-          <div className="flex items-center justify-between gap-2 mb-2">
+          <div className="flex items-center gap-2 text-right">
             <div>
-              <div className="text-gray-300 text-xs font-semibold">Active Loans</div>
-              <div className="text-[10px] text-gray-500">Early payments reduce principal immediately.</div>
+              <div className="text-[10px] text-gray-500">Available</div>
+              <div className="text-xs font-semibold text-gray-300">{formatCurrency(Math.max(0, creditLimit - totalDebt))}</div>
             </div>
-            <div className="text-right text-[10px] text-gray-500">
-              Outstanding
-              <div className="text-red-300 font-semibold">{formatCurrency(totalDebt)}</div>
-            </div>
+            <span className={`text-gray-400 transition-transform ${loansOpen ? 'rotate-180' : ''}`} aria-hidden="true">⌄</span>
           </div>
-          <div className="space-y-2">
-            {activeLoans.map(loan => {
-              const scheduledPayment = loan.dailyPaymentUSD || calculateDailyLoanPayment(loan.principalUSD, loan.annualInterestRate, loan.termYears);
-              const repayQuarter = Math.max(1, Math.round(loan.principalUSD * 0.25));
-              const repayHalf = Math.max(1, Math.round(loan.principalUSD * 0.50));
-              const canRepay = playerAirline.cashUSD > 0;
+        </button>
 
-              return (
-                <div key={loan.id} className="rounded border border-gray-700 bg-gray-900/30 p-2">
-                  <div className="flex items-start justify-between gap-2">
-                    <div>
-                      <div className="text-sm font-semibold text-white">{formatCurrency(loan.principalUSD)}</div>
-                      <div className="text-[10px] text-gray-500">
-                        {formatInterestRate(loan.annualInterestRate)} · {loan.termYears}y · {formatCurrency(scheduledPayment)}/day
-                      </div>
-                    </div>
-                    <div className="flex shrink-0 flex-wrap justify-end gap-1">
-                      <button
-                        type="button"
-                        disabled={!canRepay}
-                        onClick={() => repayLoan(loan.id, repayQuarter)}
-                        className="rounded border border-gray-600 px-2 py-1 text-[10px] font-semibold text-gray-200 hover:border-green-400 hover:text-green-300 disabled:cursor-not-allowed disabled:border-gray-800 disabled:text-gray-600"
-                      >
-                        25%
-                      </button>
-                      <button
-                        type="button"
-                        disabled={!canRepay}
-                        onClick={() => repayLoan(loan.id, repayHalf)}
-                        className="rounded border border-gray-600 px-2 py-1 text-[10px] font-semibold text-gray-200 hover:border-green-400 hover:text-green-300 disabled:cursor-not-allowed disabled:border-gray-800 disabled:text-gray-600"
-                      >
-                        50%
-                      </button>
-                      <button
-                        type="button"
-                        disabled={!canRepay}
-                        onClick={() => repayLoan(loan.id, loan.principalUSD)}
-                        className="rounded bg-green-700 px-2 py-1 text-[10px] font-semibold text-white hover:bg-green-600 disabled:cursor-not-allowed disabled:bg-gray-700 disabled:text-gray-400"
-                      >
-                        Full
-                      </button>
-                    </div>
+        {loansOpen && (
+          <div className="border-t border-gray-700/70 p-2">
+            <div className="mb-3">
+              <div className="flex items-center justify-between gap-2 mb-2">
+                <div>
+                  <div className="text-gray-300 text-xs font-semibold">Loan Application</div>
+                  <div className="text-[10px] text-gray-500">Larger facilities get lower institutional rates.</div>
+                </div>
+                <div className="text-right text-[10px] text-gray-500">
+                  Credit line
+                  <div className="text-gray-300 font-semibold">{formatCurrency(creditLimit)}</div>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 min-[420px]:grid-cols-4 gap-1.5 mb-2">
+                {LOAN_OFFERS.map(offer => {
+                  const selected = offer.amountUSD === selectedLoanAmount;
+                  const available = totalDebt + offer.amountUSD <= creditLimit;
+                  return (
+                    <button
+                      key={offer.amountUSD}
+                      type="button"
+                      onClick={() => setSelectedLoanAmount(offer.amountUSD)}
+                      className={`rounded border px-2 py-1.5 text-left transition-colors ${
+                        selected
+                          ? 'border-blue-400 bg-blue-500/20 text-white'
+                          : available
+                            ? 'border-gray-700 bg-gray-900/40 text-gray-300 hover:border-gray-500'
+                            : 'border-gray-800 bg-gray-950/30 text-gray-600'
+                      }`}
+                    >
+                      <div className="text-xs font-semibold">{formatCurrency(offer.amountUSD)}</div>
+                      <div className="text-[10px]">{formatInterestRate(offer.annualInterestRate)}</div>
+                    </button>
+                  );
+                })}
+              </div>
+              <div className="flex flex-col min-[420px]:flex-row min-[420px]:items-center justify-between gap-2 text-xs">
+                <div className="space-y-0.5">
+                  <div className="text-gray-400">
+                    Term: <span className="text-gray-200">{selectedOffer.termYears} years</span>
+                  </div>
+                  <div className="text-gray-400">
+                    Daily service: <span className="text-red-300">{formatCurrency(calculateDailyLoanPayment(selectedOffer.amountUSD, selectedOffer.annualInterestRate, selectedOffer.termYears))}</span>
+                  </div>
+                  {!canApplyForLoan && (
+                    <div className="text-red-400">This would exceed your current credit line.</div>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  disabled={!canApplyForLoan}
+                  onClick={() => applyLoan(selectedOffer.amountUSD)}
+                  className="rounded bg-green-600 px-3 py-2 text-xs font-semibold text-white hover:bg-green-500 disabled:cursor-not-allowed disabled:bg-gray-700 disabled:text-gray-400"
+                >
+                  Apply
+                </button>
+              </div>
+            </div>
+
+            {activeLoans.length > 0 && (
+              <div className="border-t border-gray-700/70 pt-3">
+                <div className="flex items-center justify-between gap-2 mb-2">
+                  <div>
+                    <div className="text-gray-300 text-xs font-semibold">Active Loans</div>
+                    <div className="text-[10px] text-gray-500">Early payments reduce principal immediately.</div>
+                  </div>
+                  <div className="text-right text-[10px] text-gray-500">
+                    Outstanding
+                    <div className="text-red-300 font-semibold">{formatCurrency(totalDebt)}</div>
                   </div>
                 </div>
-              );
-            })}
+                <div className="space-y-2">
+                  {activeLoans.map(loan => {
+                    const scheduledPayment = loan.dailyPaymentUSD || calculateDailyLoanPayment(loan.principalUSD, loan.annualInterestRate, loan.termYears);
+                    const repayQuarter = Math.max(1, Math.round(loan.principalUSD * 0.25));
+                    const repayHalf = Math.max(1, Math.round(loan.principalUSD * 0.50));
+                    const canRepay = playerAirline.cashUSD > 0;
+
+                    return (
+                      <div key={loan.id} className="rounded border border-gray-700 bg-gray-900/30 p-2">
+                        <div className="flex items-start justify-between gap-2">
+                          <div>
+                            <div className="text-sm font-semibold text-white">{formatCurrency(loan.principalUSD)}</div>
+                            <div className="text-[10px] text-gray-500">
+                              {formatInterestRate(loan.annualInterestRate)} · {loan.termYears}y · {formatCurrency(scheduledPayment)}/day
+                            </div>
+                          </div>
+                          <div className="flex shrink-0 flex-wrap justify-end gap-1">
+                            <button
+                              type="button"
+                              disabled={!canRepay}
+                              onClick={() => repayLoan(loan.id, repayQuarter)}
+                              className="rounded border border-gray-600 px-2 py-1 text-[10px] font-semibold text-gray-200 hover:border-green-400 hover:text-green-300 disabled:cursor-not-allowed disabled:border-gray-800 disabled:text-gray-600"
+                            >
+                              25%
+                            </button>
+                            <button
+                              type="button"
+                              disabled={!canRepay}
+                              onClick={() => repayLoan(loan.id, repayHalf)}
+                              className="rounded border border-gray-600 px-2 py-1 text-[10px] font-semibold text-gray-200 hover:border-green-400 hover:text-green-300 disabled:cursor-not-allowed disabled:border-gray-800 disabled:text-gray-600"
+                            >
+                              50%
+                            </button>
+                            <button
+                              type="button"
+                              disabled={!canRepay}
+                              onClick={() => repayLoan(loan.id, loan.principalUSD)}
+                              className="rounded bg-green-700 px-2 py-1 text-[10px] font-semibold text-white hover:bg-green-600 disabled:cursor-not-allowed disabled:bg-gray-700 disabled:text-gray-400"
+                            >
+                              Full
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
-        </div>
-      )}
+        )}
+      </div>
 
       <div>
         <div className="text-gray-400 text-xs mb-1">30-Day Profit Trend</div>
