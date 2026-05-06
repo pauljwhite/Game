@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useGameStore } from '@/store';
 import type { NewsTickerItem } from '@/store/uiSlice';
 
@@ -17,7 +17,9 @@ export const BottomBar: React.FC = () => {
     [newsTicker],
   );
   const tickerDuration = speed >= 14400 ? 5 : speed >= 3600 ? 7 : speed >= 1200 ? 10 : speed >= 300 ? 15 : 22;
+  const tickerItemsRef = useRef(tickerItems);
   const [latestNews, setLatestNews] = useState<NewsTickerItem>(tickerItems[0]);
+  const [animationCycle, setAnimationCycle] = useState(0);
   const isFleetAlert = latestNews.severity === 'fleet' || latestNews.severity === 'breaking';
   const isPlayerAlert = !!latestNews.playerRelated || isFleetAlert;
   const linkedArticleId = latestNews.articleId && newspaperQueue.some(article => article.id === latestNews.articleId)
@@ -37,12 +39,18 @@ export const BottomBar: React.FC = () => {
     if (linkedArticleId) openModalById('newspaper', { articleId: linkedArticleId, readOnly: true });
   }
 
+  useEffect(() => {
+    tickerItemsRef.current = tickerItems;
+  }, [tickerItems]);
+
   function advanceTicker() {
     setLatestNews(current => {
-      const currentIndex = tickerItems.findIndex(item => item.id === current.id);
-      const nextIndex = currentIndex < 0 ? 0 : (currentIndex + 1) % tickerItems.length;
-      return tickerItems[nextIndex];
+      const queuedItems = tickerItemsRef.current;
+      const currentIndex = queuedItems.findIndex(item => item.id === current.id);
+      const nextIndex = currentIndex < 0 ? 0 : (currentIndex + 1) % queuedItems.length;
+      return queuedItems[nextIndex];
     });
+    setAnimationCycle(cycle => cycle + 1);
   }
 
   return (
@@ -58,10 +66,10 @@ export const BottomBar: React.FC = () => {
         title={linkedArticleId ? 'Open Aviation Herald article' : undefined}
       >
         <div
-          key={latestNews.id}
+          key={`${latestNews.id}_${animationCycle}`}
           className={`news-ticker-track text-xs whitespace-nowrap ${tickerClass}`}
-          style={{ animationDuration: `${tickerDuration}s` }}
-          onAnimationIteration={advanceTicker}
+          style={{ animationDuration: `${tickerDuration}s`, animationIterationCount: 1 }}
+          onAnimationEnd={advanceTicker}
         >
           <span className="news-ticker-item">{tickerText}</span>
           <span className="news-ticker-item" aria-hidden="true">{tickerText}</span>
