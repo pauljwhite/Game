@@ -30,6 +30,7 @@ export interface PlayerSlice {
   sellAircraft: (aircraftId: string) => void;
   createRoute: (config: RouteConfig, airports: Record<string, Airport>, gameDay: number) => string | null;
   updateRoute: (routeId: string, changes: Partial<Route>) => void;
+  applyRouteOptimisation: (updates: Record<string, Partial<Route>>, cost: number) => boolean;
   deleteRoute: (routeId: string) => void;
   designateHub: (iata: string) => void;
   removeHub: (iata: string) => void;
@@ -177,6 +178,27 @@ export const createPlayerSlice: StateCreator<GameStore, [['zustand/immer', never
 
   updateRoute: (routeId, changes) =>
     set((state) => { Object.assign(state.routes[routeId], changes); }),
+
+  applyRouteOptimisation: (updates, cost) => {
+    const airline = get().airlines[PLAYER_ID];
+    if (!airline || airline.cashUSD < cost) return false;
+    set((state) => {
+      const player = state.airlines[PLAYER_ID];
+      if (!player || player.cashUSD < cost) return;
+      player.cashUSD -= cost;
+      Object.entries(updates).forEach(([routeId, changes]) => {
+        if (state.routes[routeId]) Object.assign(state.routes[routeId], changes);
+      });
+    });
+    get().pushNewsItem(
+      `Network optimisation completed for ${
+        Object.keys(updates).length
+      } routes at a consulting cost of ${
+        new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(cost)
+      }.`,
+    );
+    return true;
+  },
 
   deleteRoute: (routeId) =>
     set((state) => {
