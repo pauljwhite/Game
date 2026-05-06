@@ -5,20 +5,27 @@ import { useGameStore } from '@/store';
 import type { Airport } from '@/types';
 
 const BASE_RADIUS: Record<string, number> = {
-  small: 3, medium: 5, large: 7, major: 9,
+  small: 2.5, medium: 3.5, large: 5, major: 6.5,
 };
 
 const MIN_ZOOM: Record<string, number> = {
   small: 5, medium: 4, large: 2, major: 2,
 };
 
-const HIT_RADIUS = 14;
+const HIT_RADIUS: Record<string, number> = {
+  small: 14, medium: 14, large: 15, major: 16,
+};
 const BOUNDS_PADDING = 0.35;
 
 function getVisualRadius(size: string, zoom: number): number {
   const base = BASE_RADIUS[size] ?? 4;
-  const scale = Math.max(0.5, zoom / 5);
-  return Math.max(3, base * scale);
+  if (zoom <= 3) return Math.max(2, base * 0.55);
+  if (zoom <= 5) return Math.max(2.25, base * (0.55 + (zoom - 3) * 0.18));
+  return Math.min(base * 1.5, base * (0.91 + (zoom - 5) * 0.12));
+}
+
+function getHitRadius(size: string): number {
+  return HIT_RADIUS[size] ?? 14;
 }
 
 interface MarkerEntry {
@@ -85,6 +92,7 @@ export function AirportMarkers({ map }: AirportMarkersProps) {
           existing.airport = airport;
           existing.visual.setLatLng(latlng);
           existing.hit.setLatLng(latlng);
+          existing.hit.setRadius(getHitRadius(airport.size));
           applyMarkerStyle(existing, zoom);
           return;
         }
@@ -100,7 +108,7 @@ export function AirportMarkers({ map }: AirportMarkersProps) {
         }).addTo(map);
 
         const hit = L.circleMarker(latlng, {
-          radius: HIT_RADIUS,
+          radius: getHitRadius(airport.size),
           color: 'transparent',
           fillColor: 'transparent',
           fillOpacity: 0,
