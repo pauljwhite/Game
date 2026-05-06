@@ -29,6 +29,11 @@ function LoadFactorPreviewRow({ label, current, predicted }: { label: string; cu
   );
 }
 
+function normalisePrice(value: number): number {
+  const step = value < 200 ? 5 : value < 1000 ? 10 : value < 5000 ? 50 : 100;
+  return Math.max(1, Math.round(value / step) * step);
+}
+
 export const RouteDetailModal: React.FC = () => {
   const routes               = useGameStore(s => s.routes);
   const aircraft             = useGameStore(s => s.aircraft);
@@ -339,6 +344,20 @@ export const RouteDetailModal: React.FC = () => {
                   value={priceEconomy} min={1} max={maxEco}
                   onChange={v => setPriceEconomy(v)}
                 />
+                <input
+                  type="range"
+                  min={1}
+                  max={maxEco}
+                  step={1}
+                  value={Math.min(maxEco, priceEconomy)}
+                  onChange={e => setPriceEconomy(Math.min(maxEco, normalisePrice(Number(e.target.value))))}
+                  className="mt-2 w-full accent-blue-500"
+                />
+                <div className="flex justify-between text-[10px] text-gray-500 mt-1">
+                  <span>$1</span>
+                  <span>Suggested {formatCurrency(referencePrice)}</span>
+                  <span>{formatCurrency(maxEco)}</span>
+                </div>
               </div>
               <div>
                 <label className="text-gray-400 text-xs block mb-1">Business (max {formatCurrency(maxBiz)})</label>
@@ -346,6 +365,20 @@ export const RouteDetailModal: React.FC = () => {
                   value={priceBusiness} min={1} max={maxBiz}
                   onChange={v => setPriceBusiness(v)}
                 />
+                <input
+                  type="range"
+                  min={1}
+                  max={maxBiz}
+                  step={1}
+                  value={Math.min(maxBiz, priceBusiness)}
+                  onChange={e => setPriceBusiness(Math.min(maxBiz, normalisePrice(Number(e.target.value))))}
+                  className="mt-2 w-full accent-blue-500"
+                />
+                <div className="flex justify-between text-[10px] text-gray-500 mt-1">
+                  <span>$1</span>
+                  <span>Suggested {formatCurrency(referencePrice * 4)}</span>
+                  <span>{formatCurrency(maxBiz)}</span>
+                </div>
               </div>
             </div>
           </div>
