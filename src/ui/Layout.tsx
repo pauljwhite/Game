@@ -42,12 +42,14 @@ export const Layout: React.FC = () => {
     document.documentElement.dataset.theme = themeMode;
   }, [themeMode]);
 
+  const nextAutoOpenArticle = newspaperQueue.find(article => !article.suppressAutoOpen);
+
   // Auto-open newspaper modal when queue has items and no other modal is showing
   useEffect(() => {
-    if (openModal === null && newspaperQueue.length > 0) {
-      openModalById('newspaper');
+    if (openModal === null && nextAutoOpenArticle) {
+      openModalById('newspaper', nextAutoOpenArticle.id);
     }
-  }, [openModal, newspaperQueue.length, openModalById]);
+  }, [openModal, nextAutoOpenArticle, openModalById]);
 
 
   if (!hydrated || !isInitialized) {

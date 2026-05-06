@@ -378,6 +378,21 @@ function FleetPolicySection() {
             </button>
           </div>
 
+          <div className="flex items-start justify-between gap-3 rounded bg-white/[0.035] px-2 py-2">
+            <div>
+              <div className="text-gray-300">Automatically maintain aircraft with issues</div>
+              <div className="text-[10px] text-gray-500">Grounding Herald articles stay in the ticker, but no longer pop up.</div>
+            </div>
+            <button
+              onClick={() => setMaintenancePolicy({ ...policy, autoMaintainIssues: !policy.autoMaintainIssues })}
+              className={`px-2.5 py-0.5 rounded font-semibold transition-colors shrink-0 ${
+                policy.autoMaintainIssues ? 'bg-teal-500 text-white' : 'bg-white/10 hover:bg-white/15 text-gray-300'
+              }`}
+            >
+              {policy.autoMaintainIssues ? 'ON' : 'OFF'}
+            </button>
+          </div>
+
           {/* Threshold */}
           <div>
             <div className="flex justify-between text-[10px] text-gray-400 mb-1">

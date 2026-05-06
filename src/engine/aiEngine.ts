@@ -106,7 +106,7 @@ function trySpawnNewAirline(store: StoreState, gameDay: number): void {
     crashPenaltyDaysLeft: 0,
     shareholders: {},
     lastDailyProfit: 0,
-    maintenancePolicy: { enabled: false, threshold: 40, tier: 'standard' },
+    maintenancePolicy: { enabled: false, threshold: 40, tier: 'standard', autoMaintainIssues: false },
   };
 
   store.addAIAirline(newAirline);

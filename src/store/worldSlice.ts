@@ -1,5 +1,6 @@
 import type { StateCreator } from 'zustand';
 import type { Airport, Airline, Aircraft, Route } from '@/types';
+import type { NewsTickerItem } from './uiSlice';
 import { AIRPORTS } from '@/data/airports';
 import { MAINTENANCE_TIERS, computeMaintenanceCost, getMaintenanceAgeMultiplier } from '@/utils/constants';
 import { AIRCRAFT_TYPES } from '@/data/aircraftTypes';
@@ -13,7 +14,7 @@ export interface WorldSlice {
   aiAircraft: Record<string, Aircraft>;
   aiRoutes: Record<string, Route>;
   globalFuelPrice: number;
-  newsTicker: string[];
+  newsTicker: NewsTickerItem[];
   totalMarketPAX: number;
 
   initWorld: () => void;
@@ -21,7 +22,7 @@ export interface WorldSlice {
   updateAIAirline: (id: string, changes: Partial<Airline>) => void;
   addAIRoute: (route: Route) => void;
   removeAIRoute: (routeId: string) => void;
-  pushNewsItem: (text: string) => void;
+  pushNewsItem: (item: string | Omit<NewsTickerItem, 'id'>) => void;
   setGlobalFuelPrice: (price: number) => void;
   updateTotalMarketPAX: (pax: number) => void;
   setAirportHub: (iata: string, isHub: boolean) => void;
@@ -59,7 +60,7 @@ export const createWorldSlice: StateCreator<GameStore, [['zustand/immer', never]
   aiAircraft: {},
   aiRoutes: {},
   globalFuelPrice: 0.82,
-  newsTicker: ['Welcome to Mighty Airline Empire! Build your airline from the ground up.'],
+  newsTicker: [{ id: 'welcome', text: 'Welcome to Mighty Airline Empire! Build your airline from the ground up.' }],
   totalMarketPAX: 0,
   airportDailyPax: {},
 
@@ -106,9 +107,12 @@ export const createWorldSlice: StateCreator<GameStore, [['zustand/immer', never]
       delete state.aiRoutes[routeId];
     }),
 
-  pushNewsItem: (text) =>
+  pushNewsItem: (item) =>
     set((state) => {
-      state.newsTicker.unshift(text);
+      const newsItem = typeof item === 'string'
+        ? { id: `news_${Date.now()}_${Math.random().toString(36).slice(2)}`, text: item }
+        : { id: `news_${Date.now()}_${Math.random().toString(36).slice(2)}`, ...item };
+      state.newsTicker.unshift(newsItem);
       if (state.newsTicker.length > 20) state.newsTicker.pop();
     }),
 

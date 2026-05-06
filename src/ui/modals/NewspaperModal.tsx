@@ -9,34 +9,48 @@ const SEVERITY_STYLES = {
 };
 
 export const NewspaperModal: React.FC = () => {
-  const article        = useGameStore(s => s.newspaperQueue[0]);
+  const newspaperQueue = useGameStore(s => s.newspaperQueue);
+  const modalPayload   = useGameStore(s => s.modalPayload);
   const gameTimeMs     = useGameStore(s => s.gameTimeMs);
   const gameDay        = useGameStore(s => s.gameDay);
   const closeModal     = useGameStore(s => s.closeModal);
   const popNewspaper   = useGameStore(s => s.popNewspaper);
   const ignoreGrounding = useGameStore(s => s.ignoreGrounding);
   const startMaintenance = useGameStore(s => s.startMaintenance);
+  const policy = useGameStore(s => s.airlines['player']?.maintenancePolicy);
+  const setMaintenancePolicy = useGameStore(s => s.setMaintenancePolicy);
+
+  const requestedArticleId = typeof modalPayload === 'string' ? modalPayload : null;
+  const article = requestedArticleId
+    ? newspaperQueue.find(item => item.id === requestedArticleId)
+    : newspaperQueue.find(item => !item.suppressAutoOpen) ?? newspaperQueue[0];
 
   if (!article) return null;
+  const currentArticle = article;
 
-  const styles   = SEVERITY_STYLES[article.severity];
+  const styles   = SEVERITY_STYLES[currentArticle.severity];
   const gameDate = formatGameDate(gameTimeMs);
-  const hasActions = !!article.actionAircraftId;
+  const hasActions = !!currentArticle.actionAircraftId;
 
   function dismiss() {
     closeModal();
-    popNewspaper();
+    popNewspaper(currentArticle.id);
   }
 
   function handleMaintenance() {
-    if (!article.actionAircraftId) return;
-    startMaintenance(article.actionAircraftId, gameDay, 'standard');
+    if (!currentArticle.actionAircraftId) return;
+    startMaintenance(currentArticle.actionAircraftId, gameDay, 'standard');
     dismiss();
   }
 
+  function handleAlwaysMaintainIssues() {
+    if (policy) setMaintenancePolicy({ ...policy, autoMaintainIssues: true });
+    handleMaintenance();
+  }
+
   function handleKeepFlying() {
-    if (!article.actionAircraftId) return;
-    ignoreGrounding(article.actionAircraftId);
+    if (!currentArticle.actionAircraftId) return;
+    ignoreGrounding(currentArticle.actionAircraftId);
     dismiss();
   }
 
@@ -74,17 +88,17 @@ export const NewspaperModal: React.FC = () => {
 
           {/* Headline */}
           <h1 className="font-black text-2xl leading-tight mb-2 uppercase" style={{ fontFamily: 'Georgia, "Times New Roman", serif' }}>
-            {article.headline}
+            {currentArticle.headline}
           </h1>
 
           {/* Subheadline */}
           <p className="text-sm italic opacity-70 mb-4 leading-snug border-b pb-3" style={{ borderColor: 'rgba(26,16,8,0.2)', fontFamily: 'Georgia, "Times New Roman", serif' }}>
-            {article.subheadline}
+            {currentArticle.subheadline}
           </p>
 
           {/* Body */}
           <div className="space-y-3 mb-5">
-            {article.paragraphs.map((para, i) => (
+            {currentArticle.paragraphs.map((para, i) => (
               <p key={i} className="text-sm leading-relaxed" style={{ fontFamily: 'Georgia, "Times New Roman", serif', textAlign: 'justify' }}>
                 {i === 0 && (
                   <span className="float-left font-black mr-1" style={{ fontSize: '3.2rem', lineHeight: '0.82' }}>
@@ -109,9 +123,17 @@ export const NewspaperModal: React.FC = () => {
                   style={{ background: '#1a4a1a', color: '#d4edda' }}
                 >
                   <span>Send to Maintenance (Standard)</span>
-                  {article.actionMaintenanceCost ? (
-                    <span className="text-xs opacity-80">{formatCurrency(article.actionMaintenanceCost)}</span>
+                  {currentArticle.actionMaintenanceCost ? (
+                    <span className="text-xs opacity-80">{formatCurrency(currentArticle.actionMaintenanceCost)}</span>
                   ) : null}
+                </button>
+                <button
+                  onClick={handleAlwaysMaintainIssues}
+                  className="w-full py-2.5 px-4 rounded text-sm font-bold text-left flex items-center justify-between transition-opacity hover:opacity-90"
+                  style={{ background: '#164e63', color: '#cffafe' }}
+                >
+                  <span>Always Send Issue Aircraft to Maintenance</span>
+                  <span className="text-xs opacity-80">Suppress Herald popups</span>
                 </button>
                 <button
                   onClick={handleKeepFlying}

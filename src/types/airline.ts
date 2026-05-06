@@ -51,5 +51,6 @@ export interface Airline {
     enabled: boolean;
     threshold: number;
     tier: 'light' | 'standard' | 'full';
+    autoMaintainIssues: boolean;
   };
 }

@@ -94,7 +94,7 @@ export const createPlayerSlice: StateCreator<GameStore, [['zustand/immer', never
         shareholders: {},
         lastDailyProfit: 0,
         loans: [],
-        maintenancePolicy: { enabled: false, threshold: 40, tier: 'standard' },
+        maintenancePolicy: { enabled: false, threshold: 40, tier: 'standard', autoMaintainIssues: false },
       };
       state.airlines[PLAYER_ID] = airline;
     }),

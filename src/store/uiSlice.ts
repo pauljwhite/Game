@@ -15,6 +15,14 @@ export interface NewsArticle {
   // When set, the modal shows maintenance/ignore action buttons for a player aircraft
   actionAircraftId?: string;
   actionMaintenanceCost?: number;
+  suppressAutoOpen?: boolean;
+}
+
+export interface NewsTickerItem {
+  id: string;
+  text: string;
+  severity?: 'normal' | 'fleet' | 'breaking';
+  articleId?: string;
 }
 
 export interface UISlice {
@@ -34,7 +42,7 @@ export interface UISlice {
   closeModal: () => void;
   setThemeMode: (mode: ThemeMode) => void;
   pushNewspaper: (article: NewsArticle) => void;
-  popNewspaper: () => void;
+  popNewspaper: (articleId?: string) => void;
 }
 
 export const createUISlice: StateCreator<GameStore, [['zustand/immer', never]], [], UISlice> = (set) => ({
@@ -54,7 +62,14 @@ export const createUISlice: StateCreator<GameStore, [['zustand/immer', never]], 
   closeModal: () => set((state) => { state.openModal = null; state.modalPayload = null; }),
   setThemeMode: (mode) => set((state) => { state.themeMode = mode; }),
   pushNewspaper: (article) => set((state) => {
-    if (state.newspaperQueue.length < 5) state.newspaperQueue.push(article);
+    state.newspaperQueue.push(article);
+    if (state.newspaperQueue.length > 8) state.newspaperQueue.shift();
   }),
-  popNewspaper: () => set((state) => { state.newspaperQueue.shift(); }),
+  popNewspaper: (articleId) => set((state) => {
+    if (!articleId) {
+      state.newspaperQueue.shift();
+      return;
+    }
+    state.newspaperQueue = state.newspaperQueue.filter(article => article.id !== articleId);
+  }),
 });

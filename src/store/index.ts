@@ -74,12 +74,12 @@ function sanitizePersistedState(state: Partial<GameStore>): Partial<GameStore> {
     }),
   );
 
-  const DEFAULT_MAINT_POLICY = { enabled: false, threshold: 40, tier: 'standard' as const };
+  const DEFAULT_MAINT_POLICY = { enabled: false, threshold: 40, tier: 'standard' as const, autoMaintainIssues: false };
 
   const airlines = Object.fromEntries(
     Object.entries(state.airlines ?? {}).map(([id, airline]) => {
       const raw = airline as unknown as Record<string, unknown>;
-      const rawPolicy = raw.maintenancePolicy as { enabled?: boolean; threshold?: number; tier?: string } | undefined;
+      const rawPolicy = raw.maintenancePolicy as { enabled?: boolean; threshold?: number; tier?: string; autoMaintainIssues?: boolean } | undefined;
       const loans = sanitizeLoans(raw.loans);
       return [
         id,
@@ -98,6 +98,7 @@ function sanitizePersistedState(state: Partial<GameStore>): Partial<GameStore> {
                 enabled: typeof rawPolicy.enabled === 'boolean' ? rawPolicy.enabled : false,
                 threshold: typeof rawPolicy.threshold === 'number' ? rawPolicy.threshold : 40,
                 tier: (['light', 'standard', 'full'].includes(rawPolicy.tier ?? '') ? rawPolicy.tier : 'standard') as 'light' | 'standard' | 'full',
+                autoMaintainIssues: typeof rawPolicy.autoMaintainIssues === 'boolean' ? rawPolicy.autoMaintainIssues : false,
               }
             : DEFAULT_MAINT_POLICY,
           routeIds: uniqueExistingIds(airline.routeIds, routeId => routes[routeId]?.airlineId === id),
@@ -145,7 +146,13 @@ function sanitizePersistedState(state: Partial<GameStore>): Partial<GameStore> {
     isPaused: false,
   };
 
-  if (Array.isArray(state.newsTicker)) sanitized.newsTicker = state.newsTicker.slice(0, 20);
+  if (Array.isArray(state.newsTicker)) {
+    sanitized.newsTicker = state.newsTicker.slice(0, 20).map((item, index) => (
+      typeof item === 'string'
+        ? { id: `legacy_${index}`, text: item }
+        : item
+    ));
+  }
 
   return sanitized;
 }

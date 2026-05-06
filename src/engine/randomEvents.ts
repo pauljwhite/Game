@@ -498,7 +498,13 @@ export function runRandomEventsTick(
           .replace('{aircraft}', `${ac.name}`)
           .replace('{airport}', airportCity);
 
-        store.pushNewsItem(msg);
+        const autoMaintainIssues = playerAirline.maintenancePolicy?.autoMaintainIssues ?? false;
+        const articleId = `issue_${store.gameDay}_${ac.id}_${evt.id}`;
+        store.pushNewsItem({
+          text: msg,
+          severity: evt.ground ? 'fleet' : evt.reputationDelta < 0 ? 'fleet' : 'normal',
+          articleId: evt.ground ? articleId : undefined,
+        });
         store.updateAircraftCondition(ac.id, evt.conditionDelta, 0);
 
         if (evt.ground) {
@@ -509,7 +515,20 @@ export function runRandomEventsTick(
           const maintCost = acType
             ? computeMaintenanceCost('standard', ac.maintenanceHoursOwed, acType.maintenanceCostPerHourUSD, getMaintenanceAgeMultiplier(ac, store.gameDay))
             : 0;
-          store.pushNewspaper(buildGroundingArticle(evt, playerAirline.name, ac.name, airportCity, routeLabel, store.gameDay, ac.id, maintCost));
+          const article = {
+            ...buildGroundingArticle(evt, playerAirline.name, ac.name, airportCity, routeLabel, store.gameDay, ac.id, maintCost),
+            id: articleId,
+            suppressAutoOpen: autoMaintainIssues,
+          };
+          store.pushNewspaper(article);
+          if (autoMaintainIssues) {
+            store.startMaintenance(ac.id, store.gameDay, 'standard');
+            store.pushNewsItem({
+              text: `Auto-maintenance sent ${ac.name} to the hangar after ${reason.toLowerCase()}.`,
+              severity: 'fleet',
+              articleId,
+            });
+          }
         }
         if (evt.reputationDelta !== 0) {
           store.applyReputationHit('player', evt.reputationDelta);
