@@ -206,6 +206,7 @@ export const NewRouteModal: React.FC = () => {
 
   const effectiveAc   = selectedAc ?? pendingMockAc;
   const effectiveType = selectedType ?? pendingType;
+  const effectiveHasBusinessSeats = (effectiveType?.seatsBusiness ?? 0) > 0;
 
   // Suggested price from flight cost
   useEffect(() => {
@@ -218,7 +219,7 @@ export const NewRouteModal: React.FC = () => {
       2000;
     const suggested = getSuggestedEconomyPrice(totalCostPerFlight, effectiveType.seatsEconomy + effectiveType.seatsBusiness);
     setPriceEconomy(suggested);
-    setPriceBusiness(suggested * 4);
+    setPriceBusiness(effectiveType.seatsBusiness > 0 ? suggested * 4 : 0);
   }, [effectiveType, distanceKm]);
 
   // Validation
@@ -369,7 +370,7 @@ export const NewRouteModal: React.FC = () => {
     }
 
     const result = createRoute(
-      { originIata: originAirport!.iata, destinationIata: destAirport!.iata, aircraftId, flightsPerWeek, priceEconomy, priceBusiness },
+      { originIata: originAirport!.iata, destinationIata: destAirport!.iata, aircraftId, flightsPerWeek, priceEconomy, priceBusiness: effectiveHasBusinessSeats ? priceBusiness : 0 },
       airports, gameDay,
     );
     if (result !== null) {
@@ -663,6 +664,7 @@ export const NewRouteModal: React.FC = () => {
             const refPrice = pnlPreview?.referencePrice ?? null;
             const maxEco = refPrice ? refPrice * 6 : 9999;
             const maxBiz = refPrice ? refPrice * 24 : 39999;
+            const hasBusinessSeats = effectiveHasBusinessSeats;
             return (
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
@@ -670,10 +672,10 @@ export const NewRouteModal: React.FC = () => {
                   {refPrice && (
                     <button
                       type="button"
-                      onClick={() => { setPriceEconomy(refPrice); setPriceBusiness(refPrice * 4); }}
+                      onClick={() => { setPriceEconomy(refPrice); setPriceBusiness(hasBusinessSeats ? refPrice * 4 : 0); }}
                       className="text-xs text-blue-400 hover:text-blue-300 transition-colors"
                     >
-                      ↺ Reset to suggested ({formatUSD(refPrice)} / {formatUSD(refPrice * 4)})
+                      ↺ Reset to suggested ({formatUSD(refPrice)}{hasBusinessSeats ? ` / ${formatUSD(refPrice * 4)}` : ''})
                     </button>
                   )}
                 </div>
@@ -699,26 +701,33 @@ export const NewRouteModal: React.FC = () => {
                       <span>{formatUSD(maxEco)}</span>
                     </div>
                   </div>
-                  <div>
-                    <label className="text-gray-400 text-xs block mb-1">Business (max {formatUSD(maxBiz)})</label>
+                  <div className={!hasBusinessSeats ? 'opacity-60' : ''}>
+                    <label className="text-gray-400 text-xs block mb-1">
+                      Business {hasBusinessSeats ? `(max ${formatUSD(maxBiz)})` : '(no business seats)'}
+                    </label>
                     <PriceInput
-                      value={priceBusiness} min={0} max={maxBiz}
+                      value={hasBusinessSeats ? priceBusiness : 0} min={0} max={maxBiz}
+                      disabled={!hasBusinessSeats}
                       onChange={v => setPriceBusiness(v)}
                     />
                     <input
                       type="range"
+                      disabled={!hasBusinessSeats}
                       min={0}
                       max={maxBiz}
                       step={1}
-                      value={Math.min(maxBiz, priceBusiness)}
+                      value={hasBusinessSeats ? Math.min(maxBiz, priceBusiness) : 0}
                       onChange={e => setPriceBusiness(Math.min(maxBiz, normalisePrice(Number(e.target.value))))}
-                      className="mt-2 w-full accent-blue-500"
+                      className="mt-2 w-full accent-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
                     />
                     <div className="flex justify-between text-[10px] text-gray-500 mt-1">
                       <span>$0</span>
-                      {refPrice && <span>Suggested {formatUSD(refPrice * 4)}</span>}
+                      {hasBusinessSeats && refPrice && <span>Suggested {formatUSD(refPrice * 4)}</span>}
                       <span>{formatUSD(maxBiz)}</span>
                     </div>
+                    {!hasBusinessSeats && (
+                      <p className="text-[10px] text-gray-500 mt-1">Selected aircraft has no business cabin.</p>
+                    )}
                   </div>
                 </div>
               </div>

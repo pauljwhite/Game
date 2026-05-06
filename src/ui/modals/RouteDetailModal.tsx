@@ -86,6 +86,7 @@ export const RouteDetailModal: React.FC = () => {
   })();
   const maxEco = referencePrice * 6;
   const maxBiz = referencePrice * 24;
+  const hasBusinessSeats = (assignedType?.seatsBusiness ?? 0) > 0;
 
   const preview = useMemo(() => {
     if (!assignedAircraft || !assignedType || !origin || !destination) return null;
@@ -139,7 +140,7 @@ export const RouteDetailModal: React.FC = () => {
 
   function handleSave() {
     if (!routeId) return;
-    updateRoute(routeId, { priceEconomy, priceBusiness, flightsPerWeek });
+    updateRoute(routeId, { priceEconomy, priceBusiness: hasBusinessSeats ? priceBusiness : 0, flightsPerWeek });
     closeModal();
     selectRoute(null);
   }
@@ -332,10 +333,10 @@ export const RouteDetailModal: React.FC = () => {
               <span className="text-gray-300 text-sm">Pricing</span>
               <button
                 type="button"
-                onClick={() => { setPriceEconomy(referencePrice); setPriceBusiness(referencePrice * 4); }}
+                onClick={() => { setPriceEconomy(referencePrice); setPriceBusiness(hasBusinessSeats ? referencePrice * 4 : 0); }}
                 className="text-xs text-blue-400 hover:text-blue-300 transition-colors"
               >
-                ↺ Reset to suggested ({formatCurrency(referencePrice)} / {formatCurrency(referencePrice * 4)})
+                ↺ Reset to suggested ({formatCurrency(referencePrice)}{hasBusinessSeats ? ` / ${formatCurrency(referencePrice * 4)}` : ''})
               </button>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -360,26 +361,33 @@ export const RouteDetailModal: React.FC = () => {
                   <span>{formatCurrency(maxEco)}</span>
                 </div>
               </div>
-              <div>
-                <label className="text-gray-400 text-xs block mb-1">Business (max {formatCurrency(maxBiz)})</label>
+              <div className={!hasBusinessSeats ? 'opacity-60' : ''}>
+                <label className="text-gray-400 text-xs block mb-1">
+                  Business {hasBusinessSeats ? `(max ${formatCurrency(maxBiz)})` : '(no business seats)'}
+                </label>
                 <PriceInput
-                  value={priceBusiness} min={0} max={maxBiz}
+                  value={hasBusinessSeats ? priceBusiness : 0} min={0} max={maxBiz}
+                  disabled={!hasBusinessSeats}
                   onChange={v => setPriceBusiness(v)}
                 />
                 <input
                   type="range"
+                  disabled={!hasBusinessSeats}
                   min={0}
                   max={maxBiz}
                   step={1}
-                  value={Math.min(maxBiz, priceBusiness)}
+                  value={hasBusinessSeats ? Math.min(maxBiz, priceBusiness) : 0}
                   onChange={e => setPriceBusiness(Math.min(maxBiz, normalisePrice(Number(e.target.value))))}
-                  className="mt-2 w-full accent-blue-500"
+                  className="mt-2 w-full accent-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
                 />
                 <div className="flex justify-between text-[10px] text-gray-500 mt-1">
                   <span>$0</span>
-                  <span>Suggested {formatCurrency(referencePrice * 4)}</span>
+                  {hasBusinessSeats && <span>Suggested {formatCurrency(referencePrice * 4)}</span>}
                   <span>{formatCurrency(maxBiz)}</span>
                 </div>
+                {!hasBusinessSeats && (
+                  <p className="text-[10px] text-gray-500 mt-1">Assigned aircraft has no business cabin.</p>
+                )}
               </div>
             </div>
           </div>
