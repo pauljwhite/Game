@@ -40,11 +40,13 @@ export function getPlayerMarketShare(
   referencePrice?: number,
   playerAirlineId = 'player',
   cabin: 'economy' | 'business' = 'economy',
+  excludeRouteId?: string,
 ): number {
   const getPrice = (r: Route) => cabin === 'business' ? r.priceBusiness : r.priceEconomy;
 
   const routesOnPair = allRoutes.filter(
     r => r.isActive &&
+      r.id !== excludeRouteId &&
       ((r.originIata === routeOrigin && r.destinationIata === routeDest) ||
        (r.originIata === routeDest && r.destinationIata === routeOrigin)) &&
       (cabin === 'economy' || getPrice(r) > 0),

@@ -72,10 +72,12 @@ export function runDailyTick(store: ReturnType<typeof import('@/store/index')['u
     referencePrice?: number,
     airlineId = 'player',
     cabin: 'economy' | 'business' = 'economy',
+    excludeRouteId?: string,
   ): number => {
     const getPrice = (route: Route) => cabin === 'business' ? route.priceBusiness : route.priceEconomy;
     const pairRoutes = activeRoutesByPair.get(routePairKey(routeOrigin, routeDest)) ?? [];
-    const routesOnPair = cabin === 'economy' ? pairRoutes : pairRoutes.filter(route => getPrice(route) > 0);
+    const competitorRoutes = pairRoutes.filter(route => route.id !== excludeRouteId);
+    const routesOnPair = cabin === 'economy' ? competitorRoutes : competitorRoutes.filter(route => getPrice(route) > 0);
     const airline = airlineById.get(airlineId);
     const premium = airline ? repPricePremium(airline.reputationScore) : 1;
     const effectivePrice = price / premium;
@@ -192,14 +194,14 @@ export function runDailyTick(store: ReturnType<typeof import('@/store/index')['u
       const condMod = conditionDemandMod(ac.condition);
 
       // Economy class — independent demand
-      const ecoMarketShare = getMarketShare(route.originIata, route.destinationIata, route.priceEconomy, ecoReferencePrice);
+      const ecoMarketShare = getMarketShare(route.originIata, route.destinationIata, route.priceEconomy, ecoReferencePrice, 'player', 'economy', route.id);
       const ecoCapacity = aircraftType.seatsEconomy * flightsPerDay;
       const ecoPax = Math.min(ecoCapacity, Math.floor(baselinePax * 0.90 * ecoMarketShare * repMod * crashPenalty * condMod));
 
       // Business class — independent demand (10% of route baseline, competes on biz price)
       const bizCapacity = aircraftType.seatsBusiness * flightsPerDay;
       const bizMarketShare = aircraftType.seatsBusiness > 0
-        ? getMarketShare(route.originIata, route.destinationIata, route.priceBusiness, bizReferencePrice, 'player', 'business')
+        ? getMarketShare(route.originIata, route.destinationIata, route.priceBusiness, bizReferencePrice, 'player', 'business', route.id)
         : 0;
       const bizPax = Math.min(bizCapacity, Math.floor(baselinePax * 0.10 * bizMarketShare * repMod * crashPenalty * condMod));
 
@@ -306,13 +308,13 @@ export function runDailyTick(store: ReturnType<typeof import('@/store/index')['u
       const aiCondMod = conditionDemandMod(ac.condition);
 
       // Economy and business cabins use independent demand, matching player route economics.
-      const ecoMarketShare = getMarketShare(route.originIata, route.destinationIata, route.priceEconomy, ecoReferencePrice, aiAirline.id);
+      const ecoMarketShare = getMarketShare(route.originIata, route.destinationIata, route.priceEconomy, ecoReferencePrice, aiAirline.id, 'economy', route.id);
       const ecoCapacity = Math.floor(aircraftType.seatsEconomy * flightsPerDay);
       const ecoPax = Math.min(ecoCapacity, Math.floor(baselinePax * 0.90 * ecoMarketShare * aiRepMod * aiCondMod));
 
       const bizCapacity = Math.floor(aircraftType.seatsBusiness * flightsPerDay);
       const bizMarketShare = aircraftType.seatsBusiness > 0
-        ? getMarketShare(route.originIata, route.destinationIata, route.priceBusiness, bizReferencePrice, aiAirline.id, 'business')
+        ? getMarketShare(route.originIata, route.destinationIata, route.priceBusiness, bizReferencePrice, aiAirline.id, 'business', route.id)
         : 0;
       const bizPax = Math.min(bizCapacity, Math.floor(baselinePax * 0.10 * bizMarketShare * aiRepMod * aiCondMod));
 

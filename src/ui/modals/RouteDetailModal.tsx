@@ -104,12 +104,12 @@ export const RouteDetailModal: React.FC = () => {
     const repMod = playerAirline ? 1 + (playerAirline.reputationScore - 50) * REPUTATION_DEMAND_FACTOR : 1;
     const condMod = conditionDemandMod(assignedAircraft.condition);
     const baselinePax = getBaselineDailyPax(origin, destination) * (origin.isHub || destination.isHub ? HUB_DEMAND_BONUS : 1);
-    const ecoShare    = getPlayerMarketShare(route.originIata, route.destinationIata, priceEconomy, allAirlines, allRoutes, ecoRef);
+    const ecoShare    = getPlayerMarketShare(route.originIata, route.destinationIata, priceEconomy, allAirlines, allRoutes, ecoRef, 'player', 'economy', route.id);
     const ecoCapacity = assignedType.seatsEconomy * flightsPerDay;
     const ecoPax      = Math.min(ecoCapacity, Math.floor(baselinePax * 0.90 * ecoShare * repMod * condMod));
     const lfe         = ecoCapacity > 0 ? ecoPax / ecoCapacity : 0;
     const bizShare    = assignedType.seatsBusiness > 0
-      ? getPlayerMarketShare(route.originIata, route.destinationIata, priceBusiness, allAirlines, allRoutes, bizRef, 'player', 'business')
+      ? getPlayerMarketShare(route.originIata, route.destinationIata, priceBusiness, allAirlines, allRoutes, bizRef, 'player', 'business', route.id)
       : 0;
     const bizCapacity = assignedType.seatsBusiness * flightsPerDay;
     const bizPax      = Math.min(bizCapacity, Math.floor(baselinePax * 0.10 * bizShare * repMod * condMod));
