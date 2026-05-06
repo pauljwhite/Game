@@ -50,7 +50,7 @@ export function normaliseOptimisedPrice(value: number): number {
 
 function getMarketContext(input: RouteOptimisationInput): MarketContext {
   const { route, aircraft, aircraftType, origin, destination, globalFuelPrice, playerAirline, competitorRoutes } = input;
-  const costs = computeFlightCost(route, aircraft, aircraftType, origin, destination, globalFuelPrice);
+  const costs = computeFlightCost(route, aircraft, aircraftType, origin, destination, globalFuelPrice, input.gameDay);
   const totalSeats = aircraftType.seatsEconomy + aircraftType.seatsBusiness;
   const referencePrice = totalSeats > 0 ? Math.round(costs.totalCost / totalSeats * 1.3) : 200;
   const referencePriceBiz = referencePrice * 4;
@@ -128,7 +128,7 @@ function estimateOptimisedProfit(
   priceEconomy: number,
   priceBusiness: number,
 ) {
-  const costs = computeFlightCost({ ...input.route, flightsPerWeek, priceEconomy, priceBusiness }, input.aircraft, input.aircraftType, input.origin, input.destination, input.globalFuelPrice);
+  const costs = computeFlightCost({ ...input.route, flightsPerWeek, priceEconomy, priceBusiness }, input.aircraft, input.aircraftType, input.origin, input.destination, input.globalFuelPrice, input.gameDay);
   const dailyCost = costs.totalCost * (flightsPerWeek / 7);
   const dailyRevenue =
     estimateCabinRevenue(input, context, flightsPerWeek, priceEconomy, 'economy') +

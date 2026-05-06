@@ -4,7 +4,7 @@ import type { MaintenanceTier } from '@/types/aircraft';
 import { v4 as uuid } from 'uuid';
 import { haversineKm } from '@/utils/geo';
 import { AIRCRAFT_TYPES } from '@/data/aircraftTypes';
-import { computeMaintenanceCost, MAINTENANCE_TIERS } from '@/utils/constants';
+import { computeMaintenanceCost, getMaintenanceAgeMultiplier, MAINTENANCE_TIERS } from '@/utils/constants';
 import { computeAircraftValue, calculateBuyoutPrice, rawCompanyValue, calculateSharePrice } from '@/engine/valuation';
 import { calculateDailyLoanPayment, getLoanOffer } from '@/engine/finance';
 import { canAirportHandleAircraft } from '@/utils/runway';
@@ -424,7 +424,7 @@ export const createPlayerSlice: StateCreator<GameStore, [['zustand/immer', never
       ac.activeMaintTier = tier;
       const aircraftType = AIRCRAFT_TYPES.find(type => type.id === ac.typeId);
       const cost = aircraftType
-        ? computeMaintenanceCost(tier, ac.maintenanceHoursOwed, aircraftType.maintenanceCostPerHourUSD)
+        ? computeMaintenanceCost(tier, ac.maintenanceHoursOwed, aircraftType.maintenanceCostPerHourUSD, getMaintenanceAgeMultiplier(ac, state.gameDay))
         : 0;
       state.airlines[PLAYER_ID].cashUSD -= cost;
       if (ac.assignedRouteId && state.routes[ac.assignedRouteId]) {

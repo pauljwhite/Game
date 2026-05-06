@@ -1,6 +1,6 @@
 import type { NewsArticle } from '@/store/uiSlice';
 import { AIRCRAFT_TYPES } from '@/data/aircraftTypes';
-import { computeMaintenanceCost } from '@/utils/constants';
+import { computeMaintenanceCost, getMaintenanceAgeMultiplier } from '@/utils/constants';
 
 // Global throttle — multiply all event probabilities by this factor (0.6 = 40% fewer events)
 const EVENT_SCALE = 0.6;
@@ -506,7 +506,9 @@ export function runRandomEventsTick(
           store.groundAircraft(ac.id, reason);
           const routeLabel = route ? `${route.originIata}–${route.destinationIata}` : 'operated';
           const acType = AIRCRAFT_TYPES.find(t => t.id === ac.typeId);
-          const maintCost = acType ? computeMaintenanceCost('standard', ac.maintenanceHoursOwed, acType.maintenanceCostPerHourUSD) : 0;
+          const maintCost = acType
+            ? computeMaintenanceCost('standard', ac.maintenanceHoursOwed, acType.maintenanceCostPerHourUSD, getMaintenanceAgeMultiplier(ac, store.gameDay))
+            : 0;
           store.pushNewspaper(buildGroundingArticle(evt, playerAirline.name, ac.name, airportCity, routeLabel, store.gameDay, ac.id, maintCost));
         }
         if (evt.reputationDelta !== 0) {

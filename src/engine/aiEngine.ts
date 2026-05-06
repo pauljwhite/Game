@@ -5,7 +5,7 @@ import { getBaselineDailyPax } from './demandModel';
 import { computeFlightCost } from './economicsEngine';
 import { haversineKm } from '@/utils/geo';
 import { v4 as uuidv4 } from 'uuid';
-import { FUEL_PRICE_USD_PER_LITER, MAINTENANCE_TIERS, computeMaintenanceCost } from '@/utils/constants';
+import { FUEL_PRICE_USD_PER_LITER, MAINTENANCE_TIERS, computeMaintenanceCost, getMaintenanceAgeMultiplier } from '@/utils/constants';
 import { canAirportHandleAircraft } from '@/utils/runway';
 
 type StoreState = ReturnType<typeof import('@/store/index')['useGameStore']['getState']>;
@@ -193,7 +193,7 @@ function runAIMaintenanceTick(store: StoreState, gameDay: number): void {
       if (ac.condition <= threshold) {
         const aircraftType = AIRCRAFT_TYPES.find(t => t.id === ac.typeId);
         if (!aircraftType) return;
-        const cost = computeMaintenanceCost(tier, ac.maintenanceHoursOwed, aircraftType.maintenanceCostPerHourUSD);
+        const cost = computeMaintenanceCost(tier, ac.maintenanceHoursOwed, aircraftType.maintenanceCostPerHourUSD, getMaintenanceAgeMultiplier(ac, gameDay));
         // Skip if airline can't afford it (they'll keep flying degraded — risky but realistic)
         if (airline.cashUSD < cost) return;
         store.startAIMaintenance(acId, gameDay, tier);

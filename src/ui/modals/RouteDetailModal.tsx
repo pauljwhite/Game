@@ -81,7 +81,7 @@ export const RouteDetailModal: React.FC = () => {
   const assignedType = assignedAircraft ? AIRCRAFT_TYPES.find(t => t.id === assignedAircraft.typeId) : null;
   const referencePrice = (() => {
     if (assignedAircraft && assignedType && origin && destination) {
-      const costs = computeFlightCost(route, assignedAircraft, assignedType, origin, destination, globalFuelPrice);
+      const costs = computeFlightCost(route, assignedAircraft, assignedType, origin, destination, globalFuelPrice, gameDay);
       const totalSeats = assignedType.seatsEconomy + assignedType.seatsBusiness;
       return totalSeats > 0 ? Math.round(costs.totalCost / totalSeats * 1.4) : Math.round(route.distanceKm * 0.12);
     }
@@ -95,7 +95,7 @@ export const RouteDetailModal: React.FC = () => {
     if (!assignedAircraft || !assignedType || !origin || !destination) return null;
     const allAirlines = [...Object.values(airlines), ...Object.values(aiAirlines)];
     const allRoutes   = [...Object.values(routes),   ...Object.values(aiRoutes)];
-    const flightCosts = computeFlightCost(route, assignedAircraft, assignedType, origin, destination, globalFuelPrice);
+    const flightCosts = computeFlightCost(route, assignedAircraft, assignedType, origin, destination, globalFuelPrice, gameDay);
     const flightsPerDay = flightsPerWeek / 7;
     const totalSeats  = assignedType.seatsEconomy + assignedType.seatsBusiness;
     const ecoRef      = totalSeats > 0 ? Math.round(flightCosts.totalCost / totalSeats * 1.3) : 200;

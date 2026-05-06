@@ -4,7 +4,7 @@ import { gameDayFromMs } from '@/engine/economicsEngine';
 import { AIRCRAFT_TYPES } from '@/data/aircraftTypes';
 import { AircraftProfile } from '@/assets/profiles/AircraftProfile';
 import { formatCurrency, formatDuration } from '@/utils/format';
-import { computeMaintenanceCost, MAINTENANCE_TIERS } from '@/utils/constants';
+import { computeMaintenanceCost, getMaintenanceAgeMultiplier, MAINTENANCE_TIERS } from '@/utils/constants';
 import { computeAircraftValue } from '@/engine/valuation';
 import { manufacturerFlag } from '@/utils/manufacturerFlags';
 import { formatRunwayLength } from '@/utils/runway';
@@ -171,7 +171,7 @@ function AircraftCard({ ac, gameDay }: { ac: Aircraft; gameDay: number }) {
                 <div className="p-2 grid grid-cols-3 gap-1 bg-slate-950/35">
                   {TIER_ORDER.map(tier => {
                     const cfg  = MAINTENANCE_TIERS[tier];
-                    const cost = computeMaintenanceCost(tier, ac.maintenanceHoursOwed, type.maintenanceCostPerHourUSD);
+                    const cost = computeMaintenanceCost(tier, ac.maintenanceHoursOwed, type.maintenanceCostPerHourUSD, getMaintenanceAgeMultiplier(ac, gameDay));
                     const gain = cfg.conditionGain >= 999
                       ? Math.min(100, 100 - ac.condition)
                       : Math.min(cfg.conditionGain, 100 - ac.condition);

@@ -20,7 +20,7 @@ export const CRASH_DEMAND_PENALTY_DAYS = 30;
 export const CRASH_DEMAND_PENALTY_PCT = 0.15;
 export const MAINTENANCE_RESTORE_PARTIAL = 40;
 
-import type { MaintenanceTier } from '@/types/aircraft';
+import type { Aircraft, MaintenanceTier } from '@/types/aircraft';
 export type { MaintenanceTier };
 
 export const MAINTENANCE_TIERS: Record<MaintenanceTier, {
@@ -61,10 +61,22 @@ export const MAINTENANCE_TIERS: Record<MaintenanceTier, {
   },
 };
 
-export function computeMaintenanceCost(tier: MaintenanceTier, hoursOwed: number, ratePerHour: number): number {
+export function getAircraftAgeYears(aircraft: Aircraft, currentGameDay: number): number {
+  return Math.max(0, (currentGameDay - aircraft.purchasedGameDay) / 365);
+}
+
+export function getMaintenanceAgeMultiplier(aircraft: Aircraft, currentGameDay: number): number {
+  const ageYears = getAircraftAgeYears(aircraft, currentGameDay);
+  if (ageYears <= 8) return 1;
+  const midLifePenalty = Math.min(0.35, Math.max(0, ageYears - 8) * 0.025);
+  const oldFleetPenalty = Math.min(0.45, Math.max(0, ageYears - 18) * 0.04);
+  return 1 + midLifePenalty + oldFleetPenalty;
+}
+
+export function computeMaintenanceCost(tier: MaintenanceTier, hoursOwed: number, ratePerHour: number, ageMultiplier = 1): number {
   const cfg = MAINTENANCE_TIERS[tier];
   const hoursBilled = Math.max(cfg.minHoursBase, hoursOwed * cfg.hoursOwedFactor);
-  return Math.round(hoursBilled * ratePerHour * cfg.costMultiplier);
+  return Math.round(hoursBilled * ratePerHour * cfg.costMultiplier * ageMultiplier);
 }
 export const CONDITION_GROUNDING_THRESHOLD = 20;
 export const CONDITION_WARNING_THRESHOLD = 35;

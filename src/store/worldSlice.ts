@@ -1,7 +1,7 @@
 import type { StateCreator } from 'zustand';
 import type { Airport, Airline, Aircraft, Route } from '@/types';
 import { AIRPORTS } from '@/data/airports';
-import { MAINTENANCE_TIERS, computeMaintenanceCost } from '@/utils/constants';
+import { MAINTENANCE_TIERS, computeMaintenanceCost, getMaintenanceAgeMultiplier } from '@/utils/constants';
 import { AIRCRAFT_TYPES } from '@/data/aircraftTypes';
 import type { MaintenanceTier } from '@/types/aircraft';
 import { rawCompanyValue } from '@/engine/valuation';
@@ -218,7 +218,7 @@ export const createWorldSlice: StateCreator<GameStore, [['zustand/immer', never]
       const airline = state.aiAirlines[ac.airlineId];
       const aircraftType = AIRCRAFT_TYPES.find(t => t.id === ac.typeId);
       if (!airline || !aircraftType) return;
-      const cost = computeMaintenanceCost(tier, ac.maintenanceHoursOwed, aircraftType.maintenanceCostPerHourUSD);
+      const cost = computeMaintenanceCost(tier, ac.maintenanceHoursOwed, aircraftType.maintenanceCostPerHourUSD, getMaintenanceAgeMultiplier(ac, state.gameDay));
       ac.status = 'maintenance';
       ac.isGrounded = true;
       ac.lastMaintenanceGameDay = gameDay;

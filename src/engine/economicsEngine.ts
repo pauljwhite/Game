@@ -3,7 +3,7 @@ import {
   HUB_COST_DISCOUNT, HUB_DEMAND_BONUS,
   HUB_ANNUAL_FEE_USD, CREW_COST_PER_FLIGHT_HOUR_USD,
   REPUTATION_DEMAND_FACTOR, REP_PRICE_FACTOR, PRICE_ELASTICITY, CRASH_DEMAND_PENALTY_PCT, DAY_MS,
-  MAINTENANCE_TIERS,
+  MAINTENANCE_TIERS, getMaintenanceAgeMultiplier,
 } from '@/utils/constants';
 import { getBaselineDailyPax, getCompetitivenessScore, conditionDemandMod, getAirportCapacity, airportSaturationMod } from './demandModel';
 import { runRandomEventsTick } from './randomEvents';
@@ -30,12 +30,14 @@ export function computeFlightCost(
   origin: Airport,
   dest: Airport,
   fuelPriceUSDPerLiter: number,
+  currentGameDay?: number,
 ): { fuelCost: number; maintenanceCost: number; airportFees: number; crewCost: number; totalCost: number; flightDurationHours: number } {
   const flightDurationHours = route.distanceKm / aircraftType.cruiseSpeedKmh;
   const fuelLiters = (route.distanceKm / 100) * aircraftType.fuelBurnLPer100Km;
   const fuelCost = fuelLiters * fuelPriceUSDPerLiter;
   const conditionFactor = 1 + (100 - aircraft.condition) / 200;
-  const maintenanceCost = aircraftType.maintenanceCostPerHourUSD * flightDurationHours * conditionFactor;
+  const ageFactor = currentGameDay === undefined ? 1 : getMaintenanceAgeMultiplier(aircraft, currentGameDay);
+  const maintenanceCost = aircraftType.maintenanceCostPerHourUSD * flightDurationHours * conditionFactor * ageFactor;
   const crewCost = CREW_COST_PER_FLIGHT_HOUR_USD * flightDurationHours;
   const hubDiscount = (origin.isHub || dest.isHub) ? (1 - HUB_COST_DISCOUNT) : 1;
   const airportFees = (origin.landingFee + dest.landingFee) * hubDiscount;
@@ -177,7 +179,7 @@ export function runDailyTick(store: ReturnType<typeof import('@/store/index')['u
       if (!aircraftType) return;
       if (!canAirportHandleAircraft(origin, aircraftType) || !canAirportHandleAircraft(dest, aircraftType)) return;
 
-      const flightCosts = computeFlightCost(route, ac, aircraftType, origin, dest, globalFuelPrice);
+      const flightCosts = computeFlightCost(route, ac, aircraftType, origin, dest, globalFuelPrice, gameDay);
       const flightsPerDay = route.flightsPerWeek / 7;
 
       // Reference prices: cost-per-seat basis; business at 4× economy
@@ -292,7 +294,7 @@ export function runDailyTick(store: ReturnType<typeof import('@/store/index')['u
       if (!aircraftType) return;
       if (!canAirportHandleAircraft(origin, aircraftType) || !canAirportHandleAircraft(dest, aircraftType)) return;
 
-      const flightCosts = computeFlightCost(route, ac, aircraftType, origin, dest, globalFuelPrice);
+      const flightCosts = computeFlightCost(route, ac, aircraftType, origin, dest, globalFuelPrice, gameDay);
       const flightsPerDay = route.flightsPerWeek / 7;
 
       // Reference prices: cost-per-seat basis; business at 4x economy.
