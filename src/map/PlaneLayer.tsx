@@ -10,8 +10,14 @@ interface PlaneLayerProps {
   svgOverlay: SVGSVGElement;
 }
 
-const PLANE_PATH = 'M0,-8 L3,3 L0,1 L-3,3 Z';
 const MAX_RENDERED_PLANES = 300;
+
+// Top-down propeller aircraft silhouette (nose points up = -Y)
+// Subpath 1: propeller cross  Subpath 2: fuselage + wings + tail fins
+const PLANE_PATH =
+  'M-2.5,-9 L-2.5,-8.2 L-0.5,-8.2 L-0.5,-11 L0.5,-11 L0.5,-8.2 L2.5,-8.2 L2.5,-9 Z ' +
+  'M0,-8 L1,-5 L12,-1 L12.5,1.5 L9.5,4 L1.5,3 L2,6.5 L5,8.5 L4.5,11 L0,10.5 ' +
+  'L-4.5,11 L-5,8.5 L-2,6.5 L-1.5,3 L-9.5,4 L-12.5,1.5 L-12,-1 L-1,-5 Z';
 
 function hashString(value: string): number {
   let hash = 0;
@@ -95,16 +101,17 @@ export function PlaneLayer({ map, svgOverlay }: PlaneLayerProps) {
         planeG.setAttribute('class', 'route-plane');
 
         const halo = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-        halo.setAttribute('r', '7');
+        halo.setAttribute('r', '9');
         halo.setAttribute('fill', color);
-        halo.setAttribute('opacity', '0.22');
+        halo.setAttribute('opacity', '0.18');
 
         const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
         path.setAttribute('d', PLANE_PATH);
         path.setAttribute('fill', color);
-        path.setAttribute('stroke', '#ffffff');
-        path.setAttribute('stroke-width', '0.8');
+        path.setAttribute('stroke', 'rgba(0,0,0,0.35)');
+        path.setAttribute('stroke-width', '0.5');
         path.setAttribute('stroke-linejoin', 'round');
+        path.setAttribute('fill-rule', 'evenodd');
         planeG.appendChild(halo);
         planeG.appendChild(path);
         g.appendChild(planeG);
