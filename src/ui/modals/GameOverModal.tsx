@@ -11,6 +11,7 @@ export const GameOverModal: React.FC = () => {
   const aiAirlines = useGameStore(s => s.aiAirlines);
   const routes     = useGameStore(s => s.routes);
   const gameTimeMs = useGameStore(s => s.gameTimeMs);
+  const settings   = useGameStore(s => s.settings);
   const openModalById = useGameStore(s => s.openModalById);
   const playerAirlineId = useGameStore(s => s.playerAirlineId);
 
@@ -30,6 +31,14 @@ export const GameOverModal: React.FC = () => {
   const yearsOfOperation = currentYear - GAME_EPOCH_YEAR;
 
   const currentDate = formatGameDate(gameTimeMs);
+  const totalPax = playerAirline.totalPassengersAllTime +
+    Object.values(aiAirlines).reduce((s, a) => s + a.totalPassengersAllTime, 0);
+  const marketShare = totalPax > 0
+    ? ((playerAirline.totalPassengersAllTime / totalPax) * 100)
+    : 0;
+  const winDescription = settings.objective === 'market_share'
+    ? `You reached ${marketShare.toFixed(1)}% market share, beating the ${settings.targetMarketShare}% target.`
+    : 'Every rival airline has collapsed. You are the last carrier standing — a true monopoly!';
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center z-[9999]">
@@ -46,7 +55,7 @@ export const GameOverModal: React.FC = () => {
         {/* Condition explanation */}
         <div className={`rounded-lg p-3 mb-5 text-center text-sm ${isWin ? 'bg-yellow-900/30 border border-yellow-700/50 text-yellow-300' : 'bg-red-900/30 border border-red-700/50 text-red-300'}`}>
           {isWin
-            ? 'Every rival airline has collapsed. You are the last carrier standing — a true monopoly!'
+            ? winDescription
             : 'Your airline accumulated over $100M in debt and became insolvent.'}
         </div>
 
@@ -94,13 +103,7 @@ export const GameOverModal: React.FC = () => {
           <div className="flex justify-between items-center text-sm">
             <span className="text-gray-400">Market Share</span>
             <span className="text-white font-semibold">
-              {(() => {
-                const totalPax = playerAirline.totalPassengersAllTime +
-                  Object.values(aiAirlines).reduce((s, a) => s + a.totalPassengersAllTime, 0);
-                return totalPax > 0
-                  ? ((playerAirline.totalPassengersAllTime / totalPax) * 100).toFixed(1)
-                  : '0.0';
-              })()}%
+              {marketShare.toFixed(1)}%
             </span>
           </div>
 

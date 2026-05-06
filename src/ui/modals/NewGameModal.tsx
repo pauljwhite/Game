@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { useGameStore } from '@/store';
-import type { GameSettings, Airline } from '@/types';
+import type { GameObjective, GameSettings, Airline } from '@/types';
 import { AI_AIRLINES_INIT } from '@/data/airlinesInit';
 import { AIRPORTS } from '@/data/airports';
 import { AIRCRAFT_TYPES } from '@/data/aircraftTypes';
@@ -36,6 +36,8 @@ export const NewGameModal: React.FC = () => {
   const [hubQuery, setHubQuery] = useState('JFK');
   const [difficulty, setDifficulty] = useState<'easy' | 'normal' | 'hard'>('normal');
   const [startingYear, setStartingYear] = useState(1960);
+  const [objective, setObjective] = useState<GameObjective>('last_airline_standing');
+  const [targetMarketShare, setTargetMarketShare] = useState(60);
 
   const airportOptions = useMemo(
     () => AIRPORTS.reduce<Record<string, (typeof AIRPORTS)[number]>>((acc, airport) => {
@@ -72,6 +74,8 @@ export const NewGameModal: React.FC = () => {
       difficulty,
       aiCount:            6,
       startingYear,
+      objective,
+      targetMarketShare,
     };
 
     initWorld();
@@ -203,6 +207,57 @@ export const NewGameModal: React.FC = () => {
                 </button>
               ))}
             </div>
+          </div>
+
+          <div>
+            <label className="text-gray-300 text-sm block mb-2">Objective</label>
+            <div className="grid grid-cols-1 min-[420px]:grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => setObjective('last_airline_standing')}
+                className={`rounded border px-3 py-2 text-left transition-colors ${
+                  objective === 'last_airline_standing'
+                    ? 'border-yellow-500 bg-yellow-900/35 text-yellow-200'
+                    : 'border-white/10 bg-white/[0.055] text-gray-400 hover:border-white/20'
+                }`}
+              >
+                <div className="text-sm font-semibold">Last airline standing</div>
+                <div className="text-[10px] opacity-75">Win when every rival carrier collapses.</div>
+              </button>
+              <button
+                type="button"
+                onClick={() => setObjective('market_share')}
+                className={`rounded border px-3 py-2 text-left transition-colors ${
+                  objective === 'market_share'
+                    ? 'border-blue-500 bg-blue-900/40 text-blue-200'
+                    : 'border-white/10 bg-white/[0.055] text-gray-400 hover:border-white/20'
+                }`}
+              >
+                <div className="text-sm font-semibold">Market Share</div>
+                <div className="text-[10px] opacity-75">Win by carrying the target share of all passengers.</div>
+              </button>
+            </div>
+            {objective === 'market_share' && (
+              <div className="mt-3 rounded border border-white/10 bg-white/[0.035] p-3">
+                <div className="flex items-center justify-between text-xs mb-2">
+                  <span className="text-gray-400">Target market share</span>
+                  <span className="text-white font-semibold">{targetMarketShare}%</span>
+                </div>
+                <input
+                  type="range"
+                  min={60}
+                  max={100}
+                  step={1}
+                  value={targetMarketShare}
+                  onChange={e => setTargetMarketShare(Number(e.target.value))}
+                  className="w-full accent-blue-500"
+                />
+                <div className="flex justify-between text-[10px] text-gray-500 mt-1">
+                  <span>60%</span>
+                  <span>100%</span>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 

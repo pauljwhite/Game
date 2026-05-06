@@ -1,5 +1,6 @@
 export type GameSpeed = 0 | 60 | 300 | 1200 | 3600 | 14400;
 export type Difficulty = 'easy' | 'normal' | 'hard';
+export type GameObjective = 'last_airline_standing' | 'market_share';
 
 export interface GameSettings {
   playerAirlineName: string;
@@ -9,6 +10,8 @@ export interface GameSettings {
   difficulty: Difficulty;
   aiCount: number;
   startingYear: number;
+  objective: GameObjective;
+  targetMarketShare: number;
 }
 
 export interface GameState {
@@ -20,4 +23,5 @@ export interface GameState {
   lastEconomicsTick: number;
   version: string;
   isInitialized: boolean;
+  hasWon: boolean;
 }

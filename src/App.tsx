@@ -9,6 +9,7 @@ function App() {
   const aiAirlines   = useGameStore(s => s.aiAirlines);
   const gameDay      = useGameStore(s => s.gameDay);
   const hasWon       = useGameStore(s => s.hasWon);
+  const settings     = useGameStore(s => s.settings);
   const setHasWon    = useGameStore(s => s.setHasWon);
   const openModalById = useGameStore(s => s.openModalById);
 
@@ -33,13 +34,20 @@ function App() {
 
     // Win: all AI airlines are insolvent or fully dissolved, and game has been running
     if (!hasWon && gameDay > 1) {
-      const activeAI = Object.values(aiAirlines).filter(a => !a.isInsolvent).length;
-      if (activeAI === 0) {
+      const aiEntries = Object.values(aiAirlines);
+      const activeAI = aiEntries.filter(a => !a.isInsolvent).length;
+      const totalPassengers = player.totalPassengersAllTime + aiEntries.reduce((sum, airline) => sum + airline.totalPassengersAllTime, 0);
+      const playerMarketShare = totalPassengers > 0 ? (player.totalPassengersAllTime / totalPassengers) * 100 : 0;
+      const hasMetObjective = settings.objective === 'market_share'
+        ? playerMarketShare >= settings.targetMarketShare
+        : activeAI === 0;
+
+      if (hasMetObjective) {
         openModalById('gameOver', 'win');
         setHasWon();
       }
     }
-  }, [airlines, aiAirlines, gameDay, isInitialized, hasWon, openModalById, setHasWon]);
+  }, [airlines, aiAirlines, gameDay, isInitialized, hasWon, settings, openModalById, setHasWon]);
 
   return <Layout />;
 }

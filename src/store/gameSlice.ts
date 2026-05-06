@@ -29,6 +29,8 @@ const DEFAULT_SETTINGS: GameSettings = {
   difficulty: 'normal',
   aiCount: 6,
   startingYear: 1960,
+  objective: 'last_airline_standing',
+  targetMarketShare: 60,
 };
 
 const DEFAULT_SPEED: GameSpeed = 300;

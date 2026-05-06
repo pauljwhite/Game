@@ -12,7 +12,19 @@ export type GameStore = GameSlice & PlayerSlice & WorldSlice & UISlice;
 
 const VALID_GAME_SPEEDS = new Set([0, 60, 300, 1200, 3600, 14400]);
 const DEFAULT_GAME_SPEED = 300;
-const SAVE_VERSION = 9;
+const SAVE_VERSION = 10;
+const DEFAULT_SETTINGS: GameStore['settings'] = {
+  playerAirlineName: 'My Airline',
+  playerAirlineColor: '#3b82f6',
+  playerAirlineEmoji: '✈️',
+  startingCash: 30_000_000,
+  difficulty: 'normal',
+  aiCount: 6,
+  startingYear: 1960,
+  objective: 'last_airline_standing',
+  targetMarketShare: 60,
+};
+const VALID_OBJECTIVES = new Set<GameStore['settings']['objective']>(['last_airline_standing', 'market_share']);
 
 function uniqueExistingIds(ids: unknown, exists: (id: string) => boolean): string[] {
   if (!Array.isArray(ids)) return [];
@@ -133,6 +145,10 @@ function sanitizePersistedState(state: Partial<GameStore>): Partial<GameStore> {
       return [id, { ...ac, knownFaultRiskMod }];
     }),
   );
+  const persistedSettings = state.settings;
+  const objective = VALID_OBJECTIVES.has(persistedSettings?.objective as GameStore['settings']['objective'])
+    ? persistedSettings!.objective
+    : DEFAULT_SETTINGS.objective;
 
   const sanitized: Partial<GameStore> = {
     ...stateWithoutStaticAirports,
@@ -144,6 +160,13 @@ function sanitizePersistedState(state: Partial<GameStore>): Partial<GameStore> {
     speed: VALID_GAME_SPEEDS.has(state.speed as number) ? state.speed : DEFAULT_GAME_SPEED,
     themeMode: state.themeMode === 'light' ? 'light' : 'dark',
     isPaused: false,
+    hasWon: typeof state.hasWon === 'boolean' ? state.hasWon : false,
+    settings: {
+      ...DEFAULT_SETTINGS,
+      ...(persistedSettings ?? {}),
+      objective,
+      targetMarketShare: Math.min(100, Math.max(60, persistedSettings?.targetMarketShare ?? DEFAULT_SETTINGS.targetMarketShare)),
+    },
   };
 
   if (Array.isArray(state.newsTicker)) {
