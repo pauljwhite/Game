@@ -14,6 +14,8 @@ import { formatCurrency } from '@/utils/format';
 import { manufacturerFlag } from '@/utils/manufacturerFlags';
 import { canAirportHandleAircraft, formatRunwayLength } from '@/utils/runway';
 
+const ALL_MANUFACTURERS = 'All';
+
 function formatUSD(n: number): string {
   if (Math.abs(n) >= 1_000_000) return `$${(n / 1_000_000).toFixed(2)}M`;
   if (Math.abs(n) >= 1_000) return `$${(n / 1_000).toFixed(1)}K`;
@@ -395,10 +397,14 @@ export const NewRouteModal: React.FC = () => {
     if (aFits !== bFits) return aFits ? -1 : 1;
     return a.purchasePrice - b.purchasePrice;
   });
-  const [buyMfr, setBuyMfr] = useState<string | null>(null);
-  const buyMfrs = useMemo(() => Array.from(new Set(buyableTypes.map(t => t.manufacturer))).sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' })), [buyableTypes]);
-  const activeBuyMfr = buyMfr ?? buyMfrs[0] ?? '';
-  const shopVisible = buyableTypes.filter(t => t.manufacturer === activeBuyMfr);
+  const [buyMfr, setBuyMfr] = useState(ALL_MANUFACTURERS);
+  const buyMfrs = useMemo(
+    () => [ALL_MANUFACTURERS, ...Array.from(new Set(buyableTypes.map(t => t.manufacturer))).sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }))],
+    [buyableTypes],
+  );
+  const shopVisible = buyMfr === ALL_MANUFACTURERS
+    ? buyableTypes
+    : buyableTypes.filter(t => t.manufacturer === buyMfr);
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center z-[9999]">
@@ -560,12 +566,12 @@ export const NewRouteModal: React.FC = () => {
                         key={mfr}
                         onClick={() => setBuyMfr(mfr)}
                         className={`shrink-0 sm:w-full text-left px-3 sm:px-2 py-2 sm:py-1.5 text-xs transition-colors ${
-                          activeBuyMfr === mfr
+                          buyMfr === mfr
                             ? 'bg-white/[0.12] text-white font-semibold'
                             : 'text-gray-400 hover:text-gray-200 hover:bg-white/[0.07]'
                         }`}
                       >
-                        {mfr}
+                        {mfr === ALL_MANUFACTURERS ? 'All' : mfr}
                       </button>
                     ))}
                   </div>

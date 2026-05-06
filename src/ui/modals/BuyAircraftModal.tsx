@@ -7,6 +7,7 @@ import { manufacturerFlag } from '@/utils/manufacturerFlags';
 import { formatRunwayLength } from '@/utils/runway';
 
 const EPOCH_YEAR = 1960;
+const ALL_MANUFACTURERS = 'All';
 
 function currentGameYear(gameTimeMs: number): number {
   const msPerYear = 365.25 * 24 * 60 * 60 * 1000;
@@ -30,14 +31,16 @@ export const BuyAircraftModal: React.FC = () => {
 
   const manufacturers = useMemo(() => {
     const set = new Set(AIRCRAFT_TYPES.map(t => t.manufacturer));
-    return Array.from(set).sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
+    return [ALL_MANUFACTURERS, ...Array.from(set).sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }))];
   }, []);
 
-  const [activeTab, setActiveTab] = useState(manufacturers[0] ?? '');
+  const [activeTab, setActiveTab] = useState(ALL_MANUFACTURERS);
   const [purchaseError, setPurchaseError] = useState<string | null>(null);
 
   const visibleTypes = useMemo(
-    () => AIRCRAFT_TYPES.filter(t => t.manufacturer === activeTab),
+    () => activeTab === ALL_MANUFACTURERS
+      ? AIRCRAFT_TYPES
+      : AIRCRAFT_TYPES.filter(t => t.manufacturer === activeTab),
     [activeTab],
   );
 
@@ -90,7 +93,13 @@ export const BuyAircraftModal: React.FC = () => {
                     : 'text-gray-400 hover:text-gray-200 hover:bg-white/[0.07]'
                 }`}
               >
-                <span className="mr-1.5">{manufacturerFlag(mfr)}</span>{mfr}
+                {mfr === ALL_MANUFACTURERS ? (
+                  <span className="mr-1.5">All</span>
+                ) : (
+                  <>
+                    <span className="mr-1.5">{manufacturerFlag(mfr)}</span>{mfr}
+                  </>
+                )}
               </button>
             ))}
           </div>
