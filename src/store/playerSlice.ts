@@ -550,6 +550,10 @@ export const createPlayerSlice: StateCreator<GameStore, [['zustand/immer', never
         const remaining = prev - percent;
         if (remaining <= 0) delete t.shareholders[source];
         else t.shareholders[source] = remaining;
+        const seller = s.aiAirlines[source];
+        if (seller) seller.cashUSD += cost;
+      } else {
+        t.cashUSD += cost;
       }
       p.cashUSD -= cost;
     });
