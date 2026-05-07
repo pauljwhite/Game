@@ -18,8 +18,6 @@ import {
 import { canAirportHandleAircraft } from '@/utils/runway';
 import type { AIAirlineInit } from '@/data/airlinesInit';
 import { pickUnusedAirlineColor } from '@/data/airlineColors';
-import { useGameStore } from '@/store';
-import { rawCompanyValue } from './valuation';
 
 type StoreState = ReturnType<typeof import('@/store/index')['useGameStore']['getState']>;
 
@@ -482,240 +480,30 @@ function trySellAIShares(store: StoreState): void {
 }
 
 export function runAITick(store: StoreState, gameDay: number): void {
-  const perfStart = typeof performance !== 'undefined' ? performance.now() : 0;
-  void store;
+  trySpawnNewAirline(store, gameDay);
+  tryAIBuyout(store, gameDay);
+  tryDissolveInsolvent(store, gameDay);
+  runAIMaintenanceTick(store, gameDay);
+  trySellAIShares(store);
 
-  useGameStore.setState((state) => {
-    const { aiAirlines, aiAircraft, aiRoutes, airports } = state;
-    const pushAINews = (text: string) => {
-      state.newsTicker.unshift({ id: `news_${Date.now()}_${Math.random().toString(36).slice(2)}`, text });
-      if (state.newsTicker.length > 20) state.newsTicker.pop();
-    };
+  const { aiAirlines, aiAircraft, aiRoutes, airports } = store;
+  Object.values(aiAirlines).forEach(airline => {
+    if (airline.isInsolvent) return;
 
-    // Spawn new airline
-    if (gameDay % SPAWN_CHECK_INTERVAL === 0) {
-      const activeCount = Object.values(aiAirlines).filter(a => !a.isInsolvent).length;
-      const spawnProb = activeCount < 4 ? SPAWN_PROBABILITY_LOW : SPAWN_PROBABILITY_BASE;
-      if (activeCount < MAX_AI_AIRLINES && Math.random() <= spawnProb) {
-        const existingNames = new Set([
-          ...Object.values(aiAirlines).map(a => a.name),
-          ...Object.values(state.airlines).map(a => a.name),
-        ]);
-        const usedHubs = new Set(Object.values(aiAirlines).flatMap(a => a.hubIatas));
-        const availableHubs = SPAWN_HUBS.filter(h => !usedHubs.has(h) && airports[h]);
-        const hubIata = availableHubs[Math.floor(Math.random() * availableHubs.length)];
-        if (hubIata) {
-          const { name, iataPrefix } = generateAirlineName(existingNames);
-          const color = pickUnusedAirlineColor(Object.values(aiAirlines).map(airline => airline.color), gameDay + activeCount);
-          const emoji = AIRLINE_EMOJIS[Math.floor(Math.random() * AIRLINE_EMOJIS.length)];
-          const personality = PERSONALITIES[Math.floor(Math.random() * PERSONALITIES.length)];
-          const newAirline: Airline = {
-            id: `ai-spawned-${uuidv4()}`,
-            name, iataPrefix,
-            isPlayer: false,
-            color, logoEmoji: emoji,
-            cashUSD: 30_000_000 + Math.floor(Math.random() * 30_000_000),
-            totalDebt: 0,
-            hubIatas: [hubIata],
-            fleetIds: [], routeIds: [],
-            personality,
-            foundedGameDay: gameDay,
-            isInsolvent: false, canBeTakenOver: false,
-            marketSharePercent: 0,
-            reputationScore: 50,
-            totalPassengersAllTime: 0,
-            dailyStats: [],
-            crashPenaltyDaysLeft: 0,
-            shareholders: {},
-            lastDailyProfit: 0,
-            maintenancePolicy: { enabled: false, threshold: 40, tier: 'standard', autoMaintainIssues: false },
-          };
-          aiAirlines[newAirline.id] = newAirline;
-          airports[hubIata].isHub = true;
-          pushAINews(`NEW ENTRANT: ${name} has launched operations with a new hub at ${hubIata}.`);
-        }
-      }
+    // Protect cash early: distressed airlines stop the bleeding before bankruptcy.
+    if (airline.cashUSD < AI_CASH_STRESS_THRESHOLD) {
+      dropWorstRoutes(airline, aiRoutes, store, airline.cashUSD < AI_CRITICAL_CASH_THRESHOLD ? 3 : 1);
     }
 
-    // AI buyouts
-    if (gameDay % AI_BUYOUT_INTERVAL === 0 && Math.random() <= AI_BUYOUT_PROBABILITY) {
-      const targets = Object.values(aiAirlines).filter(a => a.canBeTakenOver || a.isInsolvent);
-      const buyers = Object.values(aiAirlines).filter(a =>
-        !a.isInsolvent &&
-        a.cashUSD > 30_000_000 &&
-        (a.personality === 'aggressive' || a.personality === 'balanced'),
-      );
-      const target = targets[Math.floor(Math.random() * targets.length)];
-      const buyer = buyers[Math.floor(Math.random() * buyers.length)];
-      if (target && buyer && buyer.id !== target.id) {
-        const cost = Math.max(0, target.fleetIds.length * 5_000_000 - Math.abs(Math.min(0, target.cashUSD)));
-        if (buyer.cashUSD >= cost) {
-          buyer.cashUSD -= cost;
-          target.fleetIds.forEach(id => {
-            const ac = aiAircraft[id];
-            if (ac) { ac.airlineId = buyer.id; buyer.fleetIds.push(id); }
-          });
-          target.routeIds.forEach(id => {
-            const route = aiRoutes[id];
-            if (route) { route.airlineId = buyer.id; buyer.routeIds.push(id); }
-          });
-          Object.entries(target.shareholders ?? {}).forEach(([otherId, pct]) => {
-            const other = aiAirlines[otherId];
-            if (other) {
-              other.shareholders ??= {};
-              other.shareholders[buyer.id] = (other.shareholders[buyer.id] ?? 0) + pct;
-              delete other.shareholders[target.id];
-            }
-          });
-          delete aiAirlines[target.id];
-          pushAINews(`ACQUISITION: ${buyer.name} has acquired ${target.name}.`);
-        }
-      }
+    // Expand: buy aircraft + create route
+    const expandInterval = AI_EXPAND_INTERVAL_DAYS[airline.personality] ?? 7;
+    if (airline.cashUSD > aiCashReserve(airline) && gameDay % expandInterval === aiScheduleOffset(airline.id, expandInterval)) {
+      tryExpand(airline, aiAircraft, aiRoutes, airports, store, gameDay);
     }
 
-    // Dissolve long-insolvent airlines
-    if (gameDay % AI_DISSOLVE_INTERVAL === 0) {
-      Object.values(aiAirlines).forEach(airline => {
-        if (!airline.isInsolvent || airline.cashUSD > AI_DISSOLVE_THRESHOLD) return;
-        if (Math.random() >= AI_DISSOLVE_PROBABILITY) return;
-        pushAINews(`${airline.name} has been dissolved after prolonged insolvency.`);
-        airline.routeIds.forEach(rid => { delete aiRoutes[rid]; });
-        airline.fleetIds.forEach(aid => { delete aiAircraft[aid]; });
-        delete aiAirlines[airline.id];
-      });
-    }
-
-    // Maintenance, route triage, expansion, share sales, pricing
-    Object.values(aiAirlines).forEach(airline => {
-      if (airline.isInsolvent) return;
-
-      const threshold = AI_MAINT_THRESHOLD[airline.personality] ?? 40;
-      const tier = (AI_MAINT_TIER[airline.personality] ?? 'standard') as MaintenanceTier;
-      const maintDuration = MAINTENANCE_TIERS[tier].durationDays;
-      airline.fleetIds.forEach(acId => {
-        const ac = aiAircraft[acId];
-        if (!ac || ac.status === 'crashed') return;
-        if (ac.status === 'maintenance') {
-          if (gameDay - ac.lastMaintenanceGameDay >= maintDuration) {
-            const gain = MAINTENANCE_TIERS[ac.activeMaintTier ?? 'standard'].conditionGain;
-            ac.condition = gain >= 999 ? 100 : Math.min(100, ac.condition + gain);
-            ac.maintenanceHoursOwed = 0;
-            ac.isGrounded = false;
-            ac.groundedReason = undefined;
-            ac.activeMaintTier = null;
-            ac.status = ac.assignedRouteId ? 'flying' : 'idle';
-            ac.crashRisk = 0;
-            ac.knownFaultRiskMod = 1;
-            if (ac.assignedRouteId && aiRoutes[ac.assignedRouteId]) aiRoutes[ac.assignedRouteId].isActive = true;
-          }
-          return;
-        }
-        if (ac.condition <= threshold) {
-          const aircraftType = AIRCRAFT_TYPES.find(t => t.id === ac.typeId);
-          if (!aircraftType) return;
-          const cost = computeMaintenanceCost(tier, ac.maintenanceHoursOwed, aircraftType.maintenanceCostPerHourUSD, getMaintenanceAgeMultiplier(ac, gameDay));
-          if (airline.cashUSD < cost) return;
-          ac.status = 'maintenance';
-          ac.isGrounded = true;
-          ac.lastMaintenanceGameDay = gameDay;
-          ac.activeMaintTier = tier;
-          if (ac.assignedRouteId && aiRoutes[ac.assignedRouteId]) aiRoutes[ac.assignedRouteId].isActive = false;
-          airline.cashUSD -= cost;
-        }
-      });
-
-      if (airline.cashUSD < AI_CASH_STRESS_THRESHOLD) {
-        const maxRoutes = airline.cashUSD < AI_CRITICAL_CASH_THRESHOLD ? 3 : 1;
-        const worstRoutes = airline.routeIds
-          .map(routeId => aiRoutes[routeId])
-          .filter((route): route is Route => !!route && route.dailyProfit < -2_500)
-          .sort((a, b) => a.dailyProfit - b.dailyProfit)
-          .slice(0, maxRoutes);
-        worstRoutes.forEach(route => {
-          if (route.aircraftId && aiAircraft[route.aircraftId]) {
-            aiAircraft[route.aircraftId].assignedRouteId = null;
-            aiAircraft[route.aircraftId].status = 'idle';
-          }
-          airline.routeIds = airline.routeIds.filter(id => id !== route.id);
-          delete aiRoutes[route.id];
-          pushAINews(`${airline.name} has suspended a loss-making route.`);
-        });
-      }
-
-      const expandInterval = AI_EXPAND_INTERVAL_DAYS[airline.personality] ?? 7;
-      if (airline.cashUSD > aiCashReserve(airline) && gameDay % expandInterval === aiScheduleOffset(airline.id, expandInterval)) {
-        const currentGameYear = 1960 + Math.floor(gameDay / 365);
-        const maxPurchaseShare = AI_PURCHASE_CASH_SHARE[airline.personality] ?? 0.28;
-        const cashReserve = aiCashReserve(airline);
-        const affordableTypes = AIRCRAFT_TYPES
-          .filter(t =>
-            t.yearIntroduced <= currentGameYear &&
-            t.purchasePrice <= airline.cashUSD * maxPurchaseShare &&
-            airline.cashUSD - t.purchasePrice >= cashReserve
-          )
-          .sort((a, b) => b.seatsEconomy - a.seatsEconomy);
-        const plan = affordableTypes.length > 0
-          ? findBestAIPlan(airline, affordableTypes, aiRoutes, airports, gameDay, state.globalFuelPrice || FUEL_PRICE_USD_PER_LITER)
-          : null;
-        if (plan && plan.expectedDailyProfit >= AI_MIN_EXPANSION_PROFIT_PER_DAY) {
-          const newAircraft = createAIAircraft(airline, plan.aircraftType, gameDay, plan.origin);
-          const newRoute = buildAIRouteFromPlan(airline, newAircraft.id, plan, gameDay);
-          newAircraft.assignedRouteId = newRoute.id;
-          airline.cashUSD -= plan.aircraftType.purchasePrice;
-          airline.fleetIds.push(newAircraft.id);
-          airline.routeIds.push(newRoute.id);
-          aiAircraft[newAircraft.id] = newAircraft;
-          aiRoutes[newRoute.id] = newRoute;
-        }
-      }
-
-      if (airline.cashUSD <= 8_000_000) {
-        Object.entries(aiAirlines).forEach(([targetId, target]) => {
-          if (targetId === airline.id) return;
-          const stake = (target.shareholders ?? {})[airline.id] ?? 0;
-          if (stake <= 0) return;
-          const toSell = Math.max(1, Math.floor(stake / 2));
-          const proceeds = Math.round((rawCompanyValue(target, aiAircraft, aiRoutes) / 100) * toSell / 100_000) * 100_000;
-          target.shareholders ??= {};
-          const remaining = stake - toSell;
-          if (remaining <= 0) delete target.shareholders[airline.id];
-          else target.shareholders[airline.id] = remaining;
-          airline.cashUSD += proceeds;
-        });
-      }
-
-      const targetMultiplier = AI_PRICE_MULTIPLIER[airline.personality] ?? 1.0;
-      const loadTarget = AI_LOAD_TARGET[airline.personality] ?? 0.70;
-      airline.routeIds.forEach(rid => {
-        const route = aiRoutes[rid];
-        if (!route || route.dailyCost <= 0 || route.dailyPassengers <= 0) return;
-        const currentPrice = Math.max(50, route.priceEconomy);
-        const currentPax = Math.max(1, route.dailyPassengers || 1);
-        const loadFactor = route.loadFactorEconomy || 0.5;
-        const estimatedCapacity = Math.max(currentPax, currentPax / Math.max(0.15, loadFactor));
-        const steps = [0.84, 0.90, 0.96, 1.00, 1.04, 1.08, 1.14, 1.20];
-        const best = steps
-          .map(multiplier => {
-            const price = Math.max(50, Math.round(currentPrice * multiplier));
-            const demand = currentPax * Math.pow(price / currentPrice, PRICE_ELASTICITY);
-            const loadBias = loadFactor < loadTarget - 0.12 && multiplier > 1 ? 0.92 : 1;
-            const pax = Math.min(estimatedCapacity, demand * loadBias);
-            const revenue = pax * price;
-            return { price, profit: revenue - route.dailyCost };
-          })
-          .sort((a, b) => b.profit - a.profit)[0];
-        if (best && Math.abs(best.price - currentPrice) / currentPrice >= 0.025) {
-          route.priceEconomy = best.price;
-          route.priceBusiness = route.priceBusiness > 0 ? Math.round(best.price * 4 * targetMultiplier) : 0;
-        }
-      });
-    });
+    // Price adjustment toward load factor target
+    adjustPrices(airline, aiRoutes, AI_PRICE_MULTIPLIER[airline.personality] ?? 1.0, AI_LOAD_TARGET[airline.personality] ?? 0.70, store);
   });
-
-  if (typeof import.meta !== 'undefined' && import.meta.env.DEV) {
-    const elapsed = (typeof performance !== 'undefined' ? performance.now() : 0) - perfStart;
-    if (elapsed > 50) console.info(`[perf] ai date-change ${elapsed.toFixed(1)}ms`);
-  }
 }
 
 function dropWorstRoutes(airline: Airline, aiRoutes: Record<string, Route>, store: StoreState, maxRoutes: number): void {
@@ -815,12 +603,3 @@ function adjustPrices(
     }
   });
 }
-
-void trySpawnNewAirline;
-void runAIMaintenanceTick;
-void tryAIBuyout;
-void tryDissolveInsolvent;
-void trySellAIShares;
-void dropWorstRoutes;
-void tryExpand;
-void adjustPrices;
