@@ -12,6 +12,7 @@ interface PlaneLayerProps {
 }
 
 const MAX_RENDERED_PLANES = 300;
+const MIN_COMPETITOR_PLANES = 100;
 const PLANE_ICON_SIZE = 28;
 
 function hashString(value: string): number {
@@ -60,9 +61,13 @@ export function PlaneLayer({ map, svgOverlay }: PlaneLayerProps) {
     // Pull fresh state lazily — these dict refs don't drive the effect.
     const { routes, aiRoutes, aircraft, aiAircraft, airlines, aiAirlines, airports } = useGameStore.getState();
 
+    const playerRoutes = Object.values(routes);
+    const competitorRoutes = Object.values(aiRoutes);
+    const competitorBudget = Math.min(MIN_COMPETITOR_PLANES, competitorRoutes.length);
+    const playerBudget = Math.max(0, MAX_RENDERED_PLANES - competitorBudget);
     const allRoutes = [
-      ...Object.values(routes),
-      ...Object.values(aiRoutes).slice(0, Math.max(0, MAX_RENDERED_PLANES - Object.keys(routes).length)),
+      ...playerRoutes.slice(0, playerBudget),
+      ...competitorRoutes.slice(0, MAX_RENDERED_PLANES - Math.min(playerRoutes.length, playerBudget)),
     ];
     const allAircraft = { ...aircraft, ...aiAircraft };
     const allAirlines = { ...airlines, ...aiAirlines };
@@ -108,6 +113,7 @@ export function PlaneLayer({ map, svgOverlay }: PlaneLayerProps) {
         mask.setAttribute('y', `${-PLANE_ICON_SIZE / 2}`);
         mask.setAttribute('width', `${PLANE_ICON_SIZE}`);
         mask.setAttribute('height', `${PLANE_ICON_SIZE}`);
+        mask.setAttribute('mask-type', 'alpha');
         mask.setAttribute('style', 'mask-type: alpha;');
 
         const maskImage = document.createElementNS('http://www.w3.org/2000/svg', 'image');
