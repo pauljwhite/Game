@@ -12,7 +12,7 @@ interface PlaneLayerProps {
 }
 
 const MAX_RENDERED_PLANES = 300;
-const PLANE_ICON_SIZE = 18;
+const PLANE_ICON_SIZE = 28;
 
 function hashString(value: string): number {
   let hash = 0;
@@ -94,25 +94,56 @@ export function PlaneLayer({ map, svgOverlay }: PlaneLayerProps) {
         const planeG = document.createElementNS('http://www.w3.org/2000/svg', 'g');
         planeG.id = `plane-${ac.id}`;
         planeG.setAttribute('class', 'route-plane');
+        const maskId = `plane-mask-${ac.id.replace(/[^a-zA-Z0-9_-]/g, '-')}`;
 
         const halo = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-        halo.setAttribute('r', '5');
+        halo.setAttribute('r', '8');
         halo.setAttribute('fill', color);
         halo.setAttribute('opacity', '0.18');
 
-        const image = document.createElementNS('http://www.w3.org/2000/svg', 'image');
-        image.setAttribute('href', cessnaPlaneUrl);
-        image.setAttribute('x', `${-PLANE_ICON_SIZE / 2}`);
-        image.setAttribute('y', `${-PLANE_ICON_SIZE / 2}`);
-        image.setAttribute('width', `${PLANE_ICON_SIZE}`);
-        image.setAttribute('height', `${PLANE_ICON_SIZE}`);
-        image.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+        const mask = document.createElementNS('http://www.w3.org/2000/svg', 'mask');
+        mask.id = maskId;
+        mask.setAttribute('maskUnits', 'userSpaceOnUse');
+        mask.setAttribute('x', `${-PLANE_ICON_SIZE / 2}`);
+        mask.setAttribute('y', `${-PLANE_ICON_SIZE / 2}`);
+        mask.setAttribute('width', `${PLANE_ICON_SIZE}`);
+        mask.setAttribute('height', `${PLANE_ICON_SIZE}`);
+        mask.setAttribute('style', 'mask-type: alpha;');
+
+        const maskImage = document.createElementNS('http://www.w3.org/2000/svg', 'image');
+        maskImage.setAttribute('href', cessnaPlaneUrl);
+        maskImage.setAttribute('x', `${-PLANE_ICON_SIZE / 2}`);
+        maskImage.setAttribute('y', `${-PLANE_ICON_SIZE / 2}`);
+        maskImage.setAttribute('width', `${PLANE_ICON_SIZE}`);
+        maskImage.setAttribute('height', `${PLANE_ICON_SIZE}`);
+        maskImage.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+        mask.appendChild(maskImage);
+
+        const shape = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+        shape.setAttribute('x', `${-PLANE_ICON_SIZE / 2}`);
+        shape.setAttribute('y', `${-PLANE_ICON_SIZE / 2}`);
+        shape.setAttribute('width', `${PLANE_ICON_SIZE}`);
+        shape.setAttribute('height', `${PLANE_ICON_SIZE}`);
+        shape.setAttribute('fill', color);
+        shape.setAttribute('mask', `url(#${maskId})`);
+
+        const outline = document.createElementNS('http://www.w3.org/2000/svg', 'image');
+        outline.setAttribute('href', cessnaPlaneUrl);
+        outline.setAttribute('x', `${-PLANE_ICON_SIZE / 2}`);
+        outline.setAttribute('y', `${-PLANE_ICON_SIZE / 2}`);
+        outline.setAttribute('width', `${PLANE_ICON_SIZE}`);
+        outline.setAttribute('height', `${PLANE_ICON_SIZE}`);
+        outline.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+        outline.setAttribute('opacity', '0.18');
         planeG.appendChild(halo);
-        planeG.appendChild(image);
+        planeG.appendChild(mask);
+        planeG.appendChild(shape);
+        planeG.appendChild(outline);
         g.appendChild(planeG);
         planeElementsRef.current.set(ac.id, planeG);
       } else {
         planeG.querySelector('circle')?.setAttribute('fill', color);
+        planeG.querySelector('rect')?.setAttribute('fill', color);
       }
     });
 
