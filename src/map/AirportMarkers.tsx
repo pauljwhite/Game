@@ -1,5 +1,4 @@
 import { useEffect, useRef } from 'react';
-import L from 'leaflet';
 import type { Map as LeafletMap } from 'leaflet';
 import { useGameStore } from '@/store';
 import type { Airport } from '@/types';
@@ -16,8 +15,7 @@ const HIT_RADIUS: Record<string, number> = {
   small: 14, medium: 14, large: 15, major: 16,
 };
 const BOUNDS_PADDING = 0.35;
-const AIRPORT_PANE = 'airport-marker-pane';
-const AIRPORT_PANE_Z_INDEX = 720;
+const AIRPORT_OVERLAY_Z_INDEX = 800;
 
 function getVisualRadius(size: string, zoom: number): number {
   const base = BASE_RADIUS[size] ?? 4;
@@ -31,8 +29,9 @@ function getHitRadius(size: string): number {
 }
 
 interface MarkerEntry {
-  visual: L.CircleMarker;
-  hit: L.CircleMarker;
+  group: SVGGElement;
+  visual: SVGCircleElement;
+  hit: SVGCircleElement;
   airport: Airport;
 }
 
@@ -46,7 +45,7 @@ export function AirportMarkers({ map }: AirportMarkersProps) {
   const selectAirport = useGameStore(s => s.selectAirport);
   const gameDay = useGameStore(s => s.gameDay);
   const entriesRef = useRef<Map<string, MarkerEntry>>(new Map());
-  const rendererRef = useRef<L.Renderer | null>(null);
+  const overlayRef = useRef<SVGSVGElement | null>(null);
   const hubIatas = playerAirline?.hubIatas ?? [];
   const hubKey = hubIatas.join(',');
   const gameDayRef = useRef(gameDay);
@@ -61,29 +60,36 @@ export function AirportMarkers({ map }: AirportMarkersProps) {
     const isClosed = airport.closedUntilGameDay !== undefined && airport.closedUntilGameDay >= gameDayRef.current;
     const color = isClosed ? '#ef4444' : isHub ? '#f59e0b' : '#60a5fa';
 
-    entry.visual.setRadius(getVisualRadius(airport.size, zoom));
-    entry.visual.setStyle({
-      color,
-      fillColor: color,
-      fillOpacity: 0.9,
-      opacity: 1,
-    });
+    entry.visual.setAttribute('r', String(getVisualRadius(airport.size, zoom)));
+    entry.visual.setAttribute('stroke', color);
+    entry.visual.setAttribute('fill', color);
   };
 
   useEffect(() => {
-    let pane = map.getPane(AIRPORT_PANE);
-    if (!pane) pane = map.createPane(AIRPORT_PANE);
-    pane.style.zIndex = String(AIRPORT_PANE_Z_INDEX);
-    pane.style.pointerEvents = 'auto';
+    const container = map.getContainer();
+    const overlay = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    overlay.id = 'airport-svg-overlay';
+    overlay.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+    overlay.style.position = 'absolute';
+    overlay.style.inset = '0';
+    overlay.style.zIndex = String(AIRPORT_OVERLAY_Z_INDEX);
+    overlay.style.pointerEvents = 'none';
+    overlay.style.overflow = 'visible';
+    container.appendChild(overlay);
+    overlayRef.current = overlay;
 
-    const renderer = L.svg({ pane: AIRPORT_PANE }).addTo(map);
-    rendererRef.current = renderer;
+    const syncOverlaySize = () => {
+      const size = map.getSize();
+      overlay.setAttribute('width', String(size.x));
+      overlay.setAttribute('height', String(size.y));
+      overlay.style.width = `${size.x}px`;
+      overlay.style.height = `${size.y}px`;
+    };
 
     const removeMarker = (iata: string) => {
       const entry = entriesRef.current.get(iata);
       if (!entry) return;
-      entry.visual.remove();
-      entry.hit.remove();
+      entry.group.remove();
       entriesRef.current.delete(iata);
     };
 
@@ -97,43 +103,42 @@ export function AirportMarkers({ map }: AirportMarkersProps) {
         if (!bounds.contains([airport.lat, airport.lon])) return;
 
         wanted.add(airport.iata);
-        const latlng: [number, number] = [airport.lat, airport.lon];
+        const point = map.latLngToContainerPoint([airport.lat, airport.lon]);
         const existing = entriesRef.current.get(airport.iata);
         if (existing) {
           existing.airport = airport;
-          existing.visual.setLatLng(latlng);
-          existing.hit.setLatLng(latlng);
-          existing.hit.setRadius(getHitRadius(airport.size));
+          existing.group.setAttribute('transform', `translate(${point.x.toFixed(1)},${point.y.toFixed(1)})`);
+          existing.hit.setAttribute('r', String(getHitRadius(airport.size)));
           applyMarkerStyle(existing, zoom);
           return;
         }
 
-        const visual = L.circleMarker(latlng, {
-          radius: getVisualRadius(airport.size, zoom),
-          color: '#60a5fa',
-          fillColor: '#60a5fa',
-          fillOpacity: 0.9,
-          opacity: 1,
-          weight: 1,
-          interactive: false,
-          renderer,
-        }).addTo(map);
+        const group = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        group.setAttribute('transform', `translate(${point.x.toFixed(1)},${point.y.toFixed(1)})`);
 
-        const hit = L.circleMarker(latlng, {
-          radius: getHitRadius(airport.size),
-          color: 'transparent',
-          fillColor: 'transparent',
-          fillOpacity: 0,
-          opacity: 0,
-          weight: 0,
-          interactive: true,
-          renderer,
-        }).addTo(map);
+        const hit = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        hit.setAttribute('r', String(getHitRadius(airport.size)));
+        hit.setAttribute('fill', 'transparent');
+        hit.setAttribute('stroke', 'transparent');
+        hit.style.cursor = 'pointer';
+        hit.style.pointerEvents = 'all';
 
-        hit.on('click', () => selectAirport(airport.iata));
-        hit.bindTooltip(airport.iata, { direction: 'top', offset: [0, -4], className: 'leaflet-tooltip-airport' });
+        const visual = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        visual.setAttribute('r', String(getVisualRadius(airport.size, zoom)));
+        visual.setAttribute('stroke-width', '1');
+        visual.setAttribute('fill-opacity', '0.9');
+        visual.setAttribute('pointer-events', 'none');
 
-        const entry = { visual, hit, airport };
+        const title = document.createElementNS('http://www.w3.org/2000/svg', 'title');
+        title.textContent = airport.iata;
+
+        hit.addEventListener('click', () => selectAirport(airport.iata));
+        group.appendChild(hit);
+        group.appendChild(visual);
+        group.appendChild(title);
+        overlay.appendChild(group);
+
+        const entry = { group, visual, hit, airport };
         entriesRef.current.set(airport.iata, entry);
         applyMarkerStyle(entry, zoom);
       });
@@ -148,25 +153,32 @@ export function AirportMarkers({ map }: AirportMarkersProps) {
       if (raf) return;
       raf = requestAnimationFrame(() => {
         raf = 0;
+        syncOverlaySize();
         syncVisibleMarkers();
       });
     };
 
+    syncOverlaySize();
     syncVisibleMarkers();
+    map.on('move', scheduleSync);
+    map.on('zoom', scheduleSync);
     map.on('moveend', scheduleSync);
     map.on('zoomend', scheduleSync);
+    map.on('resize', scheduleSync);
 
     return () => {
       if (raf) cancelAnimationFrame(raf);
+      map.off('move', scheduleSync);
+      map.off('zoom', scheduleSync);
       map.off('moveend', scheduleSync);
       map.off('zoomend', scheduleSync);
+      map.off('resize', scheduleSync);
       entriesRef.current.forEach(entry => {
-        entry.visual.remove();
-        entry.hit.remove();
+        entry.group.remove();
       });
       entriesRef.current.clear();
-      renderer.remove();
-      rendererRef.current = null;
+      overlay.remove();
+      overlayRef.current = null;
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [airports, map, selectAirport]);
