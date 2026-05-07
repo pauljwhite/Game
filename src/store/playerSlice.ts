@@ -41,6 +41,7 @@ export interface PlayerSlice {
   updateAircraftCondition: (aircraftId: string, conditionDelta: number, hoursOwed: number) => void;
   batchUpdatePlayerRoutes: (updates: Record<string, Partial<Route>>) => void;
   batchUpdatePlayerAircraft: (updates: Record<string, { conditionDelta: number; hoursOwed: number }>) => void;
+  reconcilePlayerRouteIds: () => void;
   groundAircraft: (aircraftId: string, reason?: string) => void;
   ignoreGrounding: (aircraftId: string) => void;
   startMaintenance: (aircraftId: string, gameDay: number, tier: MaintenanceTier) => void;
@@ -61,6 +62,24 @@ export interface PlayerSlice {
 }
 
 const PLAYER_ID = 'player';
+
+function reconcilePlayerRouteIdsInState(state: Pick<GameStore, 'airlines' | 'routes'>): void {
+  const player = state.airlines[PLAYER_ID];
+  if (!player) return;
+
+  const ownedRouteIds = Object.values(state.routes)
+    .filter(route => route.airlineId === PLAYER_ID)
+    .map(route => route.id);
+  const mergedIds = [...player.routeIds, ...ownedRouteIds];
+  const seen = new Set<string>();
+
+  player.routeIds = mergedIds.filter(id => {
+    if (seen.has(id)) return false;
+    if (state.routes[id]?.airlineId !== PLAYER_ID) return false;
+    seen.add(id);
+    return true;
+  });
+}
 
 export const createPlayerSlice: StateCreator<GameStore, [['zustand/immer', never]], [], PlayerSlice> = (set, get) => ({
   playerAirlineId: PLAYER_ID,
@@ -168,6 +187,7 @@ export const createPlayerSlice: StateCreator<GameStore, [['zustand/immer', never
       };
       state.routes[id] = route;
       state.airlines[PLAYER_ID].routeIds.push(id);
+      reconcilePlayerRouteIdsInState(state);
       if (config.aircraftId && state.aircraft[config.aircraftId]) {
         state.aircraft[config.aircraftId].assignedRouteId = id;
         state.aircraft[config.aircraftId].status = 'flying';
@@ -212,6 +232,7 @@ export const createPlayerSlice: StateCreator<GameStore, [['zustand/immer', never
       }
       state.airlines[PLAYER_ID].routeIds = state.airlines[PLAYER_ID].routeIds.filter(id => id !== routeId);
       delete state.routes[routeId];
+      reconcilePlayerRouteIdsInState(state);
     }),
 
   designateHub: (iata) =>
@@ -371,6 +392,7 @@ export const createPlayerSlice: StateCreator<GameStore, [['zustand/immer', never
       for (const [routeId, changes] of Object.entries(updates)) {
         if (state.routes[routeId]) Object.assign(state.routes[routeId], changes);
       }
+      reconcilePlayerRouteIdsInState(state);
     });
   },
 
@@ -395,8 +417,14 @@ export const createPlayerSlice: StateCreator<GameStore, [['zustand/immer', never
           }
         }
       }
+      reconcilePlayerRouteIdsInState(state);
     });
   },
+
+  reconcilePlayerRouteIds: () =>
+    set((state) => {
+      reconcilePlayerRouteIdsInState(state);
+    }),
 
   groundAircraft: (aircraftId, reason) =>
     set((state) => {

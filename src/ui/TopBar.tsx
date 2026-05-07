@@ -46,6 +46,7 @@ const AirlineMenu: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   const fleetCount = player.fleetIds.length;
   const activeRoutes = player.routeIds.filter(id => routes[id]?.isActive).length;
   const totalRoutes = player.routeIds.length;
+  const inactiveRoutes = Math.max(0, totalRoutes - activeRoutes);
   const hubCount = player.hubIatas.length;
   const idleCount = player.fleetIds.filter(id => aircraft[id]?.status === 'idle').length;
   const maintenanceCount = player.fleetIds.filter(id => aircraft[id]?.status === 'maintenance').length;
@@ -96,8 +97,10 @@ const AirlineMenu: React.FC<{ onClose: () => void }> = ({ onClose }) => {
         </div>
         <div>
           <div className="text-gray-500">Routes</div>
-          <div className="text-white font-semibold">{totalRoutes} routes</div>
-          <div className="text-gray-500 text-[10px]">{activeRoutes} active</div>
+          <div className="text-white font-semibold">{totalRoutes} total routes</div>
+          <div className={`text-[10px] ${inactiveRoutes > 0 ? 'text-yellow-300' : 'text-gray-500'}`}>
+            {activeRoutes} active{inactiveRoutes > 0 ? ` · ${inactiveRoutes} inactive` : ''}
+          </div>
         </div>
         <div>
           <div className="text-gray-500">Hubs</div>

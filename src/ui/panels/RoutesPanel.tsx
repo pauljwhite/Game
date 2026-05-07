@@ -89,6 +89,7 @@ function calculateOptimisationUpdates(state: GameStore): { updates: Record<strin
 
 export const RoutesPanel: React.FC = () => {
   const routes = useGameStore(s => s.routes);
+  const aircraft = useGameStore(s => s.aircraft);
   const playerCash = useGameStore(s => s.airlines['player']?.cashUSD ?? 0);
   const optimisationKey = useGameStore(buildOptimisationKey);
   const openModalById = useGameStore(s => s.openModalById);
@@ -98,6 +99,8 @@ export const RoutesPanel: React.FC = () => {
   const closePanel  = useGameStore(s => s.closePanel);
 
   const playerRoutes = Object.values(routes).filter(r => r.airlineId === 'player');
+  const activeRouteCount = playerRoutes.filter(route => route.isActive).length;
+  const inactiveRouteCount = playerRoutes.length - activeRouteCount;
   const optimisationUpdates = React.useMemo(() => {
     void optimisationKey;
     return calculateOptimisationUpdates(useGameStore.getState());
@@ -123,7 +126,14 @@ export const RoutesPanel: React.FC = () => {
   return (
     <div className="panel-scroll flex h-full min-h-0 flex-col overflow-y-auto overscroll-contain">
       <div className="panel-header flex shrink-0 items-center justify-between">
-        <h2 className="text-white font-bold">Routes ({playerRoutes.length})</h2>
+        <div>
+          <h2 className="text-white font-bold">Routes ({playerRoutes.length})</h2>
+          {playerRoutes.length > 0 && (
+            <div className={`mt-0.5 text-[11px] ${inactiveRouteCount > 0 ? 'text-yellow-300' : 'text-gray-500'}`}>
+              {activeRouteCount} active{inactiveRouteCount > 0 ? ` · ${inactiveRouteCount} inactive` : ''}
+            </div>
+          )}
+        </div>
         <div className="flex items-center gap-1">
           <button
             onClick={() => openModalById('newRoute')}
@@ -174,6 +184,16 @@ export const RoutesPanel: React.FC = () => {
         )}
         {playerRoutes.map(route => {
           const profitColor = route.dailyProfit >= 0 ? 'text-green-400' : 'text-red-400';
+          const assignedAircraft = route.aircraftId ? aircraft[route.aircraftId] : null;
+          const inactiveReason = route.isActive
+            ? null
+            : !route.aircraftId
+              ? 'No aircraft'
+              : assignedAircraft?.status === 'maintenance'
+                ? 'Maintenance'
+                : assignedAircraft?.isGrounded
+                  ? 'Grounded'
+                  : 'Inactive';
 
           return (
             <div
@@ -187,6 +207,11 @@ export const RoutesPanel: React.FC = () => {
                   <span className="text-white font-mono text-sm">
                     {route.originIata} {'->'} {route.destinationIata}
                   </span>
+                  {inactiveReason && (
+                    <span className="rounded border border-yellow-400/20 bg-yellow-400/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-yellow-200">
+                      {inactiveReason}
+                    </span>
+                  )}
                 </div>
                 <span className={`text-sm font-medium text-right shrink-0 ${profitColor}`}>
                   {formatCurrency(route.dailyProfit)}/day

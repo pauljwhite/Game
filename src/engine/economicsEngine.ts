@@ -275,6 +275,7 @@ export function runDailyTick(store: ReturnType<typeof import('@/store/index')['u
 
     store.batchUpdatePlayerRoutes(playerRouteUpdates);
     store.batchUpdatePlayerAircraft(playerAcUpdates);
+    store.reconcilePlayerRouteIds();
     if (playerReputationDelta !== 0) store.applyReputationHit('player', playerReputationDelta);
 
     const hubFees = (playerAirline.hubIatas.length * HUB_ANNUAL_FEE_USD) / 365;

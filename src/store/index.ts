@@ -39,6 +39,18 @@ function uniqueExistingIds(ids: unknown, exists: (id: string) => boolean): strin
   return result;
 }
 
+function mergeOwnedIds<T extends { id: string; airlineId: string }>(
+  listedIds: unknown,
+  records: Record<string, T>,
+  airlineId: string,
+): string[] {
+  const ownedIds = Object.values(records)
+    .filter(record => record.airlineId === airlineId)
+    .map(record => record.id);
+  const rawIds = Array.isArray(listedIds) ? listedIds : [];
+  return uniqueExistingIds([...rawIds, ...ownedIds], id => records[id]?.airlineId === airlineId);
+}
+
 function sanitizeLoans(loans: unknown): NonNullable<GameStore['airlines'][string]['loans']> {
   if (!Array.isArray(loans)) return [];
 
@@ -79,8 +91,8 @@ function sanitizePersistedState(state: Partial<GameStore>): Partial<GameStore> {
           crashPenaltyDaysLeft: typeof raw.crashPenaltyDaysLeft === 'number' ? raw.crashPenaltyDaysLeft : 0,
           shareholders: (raw.shareholders as Record<string, number> | undefined) ?? {},
           lastDailyProfit: typeof raw.lastDailyProfit === 'number' ? raw.lastDailyProfit : 0,
-          routeIds: uniqueExistingIds(airline.routeIds, routeId => aiRoutes[routeId]?.airlineId === id),
-          fleetIds: uniqueExistingIds(airline.fleetIds, aircraftId => aiAircraft[aircraftId]?.airlineId === id),
+          routeIds: mergeOwnedIds(airline.routeIds, aiRoutes, id),
+          fleetIds: mergeOwnedIds(airline.fleetIds, aiAircraft, id),
         },
       ];
     }),
@@ -113,8 +125,8 @@ function sanitizePersistedState(state: Partial<GameStore>): Partial<GameStore> {
                 autoMaintainIssues: typeof rawPolicy.autoMaintainIssues === 'boolean' ? rawPolicy.autoMaintainIssues : false,
               }
             : DEFAULT_MAINT_POLICY,
-          routeIds: uniqueExistingIds(airline.routeIds, routeId => routes[routeId]?.airlineId === id),
-          fleetIds: uniqueExistingIds(airline.fleetIds, aircraftId => aircraft[aircraftId]?.airlineId === id),
+          routeIds: mergeOwnedIds(airline.routeIds, routes, id),
+          fleetIds: mergeOwnedIds(airline.fleetIds, aircraft, id),
         },
       ];
     }),
