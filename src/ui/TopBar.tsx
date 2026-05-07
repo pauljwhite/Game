@@ -191,7 +191,8 @@ export const TopBar: React.FC = () => {
   const gameClock = formatGameClock(gameTimeMs);
 
   const togglePanel = (id: PanelId) => {
-    openPanel === id ? closePanel() : openPanelById(id);
+    if (openPanel === id) closePanel();
+    else openPanelById(id);
   };
 
   return (

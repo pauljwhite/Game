@@ -64,7 +64,8 @@ export const PnLChart: React.FC<PnLChartProps> = ({ snapshots, width = 300, heig
     snapshots.forEach((s, i) => {
       const x = pad.left + (i / (snapshots.length - 1)) * chartW;
       const y = pad.top + chartH - ((s.profit - min) / range) * chartH;
-      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+      if (i === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
     });
 
     const lastProfit = profits[profits.length - 1] ?? 0;
@@ -73,7 +74,6 @@ export const PnLChart: React.FC<PnLChartProps> = ({ snapshots, width = 300, heig
 
     // Fill under line
     const lastX = pad.left + chartW;
-    void (pad.top + chartH - ((lastProfit - min) / range) * chartH);
     ctx.lineTo(lastX, zeroY);
     ctx.lineTo(pad.left, zeroY);
     ctx.closePath();
@@ -83,4 +83,3 @@ export const PnLChart: React.FC<PnLChartProps> = ({ snapshots, width = 300, heig
 
   return <canvas ref={canvasRef} width={width} height={height} className="rounded" />;
 };
-

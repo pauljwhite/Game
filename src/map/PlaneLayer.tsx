@@ -119,8 +119,8 @@ export function PlaneLayer({ map, svgOverlay }: PlaneLayerProps) {
         initPlanePosition(ac.id, route.id, ac.airlineId, color, origin.lat, origin.lon, cycleOffsetMs);
       }
 
-      let planeG = planeElementsRef.current.get(ac.id);
-      if (!planeG) {
+      const existingPlaneG = planeElementsRef.current.get(ac.id);
+      if (!existingPlaneG) {
         const planeG = document.createElementNS('http://www.w3.org/2000/svg', 'g');
         planeG.id = `plane-${ac.id}`;
         planeG.setAttribute('class', 'route-plane');
@@ -175,10 +175,10 @@ export function PlaneLayer({ map, svgOverlay }: PlaneLayerProps) {
         g.appendChild(planeG);
         planeElementsRef.current.set(ac.id, planeG);
       } else {
-        planeG.querySelector('circle')?.setAttribute('fill', color);
-        planeG.querySelector('rect')?.setAttribute('fill', color);
-        planeG.querySelector('.route-plane-mask-image')?.setAttribute('href', planeIconUrl);
-        planeG.querySelector('.route-plane-outline-image')?.setAttribute('href', planeIconUrl);
+        existingPlaneG.querySelector('circle')?.setAttribute('fill', color);
+        existingPlaneG.querySelector('rect')?.setAttribute('fill', color);
+        existingPlaneG.querySelector('.route-plane-mask-image')?.setAttribute('href', planeIconUrl);
+        existingPlaneG.querySelector('.route-plane-outline-image')?.setAttribute('href', planeIconUrl);
       }
     });
 

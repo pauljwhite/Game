@@ -1,5 +1,5 @@
 import React from 'react';
-import { useGameStore } from '@/store';
+import { useGameStore, type GameStore } from '@/store';
 import { formatCurrency } from '@/utils/format';
 import { LoadFactorBar } from '@/ui/components/LoadFactorBar';
 import { AIRCRAFT_TYPES } from '@/data/aircraftTypes';
@@ -8,17 +8,89 @@ import type { Route } from '@/types';
 
 const OPTIMISE_ALL_BASE_COST = 2_000_000;
 const OPTIMISE_ALL_COST_PER_ROUTE = 2_500_000;
+const AIRCRAFT_TYPE_BY_ID = Object.fromEntries(AIRCRAFT_TYPES.map(type => [type.id, type]));
+
+function buildOptimisationKey(state: GameStore): string {
+  const parts: string[] = [];
+  const player = state.airlines['player'];
+  if (player) parts.push(`P:${player.reputationScore.toFixed(0)}:${player.hubIatas.join(',')}`);
+
+  player?.routeIds.forEach(routeId => {
+    const route = state.routes[routeId];
+    if (!route) return;
+    const ac = route.aircraftId ? state.aircraft[route.aircraftId] : null;
+    parts.push([
+      'R',
+      route.id,
+      route.originIata,
+      route.destinationIata,
+      route.aircraftId ?? '',
+      route.flightsPerWeek,
+      route.priceEconomy,
+      route.priceBusiness,
+      route.isActive ? 1 : 0,
+      ac?.typeId ?? '',
+      ac ? Math.floor(ac.condition / 5) : '',
+    ].join(':'));
+  });
+
+  Object.values(state.aiRoutes).forEach(route => {
+    if (!route.isActive) return;
+    const airline = state.aiAirlines[route.airlineId];
+    parts.push([
+      'A',
+      route.originIata,
+      route.destinationIata,
+      route.priceEconomy,
+      route.priceBusiness,
+      airline?.reputationScore.toFixed(0) ?? '',
+    ].join(':'));
+  });
+
+  parts.push(`F:${state.globalFuelPrice.toFixed(3)}`);
+  parts.push(`M:${Math.floor(state.gameDay / 30)}`);
+  return parts.join('|');
+}
+
+function calculateOptimisationUpdates(state: GameStore): { updates: Record<string, Partial<Route>>; eligibleCount: number } {
+  const updates: Record<string, Partial<Route>> = {};
+  let eligibleCount = 0;
+  const playerRoutes = Object.values(state.routes).filter(route => route.airlineId === 'player');
+  const competitorAirlines = { ...state.airlines, ...state.aiAirlines };
+  const competitorRoutes = [...Object.values(state.routes), ...Object.values(state.aiRoutes)];
+
+  playerRoutes.forEach(route => {
+    const ac = route.aircraftId ? state.aircraft[route.aircraftId] : null;
+    const type = ac ? AIRCRAFT_TYPE_BY_ID[ac.typeId] : null;
+    const origin = state.airports[route.originIata];
+    const destination = state.airports[route.destinationIata];
+    if (!ac || !type || !origin || !destination) return;
+    eligibleCount += 1;
+
+    const changes = getRouteOptimisationChanges({
+      route,
+      aircraft: ac,
+      aircraftType: type,
+      origin,
+      destination,
+      globalFuelPrice: state.globalFuelPrice,
+      playerAirline: state.airlines['player'],
+      competitorAirlines,
+      competitorRoutes,
+      airportDailyPax: state.airportDailyPax,
+      gameDay: state.gameDay,
+    });
+
+    if (changes) updates[route.id] = changes;
+  });
+
+  return { updates, eligibleCount };
+}
 
 export const RoutesPanel: React.FC = () => {
   const routes = useGameStore(s => s.routes);
-  const airlines = useGameStore(s => s.airlines);
-  const aircraft = useGameStore(s => s.aircraft);
-  const airports = useGameStore(s => s.airports);
-  const aiAirlines = useGameStore(s => s.aiAirlines);
-  const aiRoutes = useGameStore(s => s.aiRoutes);
-  const globalFuelPrice = useGameStore(s => s.globalFuelPrice);
-  const airportDailyPax = useGameStore(s => s.airportDailyPax);
-  const gameDay = useGameStore(s => s.gameDay);
+  const playerCash = useGameStore(s => s.airlines['player']?.cashUSD ?? 0);
+  const optimisationKey = useGameStore(buildOptimisationKey);
   const openModalById = useGameStore(s => s.openModalById);
   const selectRoute = useGameStore(s => s.selectRoute);
   const deleteRoute = useGameStore(s => s.deleteRoute);
@@ -27,47 +99,25 @@ export const RoutesPanel: React.FC = () => {
 
   const playerRoutes = Object.values(routes).filter(r => r.airlineId === 'player');
   const optimisationUpdates = React.useMemo(() => {
-    const updates: Record<string, Partial<Route>> = {};
-    let eligibleCount = 0;
-
-    playerRoutes.forEach(route => {
-      const ac = route.aircraftId ? aircraft[route.aircraftId] : null;
-      const type = ac ? AIRCRAFT_TYPES.find(candidate => candidate.id === ac.typeId) : null;
-      const origin = airports[route.originIata];
-      const destination = airports[route.destinationIata];
-      if (!ac || !type || !origin || !destination) return;
-      eligibleCount += 1;
-
-      const changes = getRouteOptimisationChanges({
-        route,
-        aircraft: ac,
-        aircraftType: type,
-        origin,
-        destination,
-        globalFuelPrice,
-        playerAirline: airlines['player'],
-        competitorAirlines: { ...airlines, ...aiAirlines },
-        competitorRoutes: [...Object.values(routes), ...Object.values(aiRoutes)],
-        airportDailyPax,
-        gameDay,
-      });
-
-      if (changes) updates[route.id] = changes;
-    });
-
-    return { updates, eligibleCount };
-  }, [playerRoutes, aircraft, airports, globalFuelPrice, airlines, aiAirlines, routes, aiRoutes, airportDailyPax, gameDay]);
+    void optimisationKey;
+    return calculateOptimisationUpdates(useGameStore.getState());
+  }, [optimisationKey]);
 
   const optimisableCount = Object.keys(optimisationUpdates.updates).length;
   const optimiseAllCost = optimisableCount > 0
     ? OPTIMISE_ALL_BASE_COST + optimisableCount * OPTIMISE_ALL_COST_PER_ROUTE
     : 0;
-  const playerCash = airlines['player']?.cashUSD ?? 0;
   const canOptimiseAll = optimisableCount > 0 && playerCash >= optimiseAllCost;
 
   function handleOptimiseAll() {
-    if (!canOptimiseAll) return;
-    applyRouteOptimisation(optimisationUpdates.updates, optimiseAllCost);
+    const fresh = calculateOptimisationUpdates(useGameStore.getState());
+    const freshCount = Object.keys(fresh.updates).length;
+    const freshCost = freshCount > 0
+      ? OPTIMISE_ALL_BASE_COST + freshCount * OPTIMISE_ALL_COST_PER_ROUTE
+      : 0;
+    const cash = useGameStore.getState().airlines['player']?.cashUSD ?? 0;
+    if (freshCount === 0 || cash < freshCost) return;
+    applyRouteOptimisation(fresh.updates, freshCost);
   }
 
   return (

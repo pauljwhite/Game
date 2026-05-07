@@ -163,6 +163,7 @@ export function runDailyTick(store: ReturnType<typeof import('@/store/index')['u
 
     const playerRouteUpdates: Record<string, Partial<typeof routes[string]>> = {};
     const playerAcUpdates: Record<string, { conditionDelta: number; hoursOwed: number }> = {};
+    let playerReputationDelta = 0;
 
     const playerRouteIds = playerAirline.routeIds;
     playerRouteIds.forEach(routeId => {
@@ -268,12 +269,13 @@ export function runDailyTick(store: ReturnType<typeof import('@/store/index')['u
       // Reputation drain for flying poorly maintained aircraft (condition < 40)
       if (ac.condition < 40) {
         const drain = ((40 - ac.condition) / 40) * 0.15;
-        store.applyReputationHit('player', -drain);
+        playerReputationDelta -= drain;
       }
     });
 
     store.batchUpdatePlayerRoutes(playerRouteUpdates);
     store.batchUpdatePlayerAircraft(playerAcUpdates);
+    if (playerReputationDelta !== 0) store.applyReputationHit('player', playerReputationDelta);
 
     const hubFees = (playerAirline.hubIatas.length * HUB_ANNUAL_FEE_USD) / 365;
     const totalCost = totalFuelCost + totalMaintenanceCost + totalAirportFees + totalCrewCost + hubFees;
@@ -287,6 +289,7 @@ export function runDailyTick(store: ReturnType<typeof import('@/store/index')['u
   const aiNetProfits: Record<string, number> = {};
   const aiRouteUpdates: Record<string, Partial<typeof aiRoutes[string]>> = {};
   const aiAcUpdates: Record<string, { conditionDelta: number; hoursOwed: number }> = {};
+  const aiStatsUpdates: Record<string, { netProfit: number; passengers: number; revenue: number; costs: number; gameDay: number; recoverRep?: boolean }> = {};
 
   Object.values(aiAirlines).forEach(aiAirline => {
     if (aiAirline.isInsolvent) return;
@@ -384,7 +387,14 @@ export function runDailyTick(store: ReturnType<typeof import('@/store/index')['u
     const willBeInsolvent = (aiAirline.cashUSD + netProfit) < -50_000_000;
     const wasInsolvent = aiAirline.isInsolvent;
 
-    store.updateAIAirlineStats(aiAirline.id, netProfit, aiPax, aiRevenue, aiCost, gameDay, !aiAirline.isInsolvent);
+    aiStatsUpdates[aiAirline.id] = {
+      netProfit,
+      passengers: aiPax,
+      revenue: aiRevenue,
+      costs: aiCost,
+      gameDay,
+      recoverRep: !aiAirline.isInsolvent,
+    };
 
     // First tick crossing into insolvency: ground the airline
     if (!wasInsolvent && willBeInsolvent) {
@@ -393,21 +403,24 @@ export function runDailyTick(store: ReturnType<typeof import('@/store/index')['u
     }
   });
 
+  store.batchUpdateAIAirlineStats(aiStatsUpdates);
   store.batchUpdateAIRoutes(aiRouteUpdates);
   store.batchUpdateAIAircraft(aiAcUpdates);
 
   // Distribute dividends: deduct from payer, credit shareholder atomically
   let playerDividendTotal = 0;
+  const dividendPayments: Array<{ payerAirlineId: string; receiverOwnerId: string; amount: number }> = [];
   Object.entries(aiNetProfits).forEach(([id, profit]) => {
     if (profit <= 0) return;
     const shareholders = aiAirlines[id]?.shareholders;
     if (!shareholders) return;
     Object.entries(shareholders).forEach(([ownerId, pct]) => {
       const div = (pct / 100) * profit;
-      store.payDividend(id, ownerId, div);
+      dividendPayments.push({ payerAirlineId: id, receiverOwnerId: ownerId, amount: div });
       if (ownerId === 'player') playerDividendTotal += div;
     });
   });
+  store.batchPayDividends(dividendPayments);
   if (playerDividendTotal > 500_000) {
     store.pushNewsItem({
       text: `Dividends: ${formatCurrency(playerDividendTotal)} received from shareholdings today.`,

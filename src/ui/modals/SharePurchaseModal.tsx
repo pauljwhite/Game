@@ -25,9 +25,7 @@ export const SharePurchaseModal: React.FC = () => {
   const target   = targetId ? aiAirlines[targetId] : null;
   const player   = airlines['player'];
 
-  if (!target || !player) return null;
-
-  const shareholders = target.shareholders ?? {};
+  const shareholders = target?.shareholders ?? {};
   const playerStake  = shareholders['player'] ?? 0;
   const ownedTotal   = Object.values(shareholders).reduce((s, v) => s + v, 0);
   const marketFloat  = Math.max(0, 100 - ownedTotal);
@@ -36,7 +34,7 @@ export const SharePurchaseModal: React.FC = () => {
     .filter(([id, pct]) => id !== 'player' && pct > 0)
     .map(([id, pct]) => ({ id, name: aiAirlines[id]?.name ?? id, pct }));
 
-  const companyValue = useMemo(() => rawCompanyValue(target, aiAircraft, aiRoutes), [target, aiAircraft, aiRoutes]);
+  const companyValue = useMemo(() => target ? rawCompanyValue(target, aiAircraft, aiRoutes) : 0, [target, aiAircraft, aiRoutes]);
   const pricePerPct  = companyValue / 100;
 
   // ── Buy mode ────────────────────────────────────────────────────────────
@@ -50,16 +48,18 @@ export const SharePurchaseModal: React.FC = () => {
   }, [target, buyPercent, playerStake, aiAircraft, aiRoutes, source]);
   const stakeAfterBuy    = playerStake + buyPercent;
   const willHaveMajority = stakeAfterBuy >= 50;
-  const estDailyDiv      = (buyPercent / 100) * Math.max(0, target.lastDailyProfit ?? 0);
-  const canAfford        = player.cashUSD >= cost;
+  const estDailyDiv      = (buyPercent / 100) * Math.max(0, target?.lastDailyProfit ?? 0);
+  const canAfford        = (player?.cashUSD ?? 0) >= cost;
   const hasSource        = maxFromSource >= 1;
 
   // ── Sell mode ────────────────────────────────────────────────────────────
   const sellPercent  = Math.min(Math.max(1, percentInput), playerStake);
   const proceeds     = Math.round((pricePerPct * sellPercent) / 100_000) * 100_000;
-  const lostDailyDiv = (sellPercent / 100) * Math.max(0, target.lastDailyProfit ?? 0);
+  const lostDailyDiv = (sellPercent / 100) * Math.max(0, target?.lastDailyProfit ?? 0);
   const stakeAfterSell = playerStake - sellPercent;
   const canSell      = playerStake >= 1;
+
+  if (!target || !player) return null;
 
   function handleBuy() {
     if (!targetId || !canAfford || !hasSource || buyPercent <= 0) return;

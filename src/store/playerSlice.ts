@@ -365,14 +365,17 @@ export const createPlayerSlice: StateCreator<GameStore, [['zustand/immer', never
       }
     }),
 
-  batchUpdatePlayerRoutes: (updates) =>
+  batchUpdatePlayerRoutes: (updates) => {
+    if (Object.keys(updates).length === 0) return;
     set((state) => {
       for (const [routeId, changes] of Object.entries(updates)) {
         if (state.routes[routeId]) Object.assign(state.routes[routeId], changes);
       }
-    }),
+    });
+  },
 
-  batchUpdatePlayerAircraft: (updates) =>
+  batchUpdatePlayerAircraft: (updates) => {
+    if (Object.keys(updates).length === 0) return;
     set((state) => {
       for (const [acId, { conditionDelta, hoursOwed }] of Object.entries(updates)) {
         const ac = state.aircraft[acId];
@@ -392,7 +395,8 @@ export const createPlayerSlice: StateCreator<GameStore, [['zustand/immer', never
           }
         }
       }
-    }),
+    });
+  },
 
   groundAircraft: (aircraftId, reason) =>
     set((state) => {

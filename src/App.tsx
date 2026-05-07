@@ -5,8 +5,15 @@ import { useGameStore } from '@/store';
 
 function App() {
   const isInitialized = useGameStore(s => s.isInitialized);
-  const airlines     = useGameStore(s => s.airlines);
-  const aiAirlines   = useGameStore(s => s.aiAirlines);
+  const playerExists = useGameStore(s => !!s.airlines['player']);
+  const playerInsolvent = useGameStore(s => !!s.airlines['player']?.isInsolvent);
+  const playerPassengers = useGameStore(s => s.airlines['player']?.totalPassengersAllTime ?? 0);
+  const rivalPassengers = useGameStore(s =>
+    Object.values(s.aiAirlines).reduce((sum, airline) => sum + airline.totalPassengersAllTime, 0),
+  );
+  const activeAICount = useGameStore(s =>
+    Object.values(s.aiAirlines).filter(airline => !airline.isInsolvent).length,
+  );
   const gameDay      = useGameStore(s => s.gameDay);
   const hasWon       = useGameStore(s => s.hasWon);
   const settings     = useGameStore(s => s.settings);
@@ -24,31 +31,39 @@ function App() {
   // Win/lose check
   useEffect(() => {
     if (!isInitialized) return;
-    const player = airlines['player'];
-    if (!player) return;
+    if (!playerExists) return;
 
-    if (player.isInsolvent) {
+    if (playerInsolvent) {
       openModalById('gameOver', 'lose');
       return;
     }
 
     // Win: all AI airlines are insolvent or fully dissolved, and game has been running
     if (!hasWon && gameDay > 1) {
-      const aiEntries = Object.values(aiAirlines);
-      const activeAI = aiEntries.filter(a => !a.isInsolvent).length;
-      const rivalPassengers = aiEntries.reduce((sum, airline) => sum + airline.totalPassengersAllTime, 0);
-      const totalPassengers = player.totalPassengersAllTime + rivalPassengers;
-      const playerMarketShare = totalPassengers > 0 ? (player.totalPassengersAllTime / totalPassengers) * 100 : 0;
+      const totalPassengers = playerPassengers + rivalPassengers;
+      const playerMarketShare = totalPassengers > 0 ? (playerPassengers / totalPassengers) * 100 : 0;
       const hasMetObjective = settings.objective === 'market_share'
         ? rivalPassengers > 0 && playerMarketShare >= settings.targetMarketShare
-        : activeAI === 0;
+        : activeAICount === 0;
 
       if (hasMetObjective) {
         openModalById('gameOver', 'win');
         setHasWon();
       }
     }
-  }, [airlines, aiAirlines, gameDay, isInitialized, hasWon, settings, openModalById, setHasWon]);
+  }, [
+    activeAICount,
+    gameDay,
+    hasWon,
+    isInitialized,
+    openModalById,
+    playerExists,
+    playerInsolvent,
+    playerPassengers,
+    rivalPassengers,
+    setHasWon,
+    settings,
+  ]);
 
   return <Layout />;
 }

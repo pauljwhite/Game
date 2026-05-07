@@ -36,6 +36,7 @@ export interface WorldSlice {
   startAIMaintenance: (aircraftId: string, gameDay: number, tier: MaintenanceTier) => void;
   completeAIMaintenance: (aircraftId: string) => void;
   updateAIAirlineStats: (id: string, netProfit: number, passengers: number, revenue: number, costs: number, gameDay: number, recoverRep?: boolean) => void;
+  batchUpdateAIAirlineStats: (updates: Record<string, { netProfit: number; passengers: number; revenue: number; costs: number; gameDay: number; recoverRep?: boolean }>) => void;
   removeAIAirline: (id: string) => void;
   addAIAirline: (airline: Airline) => void;
   addAIAircraft: (aircraft: Aircraft) => void;
@@ -45,6 +46,7 @@ export interface WorldSlice {
   sellAIShares: (sellerId: string, targetId: string, percent: number) => void;
   applyAIDividend: (airlineId: string, amount: number) => void;
   payDividend: (payerAirlineId: string, receiverOwnerId: string, amount: number) => void;
+  batchPayDividends: (payments: Array<{ payerAirlineId: string; receiverOwnerId: string; amount: number }>) => void;
   ignoreAIGrounding: (aircraftId: string) => void;
   triggerAICrash: (aircraftId: string) => void;
 }
@@ -55,7 +57,7 @@ function createAirportMap(): Record<string, Airport> {
   return airports;
 }
 
-export const createWorldSlice: StateCreator<GameStore, [['zustand/immer', never]], [], WorldSlice> = (set) => ({
+export const createWorldSlice: StateCreator<GameStore, [['zustand/immer', never]], [], WorldSlice> = (set, get) => ({
   airports: createAirportMap(),
   aiAirlines: {},
   aiAircraft: {},
@@ -65,8 +67,16 @@ export const createWorldSlice: StateCreator<GameStore, [['zustand/immer', never]
   totalMarketPAX: 0,
   airportDailyPax: {},
 
-  setAirportDailyPax: (pax) =>
-    set((state) => { state.airportDailyPax = pax; }),
+  setAirportDailyPax: (pax) => {
+    const current = get().airportDailyPax;
+    const currentKeys = Object.keys(current);
+    const nextKeys = Object.keys(pax);
+    if (
+      currentKeys.length === nextKeys.length &&
+      nextKeys.every(key => current[key] === pax[key])
+    ) return;
+    set((state) => { state.airportDailyPax = pax; });
+  },
 
   initWorld: () =>
     set((state) => {
@@ -194,14 +204,17 @@ export const createWorldSlice: StateCreator<GameStore, [['zustand/immer', never]
       }
     }),
 
-  batchUpdateAIRoutes: (updates) =>
+  batchUpdateAIRoutes: (updates) => {
+    if (Object.keys(updates).length === 0) return;
     set((state) => {
       for (const [routeId, changes] of Object.entries(updates)) {
         if (state.aiRoutes[routeId]) Object.assign(state.aiRoutes[routeId], changes);
       }
-    }),
+    });
+  },
 
-  batchUpdateAIAircraft: (updates) =>
+  batchUpdateAIAircraft: (updates) => {
+    if (Object.keys(updates).length === 0) return;
     set((state) => {
       for (const [acId, { conditionDelta, hoursOwed }] of Object.entries(updates)) {
         const ac = state.aiAircraft[acId];
@@ -221,7 +234,8 @@ export const createWorldSlice: StateCreator<GameStore, [['zustand/immer', never]
           }
         }
       }
-    }),
+    });
+  },
 
   ignoreAIGrounding: (aircraftId) =>
     set((state) => {
@@ -305,6 +319,26 @@ export const createWorldSlice: StateCreator<GameStore, [['zustand/immer', never]
         airline.reputationScore = Math.min(100, airline.reputationScore + 0.3);
       }
     }),
+
+  batchUpdateAIAirlineStats: (updates) => {
+    if (Object.keys(updates).length === 0) return;
+    set((state) => {
+      for (const [id, { netProfit, passengers, revenue, costs, gameDay, recoverRep = false }] of Object.entries(updates)) {
+        const airline = state.aiAirlines[id];
+        if (!airline) continue;
+        airline.cashUSD += netProfit;
+        airline.totalPassengersAllTime += passengers;
+        airline.lastDailyProfit = netProfit;
+        airline.isInsolvent = airline.cashUSD < -50_000_000;
+        airline.canBeTakenOver = airline.cashUSD < 0 && Math.abs(airline.cashUSD) > 20_000_000;
+        airline.dailyStats.push({ gameDay, revenue, costs, profit: netProfit, passengers, cashEnd: airline.cashUSD });
+        if (airline.dailyStats.length > 365) airline.dailyStats.shift();
+        if (recoverRep && !airline.isInsolvent && airline.reputationScore < 100) {
+          airline.reputationScore = Math.min(100, airline.reputationScore + 0.3);
+        }
+      }
+    });
+  },
 
   removeAIAirline: (id) =>
     set((state) => {
@@ -403,4 +437,20 @@ export const createWorldSlice: StateCreator<GameStore, [['zustand/immer', never]
         state.aiAirlines[receiverOwnerId].cashUSD += amount;
       }
     }),
+
+  batchPayDividends: (payments) => {
+    if (payments.length === 0) return;
+    set((state) => {
+      payments.forEach(({ payerAirlineId, receiverOwnerId, amount }) => {
+        if (state.aiAirlines[payerAirlineId]) {
+          state.aiAirlines[payerAirlineId].cashUSD -= amount;
+        }
+        if (receiverOwnerId === 'player') {
+          if (state.airlines['player']) state.airlines['player'].cashUSD += amount;
+        } else if (state.aiAirlines[receiverOwnerId]) {
+          state.aiAirlines[receiverOwnerId].cashUSD += amount;
+        }
+      });
+    });
+  },
 });

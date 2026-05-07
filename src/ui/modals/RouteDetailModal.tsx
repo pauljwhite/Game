@@ -47,6 +47,12 @@ export const RouteDetailModal: React.FC = () => {
   const updateRoute          = useGameStore(s => s.updateRoute);
   const deleteRoute          = useGameStore(s => s.deleteRoute);
   const assignAircraftToRoute = useGameStore(s => s.assignAircraftToRoute);
+  const airlines    = useGameStore(s => s.airlines);
+  const aiAirlines  = useGameStore(s => s.aiAirlines);
+  const aiRoutes    = useGameStore(s => s.aiRoutes);
+  const globalFuelPrice = useGameStore(s => s.globalFuelPrice);
+  const airportDailyPax = useGameStore(s => s.airportDailyPax);
+  const gameDay = useGameStore(s => s.gameDay);
 
   const routeId = (modalPayload as string | null) ?? selectedRouteId;
   const route   = routeId ? routes[routeId] : null;
@@ -62,37 +68,28 @@ export const RouteDetailModal: React.FC = () => {
       setPriceBusiness(route.priceBusiness);
       setFlightsPerWeek(route.flightsPerWeek);
     }
-  }, [routeId]);
+  }, [route]);
 
-  if (!route) return null;
-
-  const airlines    = useGameStore(s => s.airlines);
-  const aiAirlines  = useGameStore(s => s.aiAirlines);
-  const aiRoutes    = useGameStore(s => s.aiRoutes);
-  const globalFuelPrice = useGameStore(s => s.globalFuelPrice);
-  const airportDailyPax = useGameStore(s => s.airportDailyPax);
-  const gameDay = useGameStore(s => s.gameDay);
-
-  const assignedAircraft = route.aircraftId ? aircraft[route.aircraftId] : null;
-  const origin      = airports[route.originIata];
-  const destination = airports[route.destinationIata];
+  const assignedAircraft = route?.aircraftId ? aircraft[route.aircraftId] : null;
+  const origin      = route ? airports[route.originIata] : null;
+  const destination = route ? airports[route.destinationIata] : null;
 
   // Reference price: cost-per-seat × 1.4, or distance-based fallback
   const assignedType = assignedAircraft ? AIRCRAFT_TYPES.find(t => t.id === assignedAircraft.typeId) : null;
   const referencePrice = (() => {
-    if (assignedAircraft && assignedType && origin && destination) {
+    if (route && assignedAircraft && assignedType && origin && destination) {
       const costs = computeFlightCost(route, assignedAircraft, assignedType, origin, destination, globalFuelPrice, gameDay);
       const totalSeats = assignedType.seatsEconomy + assignedType.seatsBusiness;
       return totalSeats > 0 ? Math.round(costs.totalCost / totalSeats * 1.4) : Math.round(route.distanceKm * 0.12);
     }
-    return Math.round(route.distanceKm * 0.12);
+    return route ? Math.round(route.distanceKm * 0.12) : 0;
   })();
   const maxEco = referencePrice * 6;
   const maxBiz = referencePrice * 24;
   const hasBusinessSeats = (assignedType?.seatsBusiness ?? 0) > 0;
 
   const preview = useMemo(() => {
-    if (!assignedAircraft || !assignedType || !origin || !destination) return null;
+    if (!route || !assignedAircraft || !assignedType || !origin || !destination) return null;
     const allAirlines = [...Object.values(airlines), ...Object.values(aiAirlines)];
     const allRoutes   = [...Object.values(routes),   ...Object.values(aiRoutes)];
     const flightCosts = computeFlightCost(route, assignedAircraft, assignedType, origin, destination, globalFuelPrice, gameDay);
@@ -118,7 +115,7 @@ export const RouteDetailModal: React.FC = () => {
     const dailyCost    = flightCosts.totalCost * flightsPerDay;
     return { lfe, lfb, dailyRevenue, dailyCost, dailyProfit: dailyRevenue - dailyCost };
   }, [priceEconomy, priceBusiness, flightsPerWeek, assignedAircraft, assignedType, origin, destination,
-      routes, aiRoutes, airlines, aiAirlines, globalFuelPrice]);
+      routes, aiRoutes, airlines, aiAirlines, globalFuelPrice, gameDay, route]);
 
   const optimisationChanges = useMemo(() => {
     if (!route || !assignedAircraft || !assignedType || !origin || !destination) return null;
@@ -140,6 +137,8 @@ export const RouteDetailModal: React.FC = () => {
     priceEconomy, priceBusiness, hasBusinessSeats, globalFuelPrice, airlines,
     aiAirlines, routes, aiRoutes, airportDailyPax, gameDay,
   ]);
+
+  if (!route || !origin || !destination) return null;
 
   const assignedRunwayLimited = !!assignedType && (
     !canAirportHandleAircraft(origin, assignedType) ||
