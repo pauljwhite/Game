@@ -48,6 +48,8 @@ interface CompetitorSummaryPanelProps {
 
 export const CompetitorSummaryPanel: React.FC<CompetitorSummaryPanelProps> = ({ airlineId, onBack }) => {
   const airlines      = useGameStore(s => s.airlines);
+  const aircraft      = useGameStore(s => s.aircraft);
+  const routes        = useGameStore(s => s.routes);
   const aiAirlines    = useGameStore(s => s.aiAirlines);
   const aiAircraft    = useGameStore(s => s.aiAircraft);
   const aiRoutes      = useGameStore(s => s.aiRoutes);
@@ -55,8 +57,13 @@ export const CompetitorSummaryPanel: React.FC<CompetitorSummaryPanelProps> = ({ 
   const openModalById = useGameStore(s => s.openModalById);
   const closePanel    = useGameStore(s => s.closePanel);
 
-  const airline = aiAirlines[airlineId];
+  const isPlayer = airlineId === 'player';
+  const airline = isPlayer ? airlines['player'] : aiAirlines[airlineId];
   const player = airlines['player'];
+  const airlineAircraft = isPlayer ? aircraft : aiAircraft;
+  const airlineRoutes = isPlayer ? routes : aiRoutes;
+  const valuationAircraft = isPlayer ? aircraft : aiAircraft;
+  const valuationRoutes = isPlayer ? routes : aiRoutes;
 
   if (!airline) {
     return (
@@ -76,13 +83,13 @@ export const CompetitorSummaryPanel: React.FC<CompetitorSummaryPanelProps> = ({ 
   const dailyPassengers = getDailyPax(airline);
   const marketShare = totalPax > 0 ? (dailyPassengers / totalPax) * 100 : 0;
 
-  const fleet = airline.fleetIds.map(id => aiAircraft[id]).filter(Boolean);
-  const routes = airline.routeIds.map(id => aiRoutes[id]).filter(Boolean);
-  const activeRoutes = routes.filter(route => route.isActive);
+  const fleet = airline.fleetIds.map(id => airlineAircraft[id]).filter(Boolean);
+  const airlineRouteList = airline.routeIds.map(id => airlineRoutes[id]).filter(Boolean);
+  const activeRoutes = airlineRouteList.filter(route => route.isActive);
   const profitableRoutes = activeRoutes.filter(route => route.dailyProfit > 0).length;
   const losingRoutes = activeRoutes.filter(route => route.dailyProfit < 0).length;
-  const routeProfit = routes.reduce((sum, route) => sum + route.dailyProfit, 0);
-  const routeRevenue = routes.reduce((sum, route) => sum + route.dailyRevenue, 0);
+  const routeProfit = airlineRouteList.reduce((sum, route) => sum + route.dailyProfit, 0);
+  const routeRevenue = airlineRouteList.reduce((sum, route) => sum + route.dailyRevenue, 0);
   const routeCosts = Math.max(0, routeRevenue - routeProfit);
   const averageLoadFactor = activeRoutes.length > 0
     ? activeRoutes.reduce((sum, route) => sum + route.loadFactorEconomy, 0) / activeRoutes.length
@@ -96,16 +103,16 @@ export const CompetitorSummaryPanel: React.FC<CompetitorSummaryPanelProps> = ({ 
   const thirtyDayRevenue = snapshots.reduce((sum, day) => sum + day.revenue, 0);
   const thirtyDayCosts = snapshots.reduce((sum, day) => sum + day.costs, 0);
   const margin = routeRevenue > 0 ? (routeProfit / routeRevenue) * 100 : 0;
-  const companyValue = rawCompanyValue(airline, aiAircraft, aiRoutes);
+  const companyValue = rawCompanyValue(airline, valuationAircraft, valuationRoutes);
   const pricePerPercent = companyValue / 100;
-  const shareholders = airline.shareholders ?? {};
+  const shareholders = isPlayer ? { player: 100 } : airline.shareholders ?? {};
   const playerStake = shareholders['player'] ?? 0;
   const aiShareholders = Object.entries(shareholders)
     .filter(([id, share]) => id !== 'player' && share > 0)
     .map(([id, share]) => ({ id, name: aiAirlines[id]?.name ?? id, share }));
   const ownedShare = Object.values(shareholders).reduce((sum, share) => sum + share, 0);
   const marketFloat = Math.max(0, 100 - ownedShare);
-  const topRoutes = [...routes]
+  const topRoutes = [...airlineRouteList]
     .sort((a, b) => b.dailyProfit - a.dailyProfit)
     .slice(0, 4);
 
@@ -128,7 +135,7 @@ export const CompetitorSummaryPanel: React.FC<CompetitorSummaryPanelProps> = ({ 
               <h2 className="text-xl font-bold text-white truncate">{airline.name}</h2>
             </div>
             <p className="text-gray-400 text-sm capitalize">
-              {airline.personality} airline · Hub: {airline.hubIatas.join(', ')}
+              {isPlayer ? 'Your airline' : `${airline.personality} airline`} · Hub: {airline.hubIatas.join(', ')}
               {airline.isInsolvent && <span className="ml-2 text-red-400">Bankrupt</span>}
             </p>
           </div>
@@ -281,7 +288,7 @@ export const CompetitorSummaryPanel: React.FC<CompetitorSummaryPanelProps> = ({ 
               <div className="space-y-1.5">
                 {fleet.map(ac => {
                   const acType = typeMap[ac.typeId];
-                  const route = ac.assignedRouteId ? aiRoutes[ac.assignedRouteId] : null;
+                  const route = ac.assignedRouteId ? airlineRoutes[ac.assignedRouteId] : null;
                   const routeLabel = route
                     ? `${route.originIata} → ${route.destinationIata}`
                     : ac.isGrounded ? 'Grounded' : 'Unassigned';
@@ -318,28 +325,30 @@ export const CompetitorSummaryPanel: React.FC<CompetitorSummaryPanelProps> = ({ 
           </div>
         </details>
 
-        <div className="mt-3 flex flex-col gap-2">
-          {!airline.isInsolvent && (
+        {!isPlayer && (
+          <div className="mt-3 flex flex-col gap-2">
+            {!airline.isInsolvent && (
+              <button
+                onClick={() => openModalById('sharesPurchase', airline.id)}
+                className="w-full py-2 bg-teal-900/60 hover:bg-teal-800/80 text-teal-200 text-sm rounded transition-colors"
+              >
+                Trade Shares{playerStake > 0 ? ` (${playerStake.toFixed(0)}%)` : ''}
+              </button>
+            )}
             <button
-              onClick={() => openModalById('sharesPurchase', airline.id)}
-              className="w-full py-2 bg-teal-900/60 hover:bg-teal-800/80 text-teal-200 text-sm rounded transition-colors"
+              onClick={() => openModalById('takeover', airline.id)}
+              disabled={playerStake < 50 && !airline.isInsolvent}
+              title={playerStake >= 50 || airline.isInsolvent ? 'Acquire airline' : `Need 50% stake (you own ${playerStake.toFixed(0)}%)`}
+              className={`w-full py-2 text-sm rounded transition-colors ${
+                playerStake >= 50 || airline.isInsolvent
+                  ? 'bg-indigo-700 hover:bg-indigo-600 text-indigo-100'
+                  : 'bg-gray-800 text-gray-600 cursor-not-allowed'
+              }`}
             >
-              Trade Shares{playerStake > 0 ? ` (${playerStake.toFixed(0)}%)` : ''}
+              {airline.isInsolvent ? 'Buy Out' : playerStake >= 50 ? 'Take Over' : `Take Over (${playerStake.toFixed(0)}/50%)`}
             </button>
-          )}
-          <button
-            onClick={() => openModalById('takeover', airline.id)}
-            disabled={playerStake < 50 && !airline.isInsolvent}
-            title={playerStake >= 50 || airline.isInsolvent ? 'Acquire airline' : `Need 50% stake (you own ${playerStake.toFixed(0)}%)`}
-            className={`w-full py-2 text-sm rounded transition-colors ${
-              playerStake >= 50 || airline.isInsolvent
-                ? 'bg-indigo-700 hover:bg-indigo-600 text-indigo-100'
-                : 'bg-gray-800 text-gray-600 cursor-not-allowed'
-            }`}
-          >
-            {airline.isInsolvent ? 'Buy Out' : playerStake >= 50 ? 'Take Over' : `Take Over (${playerStake.toFixed(0)}/50%)`}
-          </button>
-        </div>
+          </div>
+        )}
       </div>
     </div>
   );

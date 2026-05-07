@@ -30,7 +30,9 @@ export const AirlinesPanel: React.FC = () => {
   const summaryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const playerAirline = airlines['player'];
-  const summaryAirline = displayedSummaryId ? aiAirlines[displayedSummaryId] : null;
+  const summaryAirline = displayedSummaryId
+    ? displayedSummaryId === 'player' ? airlines['player'] : aiAirlines[displayedSummaryId]
+    : null;
   const getDailyPax = (a: { dailyStats: { passengers: number }[] }) => a.dailyStats.at(-1)?.passengers ?? 0;
   const totalPax = getDailyPax(playerAirline ?? { dailyStats: [] }) +
     Object.values(aiAirlines).reduce((s, a) => s + getDailyPax(a), 0);
@@ -80,7 +82,10 @@ export const AirlinesPanel: React.FC = () => {
         const share = totalPax > 0 ? (getDailyPax(playerAirline) / totalPax) * 100 : 0;
         return (
           <div className="border-b border-sky-300/20 bg-sky-400/[0.055] shrink-0">
-            <div className="p-3">
+            <div
+              onClick={() => setSummaryId('player')}
+              className="p-3 cursor-pointer hover:bg-sky-400/[0.09] transition-colors"
+            >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2 min-w-0">
                   <div className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: playerAirline.color }} />
