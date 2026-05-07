@@ -26,6 +26,8 @@ const AirlineMenu: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   const routes        = useGameStore(s => s.routes);
   const gameTimeMs    = useGameStore(s => s.gameTimeMs);
   const openModalById = useGameStore(s => s.openModalById);
+  const resetGame  = useGameStore(s => s.resetGame);
+  const initWorld  = useGameStore(s => s.initWorld);
   const [confirming, setConfirming] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -57,9 +59,10 @@ const AirlineMenu: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   function handleStartAgain() {
     if (!confirming) { setConfirming(true); return; }
     useGameStore.persist.clearStorage();
+    initWorld();
+    resetGame();
     setConfirming(false);
     onClose();
-    openModalById('newGame');
   }
 
   return (
