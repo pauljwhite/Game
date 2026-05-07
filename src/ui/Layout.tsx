@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useGameStore, useHydrated } from '@/store';
 import { TopBar } from './TopBar';
 import { BottomBar } from './BottomBar';
@@ -29,6 +29,8 @@ const PANELS = {
   hubs: HubsPanel,
 };
 
+const PANEL_SLIDE_MS = 280;
+
 export const Layout: React.FC = () => {
   const openPanel        = useGameStore(s => s.openPanel);
   const openModal        = useGameStore(s => s.openModal);
@@ -37,10 +39,39 @@ export const Layout: React.FC = () => {
   const newspaperQueue   = useGameStore(s => s.newspaperQueue);
   const openModalById    = useGameStore(s => s.openModalById);
   const themeMode        = useGameStore(s => s.themeMode);
+  const [displayedPanel, setDisplayedPanel] = useState<typeof openPanel>(openPanel);
+  const [panelVisible, setPanelVisible] = useState(Boolean(openPanel));
+  const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     document.documentElement.dataset.theme = themeMode;
   }, [themeMode]);
+
+  useEffect(() => {
+    if (closeTimerRef.current) {
+      clearTimeout(closeTimerRef.current);
+      closeTimerRef.current = null;
+    }
+
+    if (openPanel) {
+      setDisplayedPanel(openPanel);
+      requestAnimationFrame(() => setPanelVisible(true));
+      return;
+    }
+
+    setPanelVisible(false);
+    closeTimerRef.current = setTimeout(() => {
+      setDisplayedPanel(null);
+      closeTimerRef.current = null;
+    }, PANEL_SLIDE_MS);
+
+    return () => {
+      if (closeTimerRef.current) {
+        clearTimeout(closeTimerRef.current);
+        closeTimerRef.current = null;
+      }
+    };
+  }, [openPanel]);
 
   const nextAutoOpenArticle = newspaperQueue.find(article => !article.suppressAutoOpen);
 
@@ -60,7 +91,7 @@ export const Layout: React.FC = () => {
     );
   }
 
-  const PanelComponent = openPanel ? PANELS[openPanel] : null;
+  const PanelComponent = displayedPanel ? PANELS[displayedPanel] : null;
 
   return (
     <div className={`flex flex-col h-[100svh] text-white overflow-hidden ${themeMode === 'light' ? 'bg-slate-100' : 'bg-slate-950'}`}>
@@ -73,7 +104,9 @@ export const Layout: React.FC = () => {
         </div>
 
         {PanelComponent && (
-          <div className={`absolute inset-x-2 top-2 bottom-2 z-20 rounded-2xl border border-white/10 backdrop-blur-sm shadow-2xl flex min-h-0 flex-col overflow-hidden md:inset-y-0 md:right-0 md:left-auto md:w-96 md:rounded-none md:border-y-0 md:border-r-0 md:border-l ${themeMode === 'light' ? 'bg-white/95' : 'bg-gray-950/95'}`}>
+          <div className={`absolute inset-x-2 top-2 bottom-2 z-20 rounded-2xl border border-white/10 backdrop-blur-sm shadow-2xl flex min-h-0 flex-col overflow-hidden transition-transform duration-300 ease-in-out will-change-transform md:inset-y-0 md:right-0 md:left-auto md:w-96 md:rounded-none md:border-y-0 md:border-r-0 md:border-l ${
+            panelVisible ? 'translate-y-0 md:translate-x-0' : 'translate-y-full md:translate-y-0 md:translate-x-full'
+          } ${themeMode === 'light' ? 'bg-white/95' : 'bg-gray-950/95'}`}>
             <PanelComponent />
           </div>
         )}
