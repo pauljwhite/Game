@@ -17,6 +17,7 @@ import {
 } from '@/utils/constants';
 import { canAirportHandleAircraft } from '@/utils/runway';
 import type { AIAirlineInit } from '@/data/airlinesInit';
+import { pickUnusedAirlineColor } from '@/data/airlineColors';
 
 type StoreState = ReturnType<typeof import('@/store/index')['useGameStore']['getState']>;
 
@@ -40,12 +41,6 @@ const NAME_SUFFIXES = [
 ];
 
 const AIRLINE_EMOJIS = ['✈️', '🛫', '🌍', '🌎', '🌏', '🦅', '🌐', '⭐', '🌟', '🚀', '🌙', '🦉', '🦆', '🌊', '🏔️'];
-
-const AIRLINE_COLORS = [
-  '#ef4444', '#f97316', '#eab308', '#22c55e', '#06b6d4', '#3b82f6',
-  '#8b5cf6', '#ec4899', '#14b8a6', '#f59e0b', '#84cc16', '#6366f1',
-  '#10b981', '#0ea5e9', '#d946ef', '#f43f5e',
-];
 
 const SPAWN_HUBS = [
   'JFK', 'LAX', 'LHR', 'CDG', 'FRA', 'AMS', 'NRT', 'HKG', 'SIN', 'DXB',
@@ -93,7 +88,7 @@ function trySpawnNewAirline(store: StoreState, gameDay: number): void {
 
   const hubIata = availableHubs[Math.floor(Math.random() * availableHubs.length)];
   const { name, iataPrefix } = generateAirlineName(existingNames);
-  const color = AIRLINE_COLORS[Math.floor(Math.random() * AIRLINE_COLORS.length)];
+  const color = pickUnusedAirlineColor(Object.values(aiAirlines).map(airline => airline.color), gameDay + activeCount);
   const emoji = AIRLINE_EMOJIS[Math.floor(Math.random() * AIRLINE_EMOJIS.length)];
   const personality = PERSONALITIES[Math.floor(Math.random() * PERSONALITIES.length)];
 

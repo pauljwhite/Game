@@ -47,7 +47,7 @@ export const AI_AIRLINES_INIT: AIAirlineInit[] = [
   {
     name: 'Nordic Air',
     iataPrefix: 'NA',
-    color: '#38bdf8',
+    color: '#818cf8',
     logoEmoji: '❄️',
     personality: 'conservative',
     startHub: 'LHR',
@@ -69,7 +69,7 @@ export const AI_AIRLINES_INIT: AIAirlineInit[] = [
   {
     name: 'Dragon Air',
     iataPrefix: 'DA',
-    color: '#dc2626',
+    color: '#e879f9',
     logoEmoji: '🐉',
     personality: 'aggressive',
     startHub: 'PEK',
@@ -80,7 +80,7 @@ export const AI_AIRLINES_INIT: AIAirlineInit[] = [
   {
     name: 'Lotus Airways',
     iataPrefix: 'LA',
-    color: '#f97316',
+    color: '#a3e635',
     logoEmoji: '🪷',
     personality: 'balanced',
     startHub: 'DEL',
@@ -91,7 +91,7 @@ export const AI_AIRLINES_INIT: AIAirlineInit[] = [
   {
     name: 'Sky Pacific',
     iataPrefix: 'SP',
-    color: '#3b82f6',
+    color: '#22d3ee',
     logoEmoji: '🌏',
     personality: 'balanced',
     startHub: 'NRT',
@@ -113,7 +113,7 @@ export const AI_AIRLINES_INIT: AIAirlineInit[] = [
   {
     name: 'Savanna Air',
     iataPrefix: 'SV',
-    color: '#84cc16',
+    color: '#facc15',
     logoEmoji: '🦁',
     personality: 'budget',
     startHub: 'JNB',
@@ -124,7 +124,7 @@ export const AI_AIRLINES_INIT: AIAirlineInit[] = [
   {
     name: 'Condor Global',
     iataPrefix: 'CG',
-    color: '#14b8a6',
+    color: '#c084fc',
     logoEmoji: '🦅',
     personality: 'balanced',
     startHub: 'GRU',

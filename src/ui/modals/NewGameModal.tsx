@@ -8,6 +8,7 @@ import { AirportSearchInput } from '@/ui/components/AirportSearchInput';
 import { findAirportByQuery } from '@/utils/airportSearch';
 import { AirlineLogoPicker } from '@/ui/components/AirlineLogoPicker';
 import { createInitialAIOperations } from '@/engine/aiEngine';
+import { pickUnusedAirlineColor } from '@/data/airlineColors';
 
 const DIFFICULTIES = [
   { id: 'easy',   label: 'Easy',   cash: 50_000_000, desc: '$50M starting cash' },
@@ -87,14 +88,19 @@ export const NewGameModal: React.FC = () => {
     designateHub(startingHub.iata);
 
     const aiAirlines: Record<string, Airline> = {};
+    const usedAIColors = new Set<string>();
     AI_AIRLINES_INIT.forEach((config, i) => {
       const id = `ai-${i}`;
+      const color = usedAIColors.has(config.color.toLowerCase())
+        ? pickUnusedAirlineColor(usedAIColors, i)
+        : config.color;
+      usedAIColors.add(color.toLowerCase());
       aiAirlines[id] = {
         id,
         name:                   config.name,
         iataPrefix:             config.iataPrefix,
         isPlayer:               false,
-        color:                  config.color,
+        color,
         logoEmoji:              config.logoEmoji,
         cashUSD:                config.startCash,
         totalDebt:              0,
