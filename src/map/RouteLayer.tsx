@@ -117,6 +117,16 @@ export const RouteLayer: React.FC<RouteLayerProps> = ({ map, mapVersion }) => {
                 pointerEvents="stroke"
                 onClick={clickHandler}
               />
+              <path
+                d={d}
+                stroke="transparent"
+                strokeWidth={arc.isPlayer ? 18 : 16}
+                strokeLinecap="round"
+                fill="none"
+                style={{ cursor: 'pointer' }}
+                pointerEvents="stroke"
+                onClick={clickHandler}
+              />
             </g>
           );
         })
