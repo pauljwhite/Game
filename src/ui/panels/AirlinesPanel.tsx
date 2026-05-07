@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useGameStore } from '@/store';
 import { formatCurrency } from '@/utils/format';
 import { AIRCRAFT_TYPES } from '@/data/aircraftTypes';
 import { CompetitorSummaryPanel } from './CompetitorSummaryPanel';
 
 const typeMap = Object.fromEntries(AIRCRAFT_TYPES.map(t => [t.id, t]));
+const CHILD_PANEL_SLIDE_MS = 280;
 
 function conditionColor(c: number): string {
   if (c >= 70) return 'bg-green-500';
@@ -23,10 +24,13 @@ export const AirlinesPanel: React.FC = () => {
 
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [summaryId, setSummaryId] = useState<string | null>(null);
+  const [displayedSummaryId, setDisplayedSummaryId] = useState<string | null>(null);
+  const [summaryVisible, setSummaryVisible] = useState(false);
   const [insolventOpen, setInsolventOpen] = useState(false);
+  const summaryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const playerAirline = airlines['player'];
-  const summaryAirline = summaryId ? aiAirlines[summaryId] : null;
+  const summaryAirline = displayedSummaryId ? aiAirlines[displayedSummaryId] : null;
   const getDailyPax = (a: { dailyStats: { passengers: number }[] }) => a.dailyStats.at(-1)?.passengers ?? 0;
   const totalPax = getDailyPax(playerAirline ?? { dailyStats: [] }) +
     Object.values(aiAirlines).reduce((s, a) => s + getDailyPax(a), 0);
@@ -35,12 +39,37 @@ export const AirlinesPanel: React.FC = () => {
   const activeAI   = allAI.filter(a => !a.isInsolvent).sort((a, b) => getDailyPax(b) - getDailyPax(a));
   const insolventAI = allAI.filter(a => a.isInsolvent);
 
-  if (summaryAirline) {
-    return <CompetitorSummaryPanel airlineId={summaryAirline.id} onBack={() => setSummaryId(null)} />;
-  }
+  useEffect(() => {
+    if (summaryTimerRef.current) {
+      clearTimeout(summaryTimerRef.current);
+      summaryTimerRef.current = null;
+    }
+
+    if (summaryId) {
+      setDisplayedSummaryId(summaryId);
+      requestAnimationFrame(() => setSummaryVisible(true));
+      return;
+    }
+
+    setSummaryVisible(false);
+    summaryTimerRef.current = setTimeout(() => {
+      setDisplayedSummaryId(null);
+      summaryTimerRef.current = null;
+    }, CHILD_PANEL_SLIDE_MS);
+
+    return () => {
+      if (summaryTimerRef.current) {
+        clearTimeout(summaryTimerRef.current);
+        summaryTimerRef.current = null;
+      }
+    };
+  }, [summaryId]);
 
   return (
-    <div className="flex h-full min-h-0 flex-col">
+    <div className="relative h-full min-h-0 overflow-hidden">
+      <div className={`absolute inset-0 flex min-h-0 flex-col transition-transform duration-300 ease-in-out will-change-transform ${
+        summaryVisible ? '-translate-x-full' : 'translate-x-0'
+      }`}>
       <div className="panel-header flex shrink-0 items-center justify-between">
         <h2 className="text-white font-bold">Airlines</h2>
         <button onClick={closePanel} aria-label="Close" className="w-10 h-10 sm:w-7 sm:h-7 flex items-center justify-center text-gray-400 hover:text-white hover:bg-gray-700 rounded transition-colors text-lg leading-none">×</button>
@@ -309,6 +338,14 @@ export const AirlinesPanel: React.FC = () => {
           </div>
         )}
       </div>
+      </div>
+      {summaryAirline && (
+        <div className={`absolute inset-0 transition-transform duration-300 ease-in-out will-change-transform ${
+          summaryVisible ? 'translate-x-0' : 'translate-x-full'
+        }`}>
+          <CompetitorSummaryPanel airlineId={summaryAirline.id} onBack={() => setSummaryId(null)} />
+        </div>
+      )}
     </div>
   );
 };
