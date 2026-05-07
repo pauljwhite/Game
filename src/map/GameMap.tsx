@@ -49,7 +49,7 @@ export const GameMap: React.FC = () => {
         type="button"
         onClick={() => setShowAiOnMap(!showAiOnMap)}
         aria-pressed={showAiOnMap}
-        className={`absolute left-3 top-3 z-[1000] flex items-center gap-2 rounded-md border px-3 py-2 text-xs font-semibold shadow-lg backdrop-blur transition-colors ${
+        className={`absolute left-3 top-3 z-10 flex items-center gap-2 rounded-md border px-3 py-2 text-xs font-semibold shadow-lg backdrop-blur transition-colors ${
           isDark
             ? 'border-white/10 bg-gray-950/85 text-gray-200 hover:bg-gray-900'
             : 'border-slate-300 bg-white/90 text-slate-700 hover:bg-white'
