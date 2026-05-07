@@ -267,30 +267,7 @@ export const CompetitorSummaryPanel: React.FC<CompetitorSummaryPanelProps> = ({ 
           )}
         </div>
 
-        <div className="flex flex-col gap-2">
-          {!airline.isInsolvent && (
-            <button
-              onClick={() => openModalById('sharesPurchase', airline.id)}
-              className="w-full py-2 bg-teal-900/60 hover:bg-teal-800/80 text-teal-200 text-sm rounded transition-colors"
-            >
-              Trade Shares{playerStake > 0 ? ` (${playerStake.toFixed(0)}%)` : ''}
-            </button>
-          )}
-          <button
-            onClick={() => openModalById('takeover', airline.id)}
-            disabled={playerStake < 50 && !airline.isInsolvent}
-            title={playerStake >= 50 || airline.isInsolvent ? 'Acquire airline' : `Need 50% stake (you own ${playerStake.toFixed(0)}%)`}
-            className={`w-full py-2 text-sm rounded transition-colors ${
-              playerStake >= 50 || airline.isInsolvent
-                ? 'bg-indigo-700 hover:bg-indigo-600 text-indigo-100'
-                : 'bg-gray-800 text-gray-600 cursor-not-allowed'
-            }`}
-          >
-            {airline.isInsolvent ? 'Buy Out' : playerStake >= 50 ? 'Take Over' : `Take Over (${playerStake.toFixed(0)}/50%)`}
-          </button>
-        </div>
-
-        <details className="glass-card mt-3 overflow-hidden group">
+        <details className="glass-card overflow-hidden group">
           <summary className="flex cursor-pointer list-none items-center justify-between p-3 text-xs font-semibold uppercase tracking-wider text-gray-500 transition-colors hover:text-gray-300">
             <span>Fleet ({fleet.length})</span>
             <span className="text-gray-600 group-open:hidden">▼</span>
@@ -340,6 +317,29 @@ export const CompetitorSummaryPanel: React.FC<CompetitorSummaryPanelProps> = ({ 
             )}
           </div>
         </details>
+
+        <div className="mt-3 flex flex-col gap-2">
+          {!airline.isInsolvent && (
+            <button
+              onClick={() => openModalById('sharesPurchase', airline.id)}
+              className="w-full py-2 bg-teal-900/60 hover:bg-teal-800/80 text-teal-200 text-sm rounded transition-colors"
+            >
+              Trade Shares{playerStake > 0 ? ` (${playerStake.toFixed(0)}%)` : ''}
+            </button>
+          )}
+          <button
+            onClick={() => openModalById('takeover', airline.id)}
+            disabled={playerStake < 50 && !airline.isInsolvent}
+            title={playerStake >= 50 || airline.isInsolvent ? 'Acquire airline' : `Need 50% stake (you own ${playerStake.toFixed(0)}%)`}
+            className={`w-full py-2 text-sm rounded transition-colors ${
+              playerStake >= 50 || airline.isInsolvent
+                ? 'bg-indigo-700 hover:bg-indigo-600 text-indigo-100'
+                : 'bg-gray-800 text-gray-600 cursor-not-allowed'
+            }`}
+          >
+            {airline.isInsolvent ? 'Buy Out' : playerStake >= 50 ? 'Take Over' : `Take Over (${playerStake.toFixed(0)}/50%)`}
+          </button>
+        </div>
       </div>
     </div>
   );
