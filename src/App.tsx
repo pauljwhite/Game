@@ -36,10 +36,11 @@ function App() {
     if (!hasWon && gameDay > 1) {
       const aiEntries = Object.values(aiAirlines);
       const activeAI = aiEntries.filter(a => !a.isInsolvent).length;
-      const totalPassengers = player.totalPassengersAllTime + aiEntries.reduce((sum, airline) => sum + airline.totalPassengersAllTime, 0);
+      const rivalPassengers = aiEntries.reduce((sum, airline) => sum + airline.totalPassengersAllTime, 0);
+      const totalPassengers = player.totalPassengersAllTime + rivalPassengers;
       const playerMarketShare = totalPassengers > 0 ? (player.totalPassengersAllTime / totalPassengers) * 100 : 0;
       const hasMetObjective = settings.objective === 'market_share'
-        ? playerMarketShare >= settings.targetMarketShare
+        ? rivalPassengers > 0 && playerMarketShare >= settings.targetMarketShare
         : activeAI === 0;
 
       if (hasMetObjective) {
