@@ -70,6 +70,20 @@ export const createWorldSlice: StateCreator<GameStore, [['zustand/immer', never]
   initWorld: () =>
     set((state) => {
       state.airports = createAirportMap();
+      state.airlines = {};
+      state.aircraft = {};
+      state.routes = {};
+      state.aiAirlines = {};
+      state.aiAircraft = {};
+      state.aiRoutes = {};
+      state.airportDailyPax = {};
+      state.totalMarketPAX = 0;
+      state.newsTicker = [{ id: 'welcome', text: 'Welcome to Mighty Airline Empire! Build your airline from the ground up.' }];
+      state.newspaperQueue = [];
+      state.selectedAirportIata = null;
+      state.selectedRouteId = null;
+      state.openPanel = null;
+      state.modalPayload = null;
     }),
 
   setAIAirlines: (airlines, aircraft, routes) =>

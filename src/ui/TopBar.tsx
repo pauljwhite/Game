@@ -2,7 +2,6 @@ import React, { useRef, useState, useEffect } from 'react';
 import { useGameStore } from '@/store';
 import { SpeedControl } from './components/SpeedControl';
 import { formatCurrency, formatGameClock, formatGameDate, formatNumber } from '@/utils/format';
-import { clearSave } from '@/utils/persistence';
 import type { PanelId } from '@/store/uiSlice';
 import { AirlineLogo } from './components/AirlineLogo';
 
@@ -57,8 +56,10 @@ const AirlineMenu: React.FC<{ onClose: () => void }> = ({ onClose }) => {
 
   function handleStartAgain() {
     if (!confirming) { setConfirming(true); return; }
-    clearSave();
-    window.location.reload();
+    useGameStore.persist.clearStorage();
+    setConfirming(false);
+    onClose();
+    openModalById('newGame');
   }
 
   return (

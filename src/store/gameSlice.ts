@@ -68,6 +68,9 @@ export const createGameSlice: StateCreator<GameStore, [['zustand/immer', never]]
   initGameSettings: (settings) =>
     set((state) => {
       state.settings = settings;
+      state.speed = DEFAULT_SPEED;
+      state.isPaused = false;
+      state.lastEconomicsTick = -1;
       state.isInitialized = true;
       state.hasWon = false;
     }),
