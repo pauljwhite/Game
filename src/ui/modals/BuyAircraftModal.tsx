@@ -20,6 +20,13 @@ function formatUSD(n: number): string {
   return `$${n.toFixed(0)}`;
 }
 
+function formatCategory(category: string): string {
+  if (category === 'sst') return 'SST';
+  if (category === 'narrowbody') return 'Narrowbody';
+  if (category === 'widebody') return 'Widebody';
+  return 'Regional';
+}
+
 export const BuyAircraftModal: React.FC = () => {
   const gameTimeMs = useGameStore(s => s.gameTimeMs);
   const cashUSD = useGameStore(s => s.airlines['player']?.cashUSD ?? 0);
@@ -144,7 +151,7 @@ export const BuyAircraftModal: React.FC = () => {
                           <div className="min-w-0">
                             <div className="flex items-center flex-wrap gap-x-2 gap-y-0.5">
                               <span className="text-white font-semibold text-sm">{type.model}</span>
-                              <span className="text-xs text-gray-500 capitalize">{type.category}</span>
+                              <span className="text-xs text-gray-500">{formatCategory(type.category)}</span>
                               {unavailable && (
                                 <span className="px-1.5 py-0.5 bg-yellow-900/50 border border-yellow-700 rounded text-yellow-400 text-xs">
                                   Avail. {type.yearIntroduced}
