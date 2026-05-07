@@ -5,6 +5,16 @@ import { computeMaintenanceCost, getMaintenanceAgeMultiplier } from '@/utils/con
 // Global throttle — multiply all event probabilities by this factor (0.6 = 40% fewer events)
 const EVENT_SCALE = 0.6;
 const AIRPORT_EVENT_SAMPLE_SIZE = 220;
+const AI_REPUTATION_REFERENCE_FLEET_SIZE = 5;
+const AI_AIRCRAFT_REPUTATION_DAILY_CAP = -4;
+
+function scaleAIAircraftReputationDelta(delta: number, fleetSize: number, currentReputation: number): number {
+  if (delta >= 0) return delta;
+
+  const fleetScale = Math.min(1, Math.sqrt(AI_REPUTATION_REFERENCE_FLEET_SIZE / Math.max(1, fleetSize)));
+  const lowReputationScale = currentReputation < 20 ? 0.2 : currentReputation < 40 ? 0.45 : 1;
+  return delta * fleetScale * lowReputationScale;
+}
 
 function aiIgnoreGroundingChance(airline: { cashUSD: number; personality: string }): boolean {
   let chance = 0.15;
@@ -550,6 +560,7 @@ export function runRandomEventsTick(
     const eligibleAc = aiAirline.fleetIds
       .map(id => aiAircraft[id])
       .filter(ac => ac && ac.status !== 'crashed' && !ac.isGrounded) as typeof aircraft[string][];
+    let aircraftReputationDelta = 0;
 
     for (const ac of eligibleAc) {
       for (const evt of AIRCRAFT_EVENTS) {
@@ -570,9 +581,11 @@ export function runRandomEventsTick(
         store.updateAIAircraftCondition(ac.id, delta, 0);
 
         if (evt.reputationDelta !== 0) {
-          store.updateAIAirline(aiAirline.id, {
-            reputationScore: Math.max(0, aiAirline.reputationScore + evt.reputationDelta),
-          });
+          aircraftReputationDelta += scaleAIAircraftReputationDelta(
+            evt.reputationDelta,
+            aiAirline.fleetIds.length,
+            aiAirline.reputationScore + aircraftReputationDelta,
+          );
         }
 
         // Grounding decision: keep flying (risk mod) or send to maintenance
@@ -589,6 +602,11 @@ export function runRandomEventsTick(
         break; // one event per aircraft per day
       }
     }
+
+    if (aircraftReputationDelta !== 0) {
+      const cappedDelta = Math.max(AI_AIRCRAFT_REPUTATION_DAILY_CAP, aircraftReputationDelta);
+      store.adjustAIAirlineReputation(aiAirline.id, cappedDelta);
+    }
   });
 
   // ── AI airline scandal events ─────────────────────────────────────────
@@ -600,9 +618,7 @@ export function runRandomEventsTick(
 
       const msg = scandal.newsTemplate.replace('{airline}', aiAirline.name);
       store.pushNewsItem(msg);
-      store.updateAIAirline(aiAirline.id, {
-        reputationScore: Math.max(0, aiAirline.reputationScore + scandal.reputationDelta),
-      });
+      store.adjustAIAirlineReputation(aiAirline.id, scandal.reputationDelta);
 
       break; // one scandal per airline per day
     }

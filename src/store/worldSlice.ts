@@ -20,6 +20,7 @@ export interface WorldSlice {
   initWorld: () => void;
   setAIAirlines: (airlines: Record<string, Airline>, aircraft: Record<string, Aircraft>, routes: Record<string, Route>) => void;
   updateAIAirline: (id: string, changes: Partial<Airline>) => void;
+  adjustAIAirlineReputation: (id: string, delta: number) => void;
   addAIRoute: (route: Route) => void;
   removeAIRoute: (routeId: string) => void;
   pushNewsItem: (item: string | Omit<NewsTickerItem, 'id'>) => void;
@@ -96,6 +97,13 @@ export const createWorldSlice: StateCreator<GameStore, [['zustand/immer', never]
   updateAIAirline: (id, changes) =>
     set((state) => {
       if (state.aiAirlines[id]) Object.assign(state.aiAirlines[id], changes);
+    }),
+
+  adjustAIAirlineReputation: (id, delta) =>
+    set((state) => {
+      const airline = state.aiAirlines[id];
+      if (!airline) return;
+      airline.reputationScore = Math.max(0, Math.min(100, airline.reputationScore + delta));
     }),
 
   addAIRoute: (route) =>
