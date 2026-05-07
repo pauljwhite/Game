@@ -223,13 +223,15 @@ function getSpec(type: AircraftType): ProfileSpec {
   const family = FAMILY_SPECS[type.familyName] ?? {};
   const baseLength = type.category === 'widebody'
     ? 142 + Math.min(42, type.seatsEconomy * 0.09)
+    : type.category === 'sst'
+      ? 134 + Math.min(28, type.seatsEconomy * 0.12)
     : type.category === 'regional'
       ? 74 + Math.min(48, type.seatsEconomy * 0.38)
       : 96 + Math.min(48, type.seatsEconomy * 0.22);
 
   return {
     length: baseLength,
-    height: type.category === 'widebody' ? 21 : type.category === 'regional' ? 16 : 17,
+    height: type.category === 'widebody' ? 21 : type.category === 'sst' ? 15 : type.category === 'regional' ? 16 : 17,
     wing: 'low',
     tail: 'swept',
     engines: type.profileId === 'regional-turboprop' ? 'turboprop-two' : 'underwing-two',

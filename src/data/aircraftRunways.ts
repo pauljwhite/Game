@@ -151,6 +151,7 @@ export const AIRCRAFT_MIN_RUNWAY_M: Record<string, number> = {
 };
 
 export function estimateMinRunwayM(type: Omit<AircraftType, 'minRunwayM'>): number {
+  if (type.category === 'sst') return 3300;
   if (type.category === 'widebody') return type.seatsEconomy >= 360 ? 3100 : 2800;
   if (type.category === 'narrowbody') return type.seatsEconomy >= 180 ? 2300 : 1900;
   if (type.profileId === 'regional-turboprop') return 1200;

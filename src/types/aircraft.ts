@@ -10,7 +10,7 @@ export type ProfileId =
   | 'wide-quad'
   | 'wide-a380';
 
-export type AircraftCategory = 'regional' | 'narrowbody' | 'widebody';
+export type AircraftCategory = 'regional' | 'narrowbody' | 'widebody' | 'sst';
 
 export interface AircraftType {
   id: string;
