@@ -4,7 +4,11 @@ import { getPlanePositions, initPlanePosition, removePlanePosition } from '@/eng
 import { latLonToSvgPoint } from './mapProjection';
 import { useGameStore } from '@/store';
 import { AIRCRAFT_TYPES } from '@/data/aircraftTypes';
-import cessnaPlaneUrl from '@/assets/cessna-map-plane.svg';
+import regionalPlaneUrl from '@/assets/map-plane-regional.svg';
+import narrowbodyPlaneUrl from '@/assets/map-plane-narrowbody.svg';
+import widebodyPlaneUrl from '@/assets/map-plane-widebody.svg';
+import sstPlaneUrl from '@/assets/map-plane-sst.svg';
+import type { AircraftCategory } from '@/types';
 
 interface PlaneLayerProps {
   map: LeafletMap;
@@ -16,6 +20,13 @@ const MIN_COMPETITOR_PLANES = 100;
 const PLANE_ICON_SIZE = 28;
 const MIN_PLANE_ZOOM_SCALE = 0.42;
 const MAX_PLANE_ZOOM_SCALE = 1.55;
+
+const PLANE_ICON_BY_CATEGORY: Record<AircraftCategory, string> = {
+  regional: regionalPlaneUrl,
+  narrowbody: narrowbodyPlaneUrl,
+  widebody: widebodyPlaneUrl,
+  sst: sstPlaneUrl,
+};
 
 function hashString(value: string): number {
   let hash = 0;
@@ -98,6 +109,7 @@ export function PlaneLayer({ map, svgOverlay }: PlaneLayerProps) {
       if (airline?.isInsolvent) return;
       const color = airline?.color ?? '#ffffff';
       const aircraftType = AIRCRAFT_TYPES.find(t => t.id === ac.typeId);
+      const planeIconUrl = aircraftType ? PLANE_ICON_BY_CATEGORY[aircraftType.category] : narrowbodyPlaneUrl;
       const speedKmh = aircraftType?.cruiseSpeedKmh ?? 850;
       const flightDurationMs = (route.distanceKm / speedKmh) * 3_600_000;
       const cycleOffsetMs = hashString(ac.id) % Math.max(1, Math.round(flightDurationMs * 2));
@@ -130,7 +142,8 @@ export function PlaneLayer({ map, svgOverlay }: PlaneLayerProps) {
         mask.setAttribute('style', 'mask-type: alpha;');
 
         const maskImage = document.createElementNS('http://www.w3.org/2000/svg', 'image');
-        maskImage.setAttribute('href', cessnaPlaneUrl);
+        maskImage.setAttribute('href', planeIconUrl);
+        maskImage.setAttribute('class', 'route-plane-mask-image');
         maskImage.setAttribute('x', `${-PLANE_ICON_SIZE / 2}`);
         maskImage.setAttribute('y', `${-PLANE_ICON_SIZE / 2}`);
         maskImage.setAttribute('width', `${PLANE_ICON_SIZE}`);
@@ -147,7 +160,8 @@ export function PlaneLayer({ map, svgOverlay }: PlaneLayerProps) {
         shape.setAttribute('mask', `url(#${maskId})`);
 
         const outline = document.createElementNS('http://www.w3.org/2000/svg', 'image');
-        outline.setAttribute('href', cessnaPlaneUrl);
+        outline.setAttribute('href', planeIconUrl);
+        outline.setAttribute('class', 'route-plane-outline-image');
         outline.setAttribute('x', `${-PLANE_ICON_SIZE / 2}`);
         outline.setAttribute('y', `${-PLANE_ICON_SIZE / 2}`);
         outline.setAttribute('width', `${PLANE_ICON_SIZE}`);
@@ -163,6 +177,8 @@ export function PlaneLayer({ map, svgOverlay }: PlaneLayerProps) {
       } else {
         planeG.querySelector('circle')?.setAttribute('fill', color);
         planeG.querySelector('rect')?.setAttribute('fill', color);
+        planeG.querySelector('.route-plane-mask-image')?.setAttribute('href', planeIconUrl);
+        planeG.querySelector('.route-plane-outline-image')?.setAttribute('href', planeIconUrl);
       }
     });
 
