@@ -63,108 +63,112 @@ export const AirportPopup: React.FC = () => {
     .slice(0, 6);
 
   return (
-    <div className="absolute inset-x-2 bottom-3 sm:inset-x-auto sm:bottom-12 sm:left-4 z-[800] glass-panel rounded-xl p-3 w-auto sm:w-64 max-h-[48svh] overflow-y-auto">
-      {isClosed && (
-        <div className="mb-2 px-2 py-1.5 bg-red-900/50 border border-red-500/50 rounded-lg flex items-center gap-1.5">
-          <span className="text-red-400 font-bold text-xs">CLOSED</span>
-          <span className="text-red-300 text-xs">{airport.closureReason}</span>
-        </div>
-      )}
-      <div className="flex justify-between items-start">
-        <div>
-          <div className="text-white font-bold text-sm">{airport.name}</div>
-          <div className="text-gray-400 text-xs">{airport.city}, {airport.country}</div>
-        </div>
-        <button
-          onClick={() => selectAirport(null)}
-          className="text-gray-500 hover:text-white text-xs ml-2"
-        >
-          x
-        </button>
-      </div>
-
-      <div className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
-        <span className="text-gray-400">IATA</span>
-        <span className="text-white font-mono">{airport.iata}</span>
-        <span className="text-gray-400">ICAO</span>
-        <span className="text-white font-mono">{airportIcao(airport) ?? '-'}</span>
-        <span className="text-gray-400">Size</span>
-        <span className="text-white capitalize">{airport.size}</span>
-        <span className="text-gray-400">Landing fee</span>
-        <span className="text-white">{formatCurrency(airport.landingFee)}</span>
-        <span className="text-gray-400">Runway</span>
-        <span className="text-white">{formatRunwayLength(airport.longestRunwayM)}</span>
-        <span className="text-gray-400">Region</span>
-        <span className="text-white capitalize">{airport.region.replace('_', ' ')}</span>
-        {isHub && (
-          <>
-            <span className="text-gray-400">Status</span>
-            <span className="text-yellow-400">Hub</span>
-          </>
-        )}
-      </div>
-
-      <div className="mt-3 space-y-2">
-        <div className="flex justify-between items-center text-xs mb-1">
-          <span className="text-gray-400">Demand strength</span>
-          <span className={demandPct > 80 ? 'text-green-400' : demandPct > 55 ? 'text-yellow-400' : 'text-red-400'}>
-            {demandPct}%
-          </span>
-        </div>
-        <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
-          <div className={`h-full rounded-full transition-all ${demandBarColor}`} style={{ width: `${demandPct}%` }} />
-        </div>
-
-        <div className="flex justify-between items-center text-xs mb-1">
-          <span className="text-gray-400">Airport utilisation</span>
-          <span className={utilization <= 0.5 ? 'text-green-400' : utilization <= 1 ? 'text-yellow-400' : 'text-red-400'}>
-            {utilizationPct}%
-          </span>
-        </div>
-        <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
-          <div className={`h-full rounded-full transition-all ${utilizationBarColor}`} style={{ width: `${Math.min(100, utilizationPct)}%` }} />
-        </div>
-      </div>
-
-      <div className="mt-3 rounded-lg border border-white/10 bg-white/[0.03]">
-        <button
-          type="button"
-          onClick={() => setDestinationsOpen(open => !open)}
-          aria-expanded={destinationsOpen}
-          className="flex w-full items-center justify-between px-2 py-2 text-left text-xs font-semibold text-gray-200"
-        >
-          <span>Passenger destinations</span>
-          <span className="text-gray-500">{destinationsOpen ? '▲' : '▼'}</span>
-        </button>
-        {destinationsOpen && (
-          <div className="space-y-1 border-t border-white/10 px-2 py-2">
-            {desiredDestinations.map(item => (
-              <div key={item.dest.iata} className="rounded bg-white/[0.04] px-2 py-1.5">
-                <div className="flex items-center justify-between gap-2 text-xs">
-                  <span className="min-w-0 truncate text-white">
-                    {item.dest.iata} · {item.dest.city}
-                  </span>
-                  <span className={item.bestRoute && item.bestRoute.dailyProfit > 0 ? 'text-green-400' : 'text-sky-300'}>
-                    {formatNumber(item.baselinePax)} pax/d
-                  </span>
-                </div>
-                <div className="mt-0.5 flex items-center justify-between gap-2 text-[10px] text-gray-500">
-                  <span>{formatDistance(item.distanceKm)} · {item.dest.size}</span>
-                  {item.bestRoute ? (
-                    <span className={item.bestRoute.dailyProfit >= 0 ? 'text-green-400' : 'text-red-400'}>
-                      {formatCurrency(item.bestRoute.dailyProfit)}/d live
-                    </span>
-                  ) : (
-                    <span>{formatCurrency(item.score)}/d potential</span>
-                  )}
-                </div>
-              </div>
-            ))}
+    <div className="absolute inset-x-2 bottom-3 sm:inset-x-auto sm:bottom-12 sm:left-4 z-[800] glass-panel rounded-xl w-auto sm:w-64 max-h-[48svh] overflow-hidden flex flex-col">
+      <div className="shrink-0 border-b border-white/10 p-3 pb-2">
+        {isClosed && (
+          <div className="mb-2 px-2 py-1.5 bg-red-900/50 border border-red-500/50 rounded-lg flex items-center gap-1.5">
+            <span className="text-red-400 font-bold text-xs">CLOSED</span>
+            <span className="text-red-300 text-xs">{airport.closureReason}</span>
           </div>
         )}
+        <div className="flex justify-between items-start">
+          <div>
+            <div className="text-white font-bold text-sm">{airport.name}</div>
+            <div className="text-gray-400 text-xs">{airport.city}, {airport.country}</div>
+          </div>
+          <button
+            onClick={() => selectAirport(null)}
+            className="text-gray-500 hover:text-white text-xs ml-2"
+          >
+            x
+          </button>
+        </div>
       </div>
 
-      <div className="mt-3 flex flex-col min-[380px]:flex-row gap-2">
+      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 py-2">
+        <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
+          <span className="text-gray-400">IATA</span>
+          <span className="text-white font-mono">{airport.iata}</span>
+          <span className="text-gray-400">ICAO</span>
+          <span className="text-white font-mono">{airportIcao(airport) ?? '-'}</span>
+          <span className="text-gray-400">Size</span>
+          <span className="text-white capitalize">{airport.size}</span>
+          <span className="text-gray-400">Landing fee</span>
+          <span className="text-white">{formatCurrency(airport.landingFee)}</span>
+          <span className="text-gray-400">Runway</span>
+          <span className="text-white">{formatRunwayLength(airport.longestRunwayM)}</span>
+          <span className="text-gray-400">Region</span>
+          <span className="text-white capitalize">{airport.region.replace('_', ' ')}</span>
+          {isHub && (
+            <>
+              <span className="text-gray-400">Status</span>
+              <span className="text-yellow-400">Hub</span>
+            </>
+          )}
+        </div>
+
+        <div className="mt-3 space-y-2">
+          <div className="flex justify-between items-center text-xs mb-1">
+            <span className="text-gray-400">Demand strength</span>
+            <span className={demandPct > 80 ? 'text-green-400' : demandPct > 55 ? 'text-yellow-400' : 'text-red-400'}>
+              {demandPct}%
+            </span>
+          </div>
+          <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
+            <div className={`h-full rounded-full transition-all ${demandBarColor}`} style={{ width: `${demandPct}%` }} />
+          </div>
+
+          <div className="flex justify-between items-center text-xs mb-1">
+            <span className="text-gray-400">Airport utilisation</span>
+            <span className={utilization <= 0.5 ? 'text-green-400' : utilization <= 1 ? 'text-yellow-400' : 'text-red-400'}>
+              {utilizationPct}%
+            </span>
+          </div>
+          <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
+            <div className={`h-full rounded-full transition-all ${utilizationBarColor}`} style={{ width: `${Math.min(100, utilizationPct)}%` }} />
+          </div>
+        </div>
+
+        <div className="mt-3 rounded-lg border border-white/10 bg-white/[0.03]">
+          <button
+            type="button"
+            onClick={() => setDestinationsOpen(open => !open)}
+            aria-expanded={destinationsOpen}
+            className="flex w-full items-center justify-between px-2 py-2 text-left text-xs font-semibold text-gray-200"
+          >
+            <span>Passenger destinations</span>
+            <span className="text-gray-500">{destinationsOpen ? '▲' : '▼'}</span>
+          </button>
+          {destinationsOpen && (
+            <div className="space-y-1 border-t border-white/10 px-2 py-2">
+              {desiredDestinations.map(item => (
+                <div key={item.dest.iata} className="rounded bg-white/[0.04] px-2 py-1.5">
+                  <div className="flex items-center justify-between gap-2 text-xs">
+                    <span className="min-w-0 truncate text-white">
+                      {item.dest.iata} · {item.dest.city}
+                    </span>
+                    <span className={item.bestRoute && item.bestRoute.dailyProfit > 0 ? 'text-green-400' : 'text-sky-300'}>
+                      {formatNumber(item.baselinePax)} pax/d
+                    </span>
+                  </div>
+                  <div className="mt-0.5 flex items-center justify-between gap-2 text-[10px] text-gray-500">
+                    <span>{formatDistance(item.distanceKm)} · {item.dest.size}</span>
+                    {item.bestRoute ? (
+                      <span className={item.bestRoute.dailyProfit >= 0 ? 'text-green-400' : 'text-red-400'}>
+                        {formatCurrency(item.bestRoute.dailyProfit)}/d live
+                      </span>
+                    ) : (
+                      <span>{formatCurrency(item.score)}/d potential</span>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div className="shrink-0 border-t border-white/10 p-3 pt-2 flex flex-col min-[380px]:flex-row gap-2">
         <button
           onClick={() => openModalById('newRoute', selectedIata)}
           className="apple-button-primary flex-1 py-1"
