@@ -18,6 +18,8 @@ function AircraftCard({ ac, gameDay }: { ac: Aircraft; gameDay: number }) {
   const setAutoMaintenance         = useGameStore(s => s.setAutoMaintenance);
   const setAircraftPolicyExclusion = useGameStore(s => s.setAircraftPolicyExclusion);
   const sellAircraft               = useGameStore(s => s.sellAircraft);
+  const selectRoute                = useGameStore(s => s.selectRoute);
+  const openModalById              = useGameStore(s => s.openModalById);
   const airlines                   = useGameStore(s => s.airlines);
   const routes                     = useGameStore(s => s.routes);
   const policy                     = useGameStore(s => s.airlines['player']?.maintenancePolicy);
@@ -45,6 +47,12 @@ function AircraftCard({ ac, gameDay }: { ac: Aircraft; gameDay: number }) {
   const routeLabel = assignedRoute
     ? `${assignedRoute.originIata} → ${assignedRoute.destinationIata}`
     : inMaint ? 'In maintenance' : ac.isGrounded ? 'Grounded' : 'Unassigned';
+
+  function handleViewRoute() {
+    if (!assignedRoute) return;
+    selectRoute(assignedRoute.id);
+    openModalById('routeDetail', assignedRoute.id);
+  }
 
   return (
     <div className={`border-b border-white/10 ${ac.isGrounded && !inMaint ? 'opacity-60' : ''}`}>
@@ -121,39 +129,49 @@ function AircraftCard({ ac, gameDay }: { ac: Aircraft; gameDay: number }) {
           )}
 
           {/* Value + Sell */}
-          <div className="flex items-center justify-between py-1.5 px-1 mb-1">
+          <div className="flex flex-wrap items-center justify-between gap-2 py-1.5 px-1 mb-1">
             <div className="text-xs text-gray-400">
               Est. value:{' '}
               <span className="text-white font-semibold">
                 {formatCurrency(computeAircraftValue(ac, type, gameDay))}
               </span>
             </div>
-            {!inMaint && (
-              sellConfirm ? (
-                <div className="flex items-center gap-1.5">
-                  <span className="text-[10px] text-gray-400">Confirm sale?</span>
-                  <button
-                    onClick={() => sellAircraft(ac.id)}
-                    className="px-2 py-1 bg-red-600 hover:bg-red-500 text-white text-xs rounded font-semibold transition-colors"
-                  >
-                    Sell
-                  </button>
-                  <button
-                    onClick={() => setSellConfirm(false)}
-                    className="apple-button"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              ) : (
+            <div className="flex flex-wrap items-center justify-end gap-1.5">
+              {assignedRoute && (
                 <button
-                  onClick={() => setSellConfirm(true)}
+                  onClick={handleViewRoute}
                   className="apple-button"
                 >
-                  Sell Aircraft
+                  View Route
                 </button>
-              )
-            )}
+              )}
+              {!inMaint && (
+                sellConfirm ? (
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[10px] text-gray-400">Confirm sale?</span>
+                    <button
+                      onClick={() => sellAircraft(ac.id)}
+                      className="px-2 py-1 bg-red-600 hover:bg-red-500 text-white text-xs rounded font-semibold transition-colors"
+                    >
+                      Sell
+                    </button>
+                    <button
+                      onClick={() => setSellConfirm(false)}
+                      className="apple-button"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => setSellConfirm(true)}
+                    className="apple-button"
+                  >
+                    Sell Aircraft
+                  </button>
+                )
+              )}
+            </div>
           </div>
 
           {/* Maintenance accordion */}
