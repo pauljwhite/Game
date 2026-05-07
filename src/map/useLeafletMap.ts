@@ -15,6 +15,11 @@ const WORLD_BOUNDS = L.latLngBounds(
   L.latLng(85.05112878, 180),
 );
 
+const MAP_PAN_BOUNDS = L.latLngBounds(
+  L.latLng(-85.05112878, -260),
+  L.latLng(85.05112878, 260),
+);
+
 export function useLeafletMap(containerId: string, isDark = true): LeafletMapHandle {
   const [map, setMap] = useState<L.Map | null>(null);
   const [svgOverlay, setSvgOverlay] = useState<SVGSVGElement | null>(null);
@@ -40,7 +45,7 @@ export function useLeafletMap(containerId: string, isDark = true): LeafletMapHan
       zoomControl: false,
       attributionControl: false,
       preferCanvas: true,
-      maxBounds: WORLD_BOUNDS,
+      maxBounds: MAP_PAN_BOUNDS,
       maxBoundsViscosity: 1,
       worldCopyJump: false,
     });
