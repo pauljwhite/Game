@@ -1,11 +1,13 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useGameStore } from '@/store';
-import { formatCurrency } from '@/utils/format';
+import { formatCurrency, formatDistance, formatNumber } from '@/utils/format';
 import { airportIcao } from '@/utils/airportSearch';
 import { formatRunwayLength } from '@/utils/runway';
-import { getAirportCapacity, airportSaturationMod } from '@/engine/demandModel';
+import { getAirportCapacity, airportSaturationMod, getBaselineDailyPax } from '@/engine/demandModel';
+import { haversineKm } from '@/utils/geo';
 
 export const AirportPopup: React.FC = () => {
+  const [destinationsOpen, setDestinationsOpen] = useState(false);
   const selectedIata = useGameStore(s => s.selectedAirportIata);
   const airports = useGameStore(s => s.airports);
   const selectAirport = useGameStore(s => s.selectAirport);
@@ -37,6 +39,28 @@ export const AirportPopup: React.FC = () => {
   const utilizationPct = Math.round(utilization * 100);
   const demandBarColor = satMod > 0.8 ? 'bg-green-500' : satMod > 0.55 ? 'bg-yellow-500' : 'bg-red-500';
   const utilizationBarColor = utilization <= 0.5 ? 'bg-green-500' : utilization <= 1 ? 'bg-yellow-500' : 'bg-red-500';
+  const allRoutes = [...Object.values(routes), ...Object.values(aiRoutes)];
+  const desiredDestinations = Object.values(airports)
+    .filter(dest => dest.iata !== selectedIata)
+    .map(dest => {
+      const baselinePax = getBaselineDailyPax(airport, dest);
+      const distanceKm = haversineKm(airport.lat, airport.lon, dest.lat, dest.lon);
+      const existingRoutes = allRoutes.filter(r =>
+        r.isActive &&
+        ((r.originIata === selectedIata && r.destinationIata === dest.iata) ||
+         (r.originIata === dest.iata && r.destinationIata === selectedIata)),
+      );
+      const bestRoute = existingRoutes.reduce<typeof existingRoutes[number] | null>(
+        (best, route) => !best || route.dailyProfit > best.dailyProfit ? route : best,
+        null,
+      );
+      const estimatedValue = baselinePax * Math.max(250, distanceKm) * 0.08;
+      const score = Math.max(estimatedValue, bestRoute?.dailyProfit ?? 0);
+      return { dest, baselinePax, distanceKm, bestRoute, score };
+    })
+    .filter(item => item.baselinePax >= 1)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 6);
 
   return (
     <div className="absolute inset-x-2 bottom-3 sm:inset-x-auto sm:bottom-12 sm:left-4 z-[800] glass-panel rounded-xl p-3 w-auto sm:w-64 max-h-[48svh] overflow-y-auto">
@@ -100,6 +124,44 @@ export const AirportPopup: React.FC = () => {
         <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
           <div className={`h-full rounded-full transition-all ${utilizationBarColor}`} style={{ width: `${Math.min(100, utilizationPct)}%` }} />
         </div>
+      </div>
+
+      <div className="mt-3 rounded-lg border border-white/10 bg-white/[0.03]">
+        <button
+          type="button"
+          onClick={() => setDestinationsOpen(open => !open)}
+          aria-expanded={destinationsOpen}
+          className="flex w-full items-center justify-between px-2 py-2 text-left text-xs font-semibold text-gray-200"
+        >
+          <span>Passenger destinations</span>
+          <span className="text-gray-500">{destinationsOpen ? '▲' : '▼'}</span>
+        </button>
+        {destinationsOpen && (
+          <div className="space-y-1 border-t border-white/10 px-2 py-2">
+            {desiredDestinations.map(item => (
+              <div key={item.dest.iata} className="rounded bg-white/[0.04] px-2 py-1.5">
+                <div className="flex items-center justify-between gap-2 text-xs">
+                  <span className="min-w-0 truncate text-white">
+                    {item.dest.iata} · {item.dest.city}
+                  </span>
+                  <span className={item.bestRoute && item.bestRoute.dailyProfit > 0 ? 'text-green-400' : 'text-sky-300'}>
+                    {formatNumber(item.baselinePax)} pax/d
+                  </span>
+                </div>
+                <div className="mt-0.5 flex items-center justify-between gap-2 text-[10px] text-gray-500">
+                  <span>{formatDistance(item.distanceKm)} · {item.dest.size}</span>
+                  {item.bestRoute ? (
+                    <span className={item.bestRoute.dailyProfit >= 0 ? 'text-green-400' : 'text-red-400'}>
+                      {formatCurrency(item.bestRoute.dailyProfit)}/d live
+                    </span>
+                  ) : (
+                    <span>{formatCurrency(item.score)}/d potential</span>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="mt-3 flex flex-col min-[380px]:flex-row gap-2">
