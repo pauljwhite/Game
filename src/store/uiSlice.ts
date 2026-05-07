@@ -63,7 +63,7 @@ export const createUISlice: StateCreator<GameStore, [['zustand/immer', never]], 
   openPanelById: (id) => set((state) => { state.openPanel = id; }),
   closePanel: () => set((state) => { state.openPanel = null; }),
   openModalById: (id, payload) => set((state) => { state.openModal = id; state.modalPayload = payload ?? null; }),
-  closeModal: () => set((state) => { state.openModal = null; state.modalPayload = null; }),
+  closeModal: () => set((state) => { state.openModal = null; }),
   setThemeMode: (mode) => set((state) => { state.themeMode = mode; }),
   setShowAiOnMap: (show) => set((state) => { state.showAiOnMap = show; }),
   pushNewspaper: (article) => set((state) => {

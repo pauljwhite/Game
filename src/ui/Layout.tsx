@@ -30,6 +30,7 @@ const PANELS = {
 };
 
 const PANEL_SLIDE_MS = 280;
+const MODAL_ANIMATION_MS = 220;
 
 export const Layout: React.FC = () => {
   const openPanel        = useGameStore(s => s.openPanel);
@@ -42,6 +43,9 @@ export const Layout: React.FC = () => {
   const [displayedPanel, setDisplayedPanel] = useState<typeof openPanel>(openPanel);
   const [panelVisible, setPanelVisible] = useState(Boolean(openPanel));
   const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [displayedModal, setDisplayedModal] = useState<typeof openModal>(openModal);
+  const [modalVisible, setModalVisible] = useState(Boolean(openModal));
+  const modalTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     document.documentElement.dataset.theme = themeMode;
@@ -73,6 +77,32 @@ export const Layout: React.FC = () => {
     };
   }, [openPanel]);
 
+  useEffect(() => {
+    if (modalTimerRef.current) {
+      clearTimeout(modalTimerRef.current);
+      modalTimerRef.current = null;
+    }
+
+    if (openModal) {
+      setDisplayedModal(openModal);
+      requestAnimationFrame(() => setModalVisible(true));
+      return;
+    }
+
+    setModalVisible(false);
+    modalTimerRef.current = setTimeout(() => {
+      setDisplayedModal(null);
+      modalTimerRef.current = null;
+    }, MODAL_ANIMATION_MS);
+
+    return () => {
+      if (modalTimerRef.current) {
+        clearTimeout(modalTimerRef.current);
+        modalTimerRef.current = null;
+      }
+    };
+  }, [openModal]);
+
   const nextAutoOpenArticle = newspaperQueue.find(article => !article.suppressAutoOpen);
 
   // Auto-open newspaper modal when queue has items and no other modal is showing
@@ -92,6 +122,19 @@ export const Layout: React.FC = () => {
   }
 
   const PanelComponent = displayedPanel ? PANELS[displayedPanel] : null;
+  const modalContent = (() => {
+    if (displayedModal === 'buyAircraft') return <BuyAircraftModal />;
+    if (displayedModal === 'newRoute') return <NewRouteModal />;
+    if (displayedModal === 'routeDetail') return <RouteDetailModal />;
+    if (displayedModal === 'takeover') return <TakeoverModal />;
+    if (displayedModal === 'gameOver') return <GameOverModal />;
+    if (displayedModal === 'aiRouteDetail') return <CompetitorRouteModal />;
+    if (displayedModal === 'rebrand') return <RebrandModal />;
+    if (displayedModal === 'sharesPurchase') return <SharePurchaseModal />;
+    if (displayedModal === 'newspaper') return <NewspaperModal />;
+    if (displayedModal === 'settings') return <SettingsModal />;
+    return null;
+  })();
 
   return (
     <div className={`flex flex-col h-[100svh] text-white overflow-hidden ${themeMode === 'light' ? 'bg-slate-100' : 'bg-slate-950'}`}>
@@ -114,16 +157,15 @@ export const Layout: React.FC = () => {
 
       <BottomBar />
 
-      {openModal === 'buyAircraft' && <BuyAircraftModal />}
-      {openModal === 'newRoute' && <NewRouteModal />}
-      {openModal === 'routeDetail' && <RouteDetailModal />}
-      {openModal === 'takeover' && <TakeoverModal />}
-      {openModal === 'gameOver' && <GameOverModal />}
-      {openModal === 'aiRouteDetail' && <CompetitorRouteModal />}
-      {openModal === 'rebrand' && <RebrandModal />}
-      {openModal === 'sharesPurchase' && <SharePurchaseModal />}
-      {openModal === 'newspaper' && <NewspaperModal />}
-      {openModal === 'settings' && <SettingsModal />}
+      {modalContent && (
+        <div className={`fixed inset-0 z-[9998] transition-all duration-200 ease-in-out will-change-transform ${
+          modalVisible
+            ? 'pointer-events-auto translate-y-0 scale-100 opacity-100'
+            : 'pointer-events-none translate-y-3 scale-[0.985] opacity-0'
+        }`}>
+          {modalContent}
+        </div>
+      )}
     </div>
   );
 };
