@@ -1,12 +1,21 @@
 import React from 'react';
 import { useGameStore } from '@/store';
+import { AIRCRAFT_TYPES } from '@/data/aircraftTypes';
 import { rawCompanyValue } from '@/engine/valuation';
 import { AirlineLogo } from '@/ui/components/AirlineLogo';
 import { formatCurrency, formatNumber } from '@/utils/format';
 
+const typeMap = Object.fromEntries(AIRCRAFT_TYPES.map(t => [t.id, t]));
+
 function pct(value: number): string {
   if (!Number.isFinite(value)) return '0.0%';
   return `${value.toFixed(1)}%`;
+}
+
+function conditionColor(condition: number): string {
+  if (condition >= 70) return 'bg-green-500';
+  if (condition >= 40) return 'bg-yellow-500';
+  return 'bg-red-500';
 }
 
 function StatCard({
@@ -280,6 +289,57 @@ export const CompetitorSummaryPanel: React.FC<CompetitorSummaryPanelProps> = ({ 
             {airline.isInsolvent ? 'Buy Out' : playerStake >= 50 ? 'Take Over' : `Take Over (${playerStake.toFixed(0)}/50%)`}
           </button>
         </div>
+
+        <details className="glass-card mt-3 overflow-hidden group">
+          <summary className="flex cursor-pointer list-none items-center justify-between p-3 text-xs font-semibold uppercase tracking-wider text-gray-500 transition-colors hover:text-gray-300">
+            <span>Fleet ({fleet.length})</span>
+            <span className="text-gray-600 group-open:hidden">▼</span>
+            <span className="hidden text-gray-600 group-open:inline">▲</span>
+          </summary>
+
+          <div className="border-t border-white/10 p-3 pt-2">
+            {fleet.length === 0 ? (
+              <div className="text-xs text-gray-600 italic">No aircraft in fleet</div>
+            ) : (
+              <div className="space-y-1.5">
+                {fleet.map(ac => {
+                  const acType = typeMap[ac.typeId];
+                  const route = ac.assignedRouteId ? aiRoutes[ac.assignedRouteId] : null;
+                  const routeLabel = route
+                    ? `${route.originIata} → ${route.destinationIata}`
+                    : ac.isGrounded ? 'Grounded' : 'Unassigned';
+                  const statusLabel = ac.status === 'maintenance'
+                    ? 'Maintenance'
+                    : ac.isGrounded
+                      ? ac.groundedReason ?? 'Grounded'
+                      : ac.status.charAt(0).toUpperCase() + ac.status.slice(1);
+
+                  return (
+                    <div key={ac.id} className="rounded bg-white/5 px-2 py-1.5">
+                      <div className="flex items-start justify-between gap-2 text-xs">
+                        <div className="min-w-0">
+                          <div className="truncate font-medium text-white">
+                            {acType ? `${acType.manufacturer} ${acType.model}` : ac.typeId}
+                          </div>
+                          <div className="mt-0.5 text-gray-500">
+                            {routeLabel} · {statusLabel} · {Math.round(ac.totalFlightHours).toLocaleString()} hrs
+                          </div>
+                        </div>
+                        <span className="shrink-0 text-gray-400">{ac.condition.toFixed(0)}%</span>
+                      </div>
+                      <div className="mt-1.5 h-1 bg-gray-700 rounded overflow-hidden">
+                        <div
+                          className={`h-full rounded ${conditionColor(ac.condition)}`}
+                          style={{ width: `${Math.max(0, Math.min(100, ac.condition))}%` }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </details>
       </div>
     </div>
   );
