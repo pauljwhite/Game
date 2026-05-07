@@ -10,6 +10,9 @@ import { runRandomEventsTick } from './randomEvents';
 import { AIRCRAFT_TYPES } from '@/data/aircraftTypes';
 import { formatCurrency } from '@/utils/format';
 import { canAirportHandleAircraft } from '@/utils/runway';
+import type { NewsArticle, NewsTickerItem } from '@/store/uiSlice';
+import type { MaintenanceTier } from '@/types/aircraft';
+import { useGameStore } from '@/store';
 
 const AIRCRAFT_TYPE_BY_ID = Object.fromEntries(
   AIRCRAFT_TYPES.map(type => [type.id, type]),
@@ -46,6 +49,7 @@ export function computeFlightCost(
 }
 
 export function runDailyTick(store: ReturnType<typeof import('@/store/index')['useGameStore']['getState']>): void {
+  const perfStart = typeof performance !== 'undefined' ? performance.now() : 0;
   const state = store;
   const {
     gameDay, aircraft, routes, airlines, airports, aiAirlines, aiRoutes, aiAircraft,
@@ -106,7 +110,20 @@ export function runDailyTick(store: ReturnType<typeof import('@/store/index')['u
   // Build airport pax totals from last tick's dailyPassengers (used for saturation this tick)
   const prevAirportPax = state.airportDailyPax;
   const currentYear = 1960 + Math.floor(gameDay / 365);
+  const airportCapacityByIata = new Map(
+    Object.values(airports).map(airport => [airport.iata, getAirportCapacity(airport.size, currentYear)]),
+  );
   const pendingAirportPax: Record<string, number> = {};
+  const pendingNewsItems: Array<string | Omit<NewsTickerItem, 'id'>> = [];
+  const pendingNewspapers: NewsArticle[] = [];
+  const playerMaintenanceCompletions: Array<{ aircraftId: string; newsText: string }> = [];
+  const playerMaintenanceStarts: Array<{ aircraftId: string; gameDay: number; tier: MaintenanceTier; newsText: string }> = [];
+  const playerCrashIds: string[] = [];
+  const aiCrashIds: string[] = [];
+  let playerRouteUpdates: Record<string, Partial<typeof routes[string]>> = {};
+  let playerAcUpdates: Record<string, { conditionDelta: number; hoursOwed: number }> = {};
+  let playerReputationDelta = 0;
+  let playerPnl: { netProfit: number; passengers: number; revenue: number; costs: number } | null = null;
   const accumPax = (iata: string, pax: number) => {
     pendingAirportPax[iata] = (pendingAirportPax[iata] ?? 0) + pax;
   };
@@ -124,10 +141,9 @@ export function runDailyTick(store: ReturnType<typeof import('@/store/index')['u
         const tier = ac.activeMaintTier ?? 'standard';
         const durationDays = MAINTENANCE_TIERS[tier].durationDays;
         if (gameDay - ac.lastMaintenanceGameDay >= durationDays) {
-          store.completeMaintenance(ac.id);
-          store.pushNewsItem({
-            text: `${ac.name} has completed ${MAINTENANCE_TIERS[tier].label.toLowerCase()} maintenance and returned to service.`,
-            playerRelated: true,
+          playerMaintenanceCompletions.push({
+            aircraftId: ac.id,
+            newsText: `${ac.name} has completed ${MAINTENANCE_TIERS[tier].label.toLowerCase()} maintenance and returned to service.`,
           });
         }
       }
@@ -143,13 +159,14 @@ export function runDailyTick(store: ReturnType<typeof import('@/store/index')['u
         (belowThreshold || groundedNeedsFix) &&
         maintCooldownElapsed
       ) {
-        store.startMaintenance(ac.id, gameDay, ac.autoMaintenanceTier ?? 'standard');
         const reason = groundedNeedsFix
           ? `grounded (${ac.groundedReason ?? 'incident'})`
           : `condition ${ac.condition.toFixed(0)}%`;
-        store.pushNewsItem({
-          text: `Auto-maintenance triggered for ${ac.name} (${reason}).`,
-          playerRelated: true,
+        playerMaintenanceStarts.push({
+          aircraftId: ac.id,
+          gameDay,
+          tier: ac.autoMaintenanceTier ?? 'standard',
+          newsText: `Auto-maintenance triggered for ${ac.name} (${reason}).`,
         });
       }
     });
@@ -161,9 +178,9 @@ export function runDailyTick(store: ReturnType<typeof import('@/store/index')['u
     let totalCrewCost = 0;
     let totalPassengers = 0;
 
-    const playerRouteUpdates: Record<string, Partial<typeof routes[string]>> = {};
-    const playerAcUpdates: Record<string, { conditionDelta: number; hoursOwed: number }> = {};
-    let playerReputationDelta = 0;
+    playerRouteUpdates = {};
+    playerAcUpdates = {};
+    playerReputationDelta = 0;
 
     const playerRouteIds = playerAirline.routeIds;
     playerRouteIds.forEach(routeId => {
@@ -194,8 +211,8 @@ export function runDailyTick(store: ReturnType<typeof import('@/store/index')['u
       const ecoReferencePrice = totalSeats > 0 ? Math.round(flightCosts.totalCost / totalSeats * 1.3) : 200;
       const bizReferencePrice = ecoReferencePrice * 4;
 
-      const originUtil = (prevAirportPax[route.originIata] ?? 0) / getAirportCapacity(origin.size, currentYear);
-      const destUtil   = (prevAirportPax[route.destinationIata] ?? 0) / getAirportCapacity(dest.size, currentYear);
+      const originUtil = (prevAirportPax[route.originIata] ?? 0) / (airportCapacityByIata.get(origin.iata) ?? getAirportCapacity(origin.size, currentYear));
+      const destUtil   = (prevAirportPax[route.destinationIata] ?? 0) / (airportCapacityByIata.get(dest.iata) ?? getAirportCapacity(dest.size, currentYear));
       const satMod     = airportSaturationMod(originUtil) * airportSaturationMod(destUtil);
       const isPlayerHubRoute = playerAirline.hubIatas.includes(route.originIata) || playerAirline.hubIatas.includes(route.destinationIata);
       const baselinePax = getBaselineDailyPax(origin, dest) * (isPlayerHubRoute ? HUB_DEMAND_BONUS : 1) * satMod;
@@ -243,16 +260,16 @@ export function runDailyTick(store: ReturnType<typeof import('@/store/index')['u
       // Crash check — knownFaultRiskMod drastically raises risk when flying with ignored fault
       const riskMod = ac.knownFaultRiskMod ?? 1;
       if (ac.crashRisk > 0.001 && Math.random() < ac.crashRisk * riskMod * flightsPerDay * 0.0008) {
-        store.triggerCrash(ac.id);
+        playerCrashIds.push(ac.id);
         const crashRoute = `${route.originIata}–${route.destinationIata}`;
         const articleId = `crash_${store.gameDay}_${ac.id}`;
-        store.pushNewsItem({
+        pendingNewsItems.push({
           text: `BREAKING: ${playerAirline.name} ${aircraftType.model} crashes on ${route.originIata}->${route.destinationIata} route!`,
           severity: 'breaking',
           articleId,
           playerRelated: true,
         });
-        store.pushNewspaper({
+        pendingNewspapers.push({
           id: articleId,
           headline: `${playerAirline.name} ${aircraftType.model} lost`,
           subheadline: `Aviation authorities launch emergency investigation into accident on the ${crashRoute} corridor`,
@@ -273,17 +290,10 @@ export function runDailyTick(store: ReturnType<typeof import('@/store/index')['u
       }
     });
 
-    store.batchUpdatePlayerRoutes(playerRouteUpdates);
-    store.batchUpdatePlayerAircraft(playerAcUpdates);
-    store.reconcilePlayerRouteIds();
-    if (playerReputationDelta !== 0) store.applyReputationHit('player', playerReputationDelta);
-
     const hubFees = (playerAirline.hubIatas.length * HUB_ANNUAL_FEE_USD) / 365;
     const totalCost = totalFuelCost + totalMaintenanceCost + totalAirportFees + totalCrewCost + hubFees;
     const netProfit = totalRevenue - totalCost;
-
-    store.applyDailyPnL('player', netProfit, totalPassengers, { revenue: totalRevenue, costs: totalCost });
-    store.recoverReputation('player');
+    playerPnl = { netProfit, passengers: totalPassengers, revenue: totalRevenue, costs: totalCost };
   }
 
   // AI economics (same model as player, capped by seat capacity)
@@ -319,8 +329,8 @@ export function runDailyTick(store: ReturnType<typeof import('@/store/index')['u
       const ecoReferencePrice = totalSeats > 0 ? Math.round(flightCosts.totalCost / totalSeats * 1.3) : 200;
       const bizReferencePrice = ecoReferencePrice * 4;
 
-      const aiOriginUtil = (prevAirportPax[route.originIata] ?? 0) / getAirportCapacity(origin.size, currentYear);
-      const aiDestUtil   = (prevAirportPax[route.destinationIata] ?? 0) / getAirportCapacity(dest.size, currentYear);
+      const aiOriginUtil = (prevAirportPax[route.originIata] ?? 0) / (airportCapacityByIata.get(origin.iata) ?? getAirportCapacity(origin.size, currentYear));
+      const aiDestUtil   = (prevAirportPax[route.destinationIata] ?? 0) / (airportCapacityByIata.get(dest.iata) ?? getAirportCapacity(dest.size, currentYear));
       const aiSatMod     = airportSaturationMod(aiOriginUtil) * airportSaturationMod(aiDestUtil);
       const isAIHubRoute = aiAirline.hubIatas.includes(route.originIata) || aiAirline.hubIatas.includes(route.destinationIata);
       const baselinePax = getBaselineDailyPax(origin, dest) * (isAIHubRoute ? HUB_DEMAND_BONUS : 1) * aiSatMod;
@@ -366,9 +376,9 @@ export function runDailyTick(store: ReturnType<typeof import('@/store/index')['u
       if (ac.crashRisk > 0.001 && Math.random() < ac.crashRisk * aiRiskMod * flightsPerDay * 0.0008) {
         const crashRoute = route ? `${route.originIata}–${route.destinationIata}` : 'unknown route';
         const acModel = AIRCRAFT_TYPE_BY_ID[ac.typeId]?.model ?? 'aircraft';
-        store.triggerAICrash(ac.id);
-        store.pushNewsItem(`CRASH: ${aiAirline.name} ${acModel} lost on ${crashRoute}.`);
-        store.pushNewspaper({
+        aiCrashIds.push(ac.id);
+        pendingNewsItems.push(`CRASH: ${aiAirline.name} ${acModel} lost on ${crashRoute}.`);
+        pendingNewspapers.push({
           id: `ai_crash_${store.gameDay}_${ac.id}`,
           headline: `${aiAirline.name} ${acModel} lost`,
           subheadline: `Investigators launch inquiry after ${aiAirline.name} aircraft is lost on the ${crashRoute} corridor`,
@@ -399,14 +409,10 @@ export function runDailyTick(store: ReturnType<typeof import('@/store/index')['u
 
     // First tick crossing into insolvency: ground the airline
     if (!wasInsolvent && willBeInsolvent) {
-      store.pushNewsItem(`BANKRUPTCY: ${aiAirline.name} has declared bankruptcy and ceased operations.`);
-      aiAirline.routeIds.forEach(rid => store.updateAIRoute(rid, { isActive: false }));
+      pendingNewsItems.push(`BANKRUPTCY: ${aiAirline.name} has declared bankruptcy and ceased operations.`);
+      aiAirline.routeIds.forEach(rid => { aiRouteUpdates[rid] = { ...(aiRouteUpdates[rid] ?? {}), isActive: false }; });
     }
   });
-
-  store.batchUpdateAIAirlineStats(aiStatsUpdates);
-  store.batchUpdateAIRoutes(aiRouteUpdates);
-  store.batchUpdateAIAircraft(aiAcUpdates);
 
   // Distribute dividends: deduct from payer, credit shareholder atomically
   let playerDividendTotal = 0;
@@ -421,9 +427,8 @@ export function runDailyTick(store: ReturnType<typeof import('@/store/index')['u
       if (ownerId === 'player') playerDividendTotal += div;
     });
   });
-  store.batchPayDividends(dividendPayments);
   if (playerDividendTotal > 500_000) {
-    store.pushNewsItem({
+    pendingNewsItems.push({
       text: `Dividends: ${formatCurrency(playerDividendTotal)} received from shareholdings today.`,
       playerRelated: true,
     });
@@ -434,10 +439,49 @@ export function runDailyTick(store: ReturnType<typeof import('@/store/index')['u
   void _ac;
   void _r;
 
-  store.setAirportDailyPax(pendingAirportPax);
+  playerMaintenanceCompletions.forEach(({ newsText }) => {
+    pendingNewsItems.push({ text: newsText, playerRelated: true });
+  });
+  playerMaintenanceStarts.forEach(({ newsText }) => {
+    pendingNewsItems.push({ text: newsText, playerRelated: true });
+  });
+
+  const commitStart = typeof performance !== 'undefined' ? performance.now() : 0;
+  store.applyDailyEconomicsBatch({
+    playerRouteUpdates,
+    playerAircraftUpdates: playerAcUpdates,
+    playerMaintenanceCompletions,
+    playerMaintenanceStarts,
+    playerCrashIds,
+    playerPnl,
+    playerReputationDelta,
+    aiRouteUpdates,
+    aiAircraftUpdates: aiAcUpdates,
+    aiCrashIds,
+    aiStatsUpdates,
+    dividendPayments,
+    airportDailyPax: pendingAirportPax,
+    newsItems: pendingNewsItems,
+    newspaperArticles: pendingNewspapers,
+  });
+  const commitEnd = typeof performance !== 'undefined' ? performance.now() : 0;
 
   // Random incidents and scandals
-  runRandomEventsTick(store);
+  const randomStart = typeof performance !== 'undefined' ? performance.now() : 0;
+  runRandomEventsTick(useGameStore.getState());
+  const randomEnd = typeof performance !== 'undefined' ? performance.now() : 0;
+
+  if (typeof import.meta !== 'undefined' && import.meta.env.DEV) {
+    const totalMs = randomEnd - perfStart;
+    const commitMs = commitEnd - commitStart;
+    const randomMs = randomEnd - randomStart;
+    if (totalMs > 50 || commitMs > 50 || randomMs > 50) {
+      console.info(
+        `[perf] date-change ${totalMs.toFixed(1)}ms ` +
+        `(economics ${(commitStart - perfStart).toFixed(1)}ms, commit ${commitMs.toFixed(1)}ms, random ${randomMs.toFixed(1)}ms)`,
+      );
+    }
+  }
 }
 
 export function msToGameDate(gameTimeMs: number): Date {
