@@ -14,8 +14,8 @@ interface PlaneLayerProps {
 const MAX_RENDERED_PLANES = 300;
 const MIN_COMPETITOR_PLANES = 100;
 const PLANE_ICON_SIZE = 28;
-const MIN_PLANE_ZOOM_SCALE = 0.68;
-const MAX_PLANE_ZOOM_SCALE = 1.12;
+const MIN_PLANE_ZOOM_SCALE = 0.42;
+const MAX_PLANE_ZOOM_SCALE = 1.55;
 
 function hashString(value: string): number {
   let hash = 0;
