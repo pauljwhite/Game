@@ -189,11 +189,13 @@ export const RoutesPanel: React.FC = () => {
             ? null
             : !route.aircraftId
               ? 'No aircraft'
-              : assignedAircraft?.status === 'maintenance'
-                ? 'Maintenance'
-                : assignedAircraft?.isGrounded
-                  ? 'Grounded'
-                  : 'Inactive';
+              : assignedAircraft?.status === 'crashed'
+                ? 'Crashed'
+                : assignedAircraft?.status === 'maintenance'
+                  ? 'Maintenance'
+                  : assignedAircraft?.isGrounded
+                    ? 'Grounded'
+                    : 'Inactive';
 
           return (
             <div

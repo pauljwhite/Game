@@ -42,11 +42,12 @@ function AircraftCard({ ac, gameDay }: { ac: Aircraft; gameDay: number }) {
   const condText       = conditionPct >= 60 ? 'text-green-400' : conditionPct >= 30 ? 'text-yellow-400' : 'text-red-400';
   const needsMaint     = ac.condition < 30;
   const inMaint        = ac.status === 'maintenance';
+  const isCrashed      = ac.status === 'crashed';
   const canStartMaint  = !inMaint && ac.status !== 'crashed';
 
   const routeLabel = assignedRoute
     ? `${assignedRoute.originIata} → ${assignedRoute.destinationIata}`
-    : inMaint ? 'In maintenance' : ac.isGrounded ? 'Grounded' : 'Unassigned';
+    : isCrashed ? 'Lost in accident' : inMaint ? 'In maintenance' : ac.isGrounded ? 'Grounded' : 'Unassigned';
 
   function handleViewRoute() {
     if (!assignedRoute) return;
@@ -76,7 +77,8 @@ function AircraftCard({ ac, gameDay }: { ac: Aircraft; gameDay: number }) {
         </span>
 
         {/* Status chips */}
-        {needsMaint && <span className="soft-tag border-red-300/20 bg-red-500/15 text-red-200 shrink-0">MAINT</span>}
+        {isCrashed && <span className="soft-tag border-red-300/20 bg-red-500/15 text-red-200 shrink-0">LOST</span>}
+        {!isCrashed && needsMaint && <span className="soft-tag border-red-300/20 bg-red-500/15 text-red-200 shrink-0">MAINT</span>}
         {inMaint    && <span className="soft-tag border-yellow-300/20 bg-yellow-500/15 text-yellow-200 shrink-0">MAINT</span>}
         {ac.autoMaintenanceEnabled && !inMaint && !needsMaint && (
           <span className="soft-tag border-sky-300/20 bg-sky-500/15 text-sky-200 shrink-0">AUTO</span>
@@ -113,10 +115,10 @@ function AircraftCard({ ac, gameDay }: { ac: Aircraft; gameDay: number }) {
           {ac.isGrounded && !inMaint && (
             <div className="mb-2 px-3 py-2 bg-red-900/40 border border-red-500/40 rounded-lg">
               <div className="flex items-start gap-2">
-                <span className="text-red-400 font-bold text-xs shrink-0">GROUNDED</span>
+                <span className="text-red-400 font-bold text-xs shrink-0">{isCrashed ? 'LOST' : 'GROUNDED'}</span>
                 <span className="text-red-300 text-xs">{ac.groundedReason ?? 'Aircraft grounded — maintenance required'}</span>
               </div>
-              {ac.autoMaintenanceEnabled && (
+              {ac.autoMaintenanceEnabled && !isCrashed && (
                 <div className="mt-1 text-xs text-blue-300">Auto-maintenance will begin on the next daily tick.</div>
               )}
             </div>
@@ -148,12 +150,12 @@ function AircraftCard({ ac, gameDay }: { ac: Aircraft; gameDay: number }) {
               {!inMaint && (
                 sellConfirm ? (
                   <div className="flex items-center gap-1.5">
-                    <span className="text-[10px] text-gray-400">Confirm sale?</span>
+                    <span className="text-[10px] text-gray-400">{isCrashed ? 'Confirm write-off?' : 'Confirm sale?'}</span>
                     <button
                       onClick={() => sellAircraft(ac.id)}
                       className="px-2 py-1 bg-red-600 hover:bg-red-500 text-white text-xs rounded font-semibold transition-colors"
                     >
-                      Sell
+                      {isCrashed ? 'Write off' : 'Sell'}
                     </button>
                     <button
                       onClick={() => setSellConfirm(false)}
@@ -167,7 +169,7 @@ function AircraftCard({ ac, gameDay }: { ac: Aircraft; gameDay: number }) {
                     onClick={() => setSellConfirm(true)}
                     className="apple-button"
                   >
-                    Sell Aircraft
+                    {isCrashed ? 'Write Off' : 'Sell Aircraft'}
                   </button>
                 )
               )}

@@ -504,15 +504,16 @@ export const createPlayerSlice: StateCreator<GameStore, [['zustand/immer', never
       const ac = state.aircraft[aircraftId];
       if (!ac) return;
       ac.status = 'crashed';
+      ac.isGrounded = true;
+      ac.groundedReason = 'Aircraft lost in accident';
+      ac.condition = 0;
+      ac.crashRisk = 0;
       if (ac.assignedRouteId && state.routes[ac.assignedRouteId]) {
-        state.routes[ac.assignedRouteId].aircraftId = null;
         state.routes[ac.assignedRouteId].isActive = false;
       }
-      state.airlines[PLAYER_ID].fleetIds = state.airlines[PLAYER_ID].fleetIds.filter(id => id !== aircraftId);
       state.airlines[PLAYER_ID].cashUSD -= 50_000_000;
       state.airlines[PLAYER_ID].reputationScore = Math.max(0, state.airlines[PLAYER_ID].reputationScore - 45);
       state.airlines[PLAYER_ID].crashPenaltyDaysLeft = 60;
-      delete state.aircraft[aircraftId];
     }),
 
   applyReputationHit: (airlineId, delta) =>
