@@ -196,7 +196,8 @@ export function runDailyTick(store: ReturnType<typeof import('@/store/index')['u
       const originUtil = (prevAirportPax[route.originIata] ?? 0) / getAirportCapacity(origin.size, currentYear);
       const destUtil   = (prevAirportPax[route.destinationIata] ?? 0) / getAirportCapacity(dest.size, currentYear);
       const satMod     = airportSaturationMod(originUtil) * airportSaturationMod(destUtil);
-      const baselinePax = getBaselineDailyPax(origin, dest) * (origin.isHub || dest.isHub ? HUB_DEMAND_BONUS : 1) * satMod;
+      const isPlayerHubRoute = playerAirline.hubIatas.includes(route.originIata) || playerAirline.hubIatas.includes(route.destinationIata);
+      const baselinePax = getBaselineDailyPax(origin, dest) * (isPlayerHubRoute ? HUB_DEMAND_BONUS : 1) * satMod;
       const repMod = 1 + (playerAirline.reputationScore - 50) * REPUTATION_DEMAND_FACTOR;
       const crashPenalty = playerAirline.crashPenaltyDaysLeft > 0 ? (1 - CRASH_DEMAND_PENALTY_PCT) : 1;
       const condMod = conditionDemandMod(ac.condition);
@@ -317,7 +318,8 @@ export function runDailyTick(store: ReturnType<typeof import('@/store/index')['u
       const aiOriginUtil = (prevAirportPax[route.originIata] ?? 0) / getAirportCapacity(origin.size, currentYear);
       const aiDestUtil   = (prevAirportPax[route.destinationIata] ?? 0) / getAirportCapacity(dest.size, currentYear);
       const aiSatMod     = airportSaturationMod(aiOriginUtil) * airportSaturationMod(aiDestUtil);
-      const baselinePax = getBaselineDailyPax(origin, dest) * (origin.isHub || dest.isHub ? HUB_DEMAND_BONUS : 1) * aiSatMod;
+      const isAIHubRoute = aiAirline.hubIatas.includes(route.originIata) || aiAirline.hubIatas.includes(route.destinationIata);
+      const baselinePax = getBaselineDailyPax(origin, dest) * (isAIHubRoute ? HUB_DEMAND_BONUS : 1) * aiSatMod;
       const aiRepMod = 1 + (aiAirline.reputationScore - 50) * REPUTATION_DEMAND_FACTOR;
       const aiCondMod = conditionDemandMod(ac.condition);
 

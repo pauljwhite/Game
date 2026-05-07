@@ -7,6 +7,7 @@ import { AIRCRAFT_TYPES } from '@/data/aircraftTypes';
 import { AirportSearchInput } from '@/ui/components/AirportSearchInput';
 import { findAirportByQuery } from '@/utils/airportSearch';
 import { AirlineLogoPicker } from '@/ui/components/AirlineLogoPicker';
+import { createInitialAIOperations } from '@/engine/aiEngine';
 
 const DIFFICULTIES = [
   { id: 'easy',   label: 'Easy',   cash: 50_000_000, desc: '$50M starting cash' },
@@ -119,7 +120,8 @@ export const NewGameModal: React.FC = () => {
     if (aiAirlines['ai-1']) aiAirlines['ai-1'].shareholders['ai-0'] = 8;  // Eagle Air owns 8% of Sky Pacific
     if (aiAirlines['ai-4']) aiAirlines['ai-4'].shareholders['ai-1'] = 5;  // Sky Pacific owns 5% of Meridian
 
-    setAIAirlines(aiAirlines, {}, {});
+    const { aiAircraft, aiRoutes } = createInitialAIOperations(AI_AIRLINES_INIT, aiAirlines, airportOptions, startingGameDay);
+    setAIAirlines(aiAirlines, aiAircraft, aiRoutes);
     closeModal();
   }
 

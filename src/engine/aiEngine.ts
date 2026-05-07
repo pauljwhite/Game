@@ -5,8 +5,18 @@ import { getBaselineDailyPax } from './demandModel';
 import { computeFlightCost } from './economicsEngine';
 import { haversineKm } from '@/utils/geo';
 import { v4 as uuidv4 } from 'uuid';
-import { FUEL_PRICE_USD_PER_LITER, MAINTENANCE_TIERS, computeMaintenanceCost, getMaintenanceAgeMultiplier } from '@/utils/constants';
+import {
+  FUEL_PRICE_USD_PER_LITER,
+  HUB_DEMAND_BONUS,
+  MAINTENANCE_TIERS,
+  PRICE_ELASTICITY,
+  REP_PRICE_FACTOR,
+  REPUTATION_DEMAND_FACTOR,
+  computeMaintenanceCost,
+  getMaintenanceAgeMultiplier,
+} from '@/utils/constants';
 import { canAirportHandleAircraft } from '@/utils/runway';
+import type { AIAirlineInit } from '@/data/airlinesInit';
 
 type StoreState = ReturnType<typeof import('@/store/index')['useGameStore']['getState']>;
 
@@ -131,6 +141,9 @@ const AI_PURCHASE_CASH_SHARE: Record<string, number> = {
 };
 
 const AI_MIN_CASH_RESERVE_AFTER_PURCHASE = 12_000_000;
+const AI_MIN_EXPANSION_PROFIT_PER_DAY = 6_000;
+const AI_CASH_STRESS_THRESHOLD = 15_000_000;
+const AI_CRITICAL_CASH_THRESHOLD = 5_000_000;
 
 const AI_PRICE_MULTIPLIER: Record<string, number> = {
   aggressive: 0.90,
@@ -147,6 +160,213 @@ const AI_LOAD_TARGET: Record<string, number> = {
   premium: 0.65,
   conservative: 0.65,
 };
+
+function aiCashReserve(airline: Airline): number {
+  return AI_MIN_CASH_RESERVE_AFTER_PURCHASE + airline.fleetIds.length * 2_500_000;
+}
+
+function repPricePremium(reputationScore: number): number {
+  return 1 + (reputationScore - 50) * REP_PRICE_FACTOR;
+}
+
+function aiScheduleOffset(id: string, interval: number): number {
+  return Array.from(id).reduce((sum, char) => sum + char.charCodeAt(0), 0) % interval;
+}
+
+function createAIAircraft(
+  airline: Airline,
+  aircraftType: AircraftType,
+  gameDay: number,
+  origin: Airport,
+  id = `ai-ac-${uuidv4()}`,
+): Aircraft {
+  return {
+    id,
+    typeId: aircraftType.id,
+    airlineId: airline.id,
+    name: `${airline.name} ${aircraftType.model}`,
+    purchasedGameDay: gameDay,
+    condition: 100,
+    maintenanceHoursOwed: 0,
+    isGrounded: false,
+    lastMaintenanceGameDay: gameDay,
+    crashRisk: 0,
+    status: 'flying',
+    assignedRouteId: null,
+    totalFlightHours: 0,
+    currentLat: origin.lat,
+    currentLon: origin.lon,
+    flightProgress: 0,
+    activeMaintTier: null,
+    autoMaintenanceEnabled: false,
+    autoMaintenanceThreshold: 40,
+    autoMaintenanceTier: 'standard',
+    knownFaultRiskMod: 1,
+    excludedFromPolicy: false,
+  };
+}
+
+interface AIOperationPlan {
+  aircraftType: AircraftType;
+  origin: Airport;
+  dest: Airport;
+  distanceKm: number;
+  flightsPerWeek: number;
+  priceEconomy: number;
+  priceBusiness: number;
+  expectedDailyRevenue: number;
+  expectedDailyCost: number;
+  expectedDailyProfit: number;
+  expectedLoadFactor: number;
+}
+
+function estimateAIOperation(
+  airline: Airline,
+  aircraftType: AircraftType,
+  origin: Airport,
+  dest: Airport,
+  gameDay: number,
+  fuelPriceUSDPerLiter: number,
+  priceMultiplier = AI_PRICE_MULTIPLIER[airline.personality] ?? 1,
+): AIOperationPlan | null {
+  if (!canAirportHandleAircraft(origin, aircraftType) || !canAirportHandleAircraft(dest, aircraftType)) return null;
+  const distanceKm = haversineKm(origin.lat, origin.lon, dest.lat, dest.lon);
+  if (distanceKm > aircraftType.rangeKm || distanceKm < 200) return null;
+
+  const flightsPerWeek = distanceKm > 5500 ? 5 : 7;
+  const aircraft = createAIAircraft(airline, aircraftType, gameDay, origin, 'ai-plan');
+  const flightCosts = computeFlightCost(
+    { distanceKm, flightsPerWeek } as Route,
+    aircraft,
+    aircraftType,
+    origin,
+    dest,
+    fuelPriceUSDPerLiter,
+    gameDay,
+  );
+  const flightsPerDay = flightsPerWeek / 7;
+  const totalSeats = aircraftType.seatsEconomy + aircraftType.seatsBusiness;
+  const costPerSeat = totalSeats > 0 ? flightCosts.totalCost / totalSeats : 200;
+  const priceEconomy = Math.max(50, Math.round(costPerSeat * 1.45 * priceMultiplier));
+  const priceBusiness = aircraftType.seatsBusiness > 0 ? Math.round(priceEconomy * 4) : 0;
+  const referencePrice = Math.max(50, costPerSeat * 1.3);
+  const effectivePrice = priceEconomy / repPricePremium(airline.reputationScore);
+  const priceDemandMod = Math.min(1.35, Math.pow(Math.max(0.1, effectivePrice / referencePrice), PRICE_ELASTICITY));
+  const baselinePax = getBaselineDailyPax(origin, dest) * HUB_DEMAND_BONUS;
+  const repMod = 1 + (airline.reputationScore - 50) * REPUTATION_DEMAND_FACTOR;
+  const ecoCapacity = aircraftType.seatsEconomy * flightsPerDay;
+  const bizCapacity = aircraftType.seatsBusiness * flightsPerDay;
+  const ecoPax = Math.min(ecoCapacity, Math.floor(baselinePax * 0.90 * repMod * priceDemandMod));
+  const bizPax = Math.min(bizCapacity, Math.floor(baselinePax * 0.08 * repMod * Math.min(1.15, priceDemandMod)));
+  const expectedDailyRevenue = ecoPax * priceEconomy + bizPax * priceBusiness;
+  const expectedDailyCost = flightCosts.totalCost * flightsPerDay;
+  const expectedDailyProfit = expectedDailyRevenue - expectedDailyCost;
+  const expectedLoadFactor = totalSeats > 0 ? (ecoPax + bizPax) / (totalSeats * flightsPerDay) : 0;
+
+  return {
+    aircraftType,
+    origin,
+    dest,
+    distanceKm,
+    flightsPerWeek,
+    priceEconomy,
+    priceBusiness,
+    expectedDailyRevenue,
+    expectedDailyCost,
+    expectedDailyProfit,
+    expectedLoadFactor,
+  };
+}
+
+function buildAIRouteFromPlan(airline: Airline, aircraftId: string, plan: AIOperationPlan, gameDay: number, routeId = `ai-route-${uuidv4()}`): Route {
+  return {
+    id: routeId,
+    airlineId: airline.id,
+    originIata: plan.origin.iata,
+    destinationIata: plan.dest.iata,
+    aircraftId,
+    flightsPerWeek: plan.flightsPerWeek,
+    priceEconomy: plan.priceEconomy,
+    priceBusiness: plan.priceBusiness,
+    isActive: true,
+    createdGameDay: gameDay,
+    distanceKm: plan.distanceKm,
+    dailyRevenue: 0,
+    dailyCost: 0,
+    dailyProfit: 0,
+    loadFactorEconomy: 0,
+    loadFactorBusiness: 0,
+    dailyPassengers: 0,
+    flightDurationHours: plan.distanceKm / plan.aircraftType.cruiseSpeedKmh,
+  };
+}
+
+function findBestAIPlan(
+  airline: Airline,
+  aircraftTypes: AircraftType[],
+  aiRoutes: Record<string, Route>,
+  airports: Record<string, Airport>,
+  gameDay: number,
+  fuelPriceUSDPerLiter: number,
+  preferredDestIata?: string,
+): AIOperationPlan | null {
+  const hubIata = airline.hubIatas[0];
+  if (!hubIata || !airports[hubIata]) return null;
+  const hubAirport = airports[hubIata];
+  const candidates = preferredDestIata && airports[preferredDestIata]
+    ? [airports[preferredDestIata]]
+    : Object.values(airports);
+
+  const plans = aircraftTypes.flatMap(aircraftType => (
+    candidates.flatMap(dest => {
+      if (dest.iata === hubIata) return [];
+      const alreadyFlown = airline.routeIds.some(rid => {
+        const route = aiRoutes[rid];
+        return route && ((route.originIata === hubIata && route.destinationIata === dest.iata) ||
+          (route.originIata === dest.iata && route.destinationIata === hubIata));
+      });
+      if (alreadyFlown) return [];
+      const plan = estimateAIOperation(airline, aircraftType, hubAirport, dest, gameDay, fuelPriceUSDPerLiter);
+      return plan ? [plan] : [];
+    })
+  ));
+
+  return plans
+    .filter(plan => plan.expectedLoadFactor >= 0.35)
+    .sort((a, b) => b.expectedDailyProfit - a.expectedDailyProfit)[0] ?? null;
+}
+
+export function createInitialAIOperations(
+  configs: AIAirlineInit[],
+  aiAirlines: Record<string, Airline>,
+  airports: Record<string, Airport>,
+  gameDay: number,
+  fuelPriceUSDPerLiter = FUEL_PRICE_USD_PER_LITER,
+): { aiAircraft: Record<string, Aircraft>; aiRoutes: Record<string, Route> } {
+  const aiAircraft: Record<string, Aircraft> = {};
+  const aiRoutes: Record<string, Route> = {};
+
+  configs.forEach((config, index) => {
+    const airline = aiAirlines[`ai-${index}`];
+    if (!airline) return;
+    const starterType = AIRCRAFT_TYPES.find(type => type.id === config.startingAircraftTypeId);
+    if (!starterType) return;
+    const plan = findBestAIPlan(airline, [starterType], aiRoutes, airports, gameDay, fuelPriceUSDPerLiter, config.secondHub) ??
+      findBestAIPlan(airline, [starterType], aiRoutes, airports, gameDay, fuelPriceUSDPerLiter);
+    if (!plan) return;
+
+    const aircraft = createAIAircraft(airline, starterType, gameDay, plan.origin);
+    const route = buildAIRouteFromPlan(airline, aircraft.id, plan, gameDay);
+    aircraft.assignedRouteId = route.id;
+    aiAircraft[aircraft.id] = aircraft;
+    aiRoutes[route.id] = route;
+    airline.fleetIds.push(aircraft.id);
+    airline.routeIds.push(route.id);
+    airline.cashUSD -= starterType.purchasePrice;
+  });
+
+  return { aiAircraft, aiRoutes };
+}
 
 // ── Maintenance discipline by personality ────────────────────────────────────
 // Threshold: condition % at which maintenance is triggered
@@ -275,14 +495,14 @@ export function runAITick(store: StoreState, gameDay: number): void {
   Object.values(aiAirlines).forEach(airline => {
     if (airline.isInsolvent) return;
 
-    // Drop unprofitable routes when cash is tight
-    if (airline.cashUSD < 5_000_000) {
-      dropWorstRoute(airline, aiRoutes, store);
+    // Protect cash early: distressed airlines stop the bleeding before bankruptcy.
+    if (airline.cashUSD < AI_CASH_STRESS_THRESHOLD) {
+      dropWorstRoutes(airline, aiRoutes, store, airline.cashUSD < AI_CRITICAL_CASH_THRESHOLD ? 3 : 1);
     }
 
     // Expand: buy aircraft + create route
     const expandInterval = AI_EXPAND_INTERVAL_DAYS[airline.personality] ?? 7;
-    if (gameDay % expandInterval === (Math.abs(airline.id.charCodeAt(0)) % expandInterval)) {
+    if (airline.cashUSD > aiCashReserve(airline) && gameDay % expandInterval === aiScheduleOffset(airline.id, expandInterval)) {
       tryExpand(airline, aiAircraft, aiRoutes, airports, store, gameDay);
     }
 
@@ -291,23 +511,17 @@ export function runAITick(store: StoreState, gameDay: number): void {
   });
 }
 
-function dropWorstRoute(airline: Airline, aiRoutes: Record<string, Route>, store: StoreState): void {
-  let worstRouteId: string | null = null;
-  let worstProfit = 0;
+function dropWorstRoutes(airline: Airline, aiRoutes: Record<string, Route>, store: StoreState, maxRoutes: number): void {
+  const worstRoutes = airline.routeIds
+    .map(routeId => aiRoutes[routeId])
+    .filter((route): route is Route => !!route && route.dailyProfit < -2_500)
+    .sort((a, b) => a.dailyProfit - b.dailyProfit)
+    .slice(0, maxRoutes);
 
-  airline.routeIds.forEach(rid => {
-    const route = aiRoutes[rid];
-    if (!route) return;
-    if (route.dailyProfit < worstProfit) {
-      worstProfit = route.dailyProfit;
-      worstRouteId = rid;
-    }
-  });
-
-  if (worstRouteId) {
-    store.removeAIRoute(worstRouteId);
+  worstRoutes.forEach(route => {
+    store.removeAIRoute(route.id);
     store.pushNewsItem(`${airline.name} has suspended a loss-making route.`);
-  }
+  });
 }
 
 function tryExpand(
@@ -320,129 +534,37 @@ function tryExpand(
 ): void {
   const currentGameYear = 1960 + Math.floor(gameDay / 365);
   const maxPurchaseShare = AI_PURCHASE_CASH_SHARE[airline.personality] ?? 0.28;
+  const cashReserve = aiCashReserve(airline);
   const affordableTypes = AIRCRAFT_TYPES
     .filter(t =>
       t.yearIntroduced <= currentGameYear &&
       t.purchasePrice <= airline.cashUSD * maxPurchaseShare &&
-      airline.cashUSD - t.purchasePrice >= AI_MIN_CASH_RESERVE_AFTER_PURCHASE
+      airline.cashUSD - t.purchasePrice >= cashReserve
     )
     .sort((a, b) => b.seatsEconomy - a.seatsEconomy);
 
   if (affordableTypes.length === 0) return;
 
-  // Pick aircraft type appropriate to airline personality
-  let chosenType: AircraftType;
-  if (airline.personality === 'budget') {
-    chosenType = affordableTypes[affordableTypes.length - 1]; // cheapest
-  } else if (airline.personality === 'premium') {
-    const widebodies = affordableTypes.filter(t => t.category === 'widebody');
-    chosenType = widebodies.length > 0
-      ? widebodies[Math.floor(widebodies.length / 2)]
-      : affordableTypes[Math.floor(affordableTypes.length / 3)];
-  } else {
-    chosenType = affordableTypes[Math.floor(affordableTypes.length / 2)]; // mid-range
-  }
-
-  if (airline.cashUSD < chosenType.purchasePrice) return;
-
-  // Find a good new route from hub
-  const hubIata = airline.hubIatas[0];
-  if (!hubIata || !airports[hubIata]) return;
-
-  const hubAirport = airports[hubIata];
-  if (!canAirportHandleAircraft(hubAirport, chosenType)) return;
-  const candidateAirports = Object.values(airports)
-    .filter(ap => {
-      if (ap.iata === hubIata) return false;
-      if (!canAirportHandleAircraft(ap, chosenType)) return false;
-      const dist = haversineKm(hubAirport.lat, hubAirport.lon, ap.lat, ap.lon);
-      if (dist > chosenType.rangeKm || dist < 200) return false;
-      // Don't duplicate existing AI routes from this hub
-      const alreadyFlown = airline.routeIds.some(rid => {
-        const r = aiRoutes[rid];
-        return r && ((r.originIata === hubIata && r.destinationIata === ap.iata) ||
-          (r.originIata === ap.iata && r.destinationIata === hubIata));
-      });
-      return !alreadyFlown;
-    })
-    .sort((a, b) => {
-      const paxA = getBaselineDailyPax(hubAirport, a);
-      const paxB = getBaselineDailyPax(hubAirport, b);
-      return paxB - paxA;
-    });
-
-  if (candidateAirports.length === 0) return;
-
-  const topN = Math.min(3, candidateAirports.length);
-  const destAirport = candidateAirports[Math.floor(Math.random() * topN)];
-  const dist = haversineKm(hubAirport.lat, hubAirport.lon, destAirport.lat, destAirport.lon);
+  const plan = findBestAIPlan(
+    airline,
+    affordableTypes,
+    aiRoutes,
+    airports,
+    gameDay,
+    store.globalFuelPrice || FUEL_PRICE_USD_PER_LITER,
+  );
+  if (!plan || plan.expectedDailyProfit < AI_MIN_EXPANSION_PROFIT_PER_DAY) return;
 
   // Create aircraft
-  const newAircraftId = `ai-ac-${uuidv4()}`;
-  const newAircraft: Aircraft = {
-    id: newAircraftId,
-    typeId: chosenType.id,
-    airlineId: airline.id,
-    name: `${airline.name} ${chosenType.model}`,
-    purchasedGameDay: gameDay,
-    condition: 100,
-    maintenanceHoursOwed: 0,
-    isGrounded: false,
-    lastMaintenanceGameDay: gameDay,
-    crashRisk: 0,
-    status: 'flying',
-    assignedRouteId: null,
-    totalFlightHours: 0,
-    currentLat: hubAirport.lat,
-    currentLon: hubAirport.lon,
-    flightProgress: 0,
-    activeMaintTier: null,
-    autoMaintenanceEnabled: false,
-    autoMaintenanceThreshold: 40,
-    autoMaintenanceTier: 'standard',
-    knownFaultRiskMod: 1,
-    excludedFromPolicy: false,
-  };
+  const newAircraft = createAIAircraft(airline, plan.aircraftType, gameDay, plan.origin);
+  const newRoute = buildAIRouteFromPlan(airline, newAircraft.id, plan, gameDay);
 
-  // Create route
-  const newRouteId = `ai-route-${uuidv4()}`;
-  const basePrice = Math.round((computeFlightCost(
-    { distanceKm: dist, flightsPerWeek: 7 } as Route,
-    newAircraft,
-    chosenType,
-    hubAirport,
-    destAirport,
-    store.globalFuelPrice || FUEL_PRICE_USD_PER_LITER,
-  ).totalCost / chosenType.seatsEconomy) * 1.4);
-
-  const priceMultiplier = AI_PRICE_MULTIPLIER[airline.personality] ?? 1.0;
-  const newRoute: Route = {
-    id: newRouteId,
-    airlineId: airline.id,
-    originIata: hubIata,
-    destinationIata: destAirport.iata,
-    aircraftId: newAircraftId,
-    flightsPerWeek: 7,
-    priceEconomy: Math.round(basePrice * priceMultiplier),
-    priceBusiness: Math.round(basePrice * priceMultiplier * 4),
-    isActive: true,
-    createdGameDay: gameDay,
-    distanceKm: dist,
-    dailyRevenue: 0,
-    dailyCost: 0,
-    dailyProfit: 0,
-    loadFactorEconomy: 0,
-    loadFactorBusiness: 0,
-    dailyPassengers: 0,
-    flightDurationHours: dist / chosenType.cruiseSpeedKmh,
-  };
-
-  newAircraft.assignedRouteId = newRouteId;
+  newAircraft.assignedRouteId = newRoute.id;
 
   // Deduct cash, register aircraft, create route
   store.updateAIAirline(airline.id, {
-    cashUSD: airline.cashUSD - chosenType.purchasePrice,
-    fleetIds: [...airline.fleetIds, newAircraftId],
+    cashUSD: airline.cashUSD - plan.aircraftType.purchasePrice,
+    fleetIds: [...airline.fleetIds, newAircraft.id],
   });
   store.addAIAircraft(newAircraft);
   store.addAIRoute(newRoute);
@@ -458,16 +580,30 @@ function adjustPrices(
   airline.routeIds.forEach(rid => {
     const route = aiRoutes[rid];
     if (!route) return;
+    if (route.dailyCost <= 0 || route.dailyPassengers <= 0) return;
 
-    // If underperforming load target, lower prices slightly; if overperforming, raise
-    const lf = route.loadFactorEconomy || 0.5;
-    let priceDelta = 0;
-    if (lf < loadTarget - 0.1) priceDelta = -0.03; // drop 3%
-    else if (lf > loadTarget + 0.1) priceDelta = +0.03; // raise 3%
+    const currentPrice = Math.max(50, route.priceEconomy);
+    const currentPax = Math.max(1, route.dailyPassengers || 1);
+    const loadFactor = route.loadFactorEconomy || 0.5;
+    const estimatedCapacity = Math.max(currentPax, currentPax / Math.max(0.15, loadFactor));
+    const steps = [0.84, 0.90, 0.96, 1.00, 1.04, 1.08, 1.14, 1.20];
+    const best = steps
+      .map(multiplier => {
+        const price = Math.max(50, Math.round(currentPrice * multiplier));
+        const demand = currentPax * Math.pow(price / currentPrice, PRICE_ELASTICITY);
+        const loadBias = loadFactor < loadTarget - 0.12 && multiplier > 1 ? 0.92 : 1;
+        const pax = Math.min(estimatedCapacity, demand * loadBias);
+        const revenue = pax * price;
+        return { price, profit: revenue - route.dailyCost };
+      })
+      .sort((a, b) => b.profit - a.profit)[0];
 
-    if (priceDelta !== 0) {
-      const newPrice = Math.max(50, Math.round(route.priceEconomy * (1 + priceDelta)));
-      const updatedRoute: Route = { ...route, priceEconomy: newPrice, priceBusiness: Math.round(newPrice * 4 * targetMultiplier) };
+    if (best && Math.abs(best.price - currentPrice) / currentPrice >= 0.025) {
+      const updatedRoute: Route = {
+        ...route,
+        priceEconomy: best.price,
+        priceBusiness: route.priceBusiness > 0 ? Math.round(best.price * 4 * targetMultiplier) : 0,
+      };
       store.addAIRoute(updatedRoute); // addAIRoute overwrites if same id
     }
   });
