@@ -492,10 +492,13 @@ export function runRandomEventsTick(
         const route = ac.assignedRouteId ? routes[ac.assignedRouteId] : null;
         const airportIata = route ? route.destinationIata : undefined;
         const airportCity = pickAirport(store, airportIata);
+        const acType = AIRCRAFT_TYPES.find(t => t.id === ac.typeId);
+        const aircraftLabel = acType ? acType.model : 'aircraft';
+        const ownedAircraftLabel = `${playerAirline.name} ${aircraftLabel}`;
 
         const msg = evt.newsTemplate
           .replace('{airline}', playerAirline.name)
-          .replace('{aircraft}', `${ac.name}`)
+          .replace('{aircraft}', aircraftLabel)
           .replace('{airport}', airportCity);
 
         const autoMaintainIssues = playerAirline.maintenancePolicy?.autoMaintainIssues ?? false;
@@ -512,12 +515,11 @@ export function runRandomEventsTick(
           const reason = evt.groundReason ?? evt.id.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
           store.groundAircraft(ac.id, reason);
           const routeLabel = route ? `${route.originIata}–${route.destinationIata}` : 'operated';
-          const acType = AIRCRAFT_TYPES.find(t => t.id === ac.typeId);
           const maintCost = acType
             ? computeMaintenanceCost('standard', ac.maintenanceHoursOwed, acType.maintenanceCostPerHourUSD, getMaintenanceAgeMultiplier(ac, store.gameDay))
             : 0;
           const article = {
-            ...buildGroundingArticle(evt, playerAirline.name, ac.name, airportCity, routeLabel, store.gameDay, ac.id, maintCost),
+            ...buildGroundingArticle(evt, playerAirline.name, aircraftLabel, airportCity, routeLabel, store.gameDay, ac.id, maintCost),
             id: articleId,
             suppressAutoOpen: autoMaintainIssues,
           };
@@ -525,7 +527,7 @@ export function runRandomEventsTick(
           if (autoMaintainIssues) {
             store.startMaintenance(ac.id, store.gameDay, 'standard');
             store.pushNewsItem({
-              text: `Auto-maintenance sent ${ac.name} to the hangar after ${reason.toLowerCase()}.`,
+              text: `Auto-maintenance sent ${ownedAircraftLabel} to the hangar after ${reason.toLowerCase()}.`,
               severity: 'fleet',
               articleId,
               playerRelated: true,

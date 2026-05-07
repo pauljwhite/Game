@@ -301,9 +301,11 @@ export const createPlayerSlice: StateCreator<GameStore, [['zustand/immer', never
         const ac = aiAircraft[id];
         if (!ac) return;
         const hasRoute = !!ac.assignedRouteId;
+        const aircraftType = AIRCRAFT_TYPES.find(type => type.id === ac.typeId);
         state.aircraft[id] = {
           ...ac,
           airlineId: PLAYER_ID,
+          name: aircraftType ? `${state.airlines[PLAYER_ID].name} ${aircraftType.model}` : `${state.airlines[PLAYER_ID].name} aircraft`,
           isGrounded: false,
           status: hasRoute ? 'flying' : 'idle',
           // Initialise fields that AI aircraft never set
