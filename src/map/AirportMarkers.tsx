@@ -16,6 +16,8 @@ const HIT_RADIUS: Record<string, number> = {
   small: 14, medium: 14, large: 15, major: 16,
 };
 const BOUNDS_PADDING = 0.35;
+const AIRPORT_PANE = 'airport-marker-pane';
+const AIRPORT_PANE_Z_INDEX = 720;
 
 function getVisualRadius(size: string, zoom: number): number {
   const base = BASE_RADIUS[size] ?? 4;
@@ -44,6 +46,7 @@ export function AirportMarkers({ map }: AirportMarkersProps) {
   const selectAirport = useGameStore(s => s.selectAirport);
   const gameDay = useGameStore(s => s.gameDay);
   const entriesRef = useRef<Map<string, MarkerEntry>>(new Map());
+  const rendererRef = useRef<L.Renderer | null>(null);
   const hubIatas = playerAirline?.hubIatas ?? [];
   const hubKey = hubIatas.join(',');
   const gameDayRef = useRef(gameDay);
@@ -68,6 +71,14 @@ export function AirportMarkers({ map }: AirportMarkersProps) {
   };
 
   useEffect(() => {
+    let pane = map.getPane(AIRPORT_PANE);
+    if (!pane) pane = map.createPane(AIRPORT_PANE);
+    pane.style.zIndex = String(AIRPORT_PANE_Z_INDEX);
+    pane.style.pointerEvents = 'auto';
+
+    const renderer = L.svg({ pane: AIRPORT_PANE }).addTo(map);
+    rendererRef.current = renderer;
+
     const removeMarker = (iata: string) => {
       const entry = entriesRef.current.get(iata);
       if (!entry) return;
@@ -105,6 +116,7 @@ export function AirportMarkers({ map }: AirportMarkersProps) {
           opacity: 1,
           weight: 1,
           interactive: false,
+          renderer,
         }).addTo(map);
 
         const hit = L.circleMarker(latlng, {
@@ -115,6 +127,7 @@ export function AirportMarkers({ map }: AirportMarkersProps) {
           opacity: 0,
           weight: 0,
           interactive: true,
+          renderer,
         }).addTo(map);
 
         hit.on('click', () => selectAirport(airport.iata));
@@ -152,6 +165,8 @@ export function AirportMarkers({ map }: AirportMarkersProps) {
         entry.hit.remove();
       });
       entriesRef.current.clear();
+      renderer.remove();
+      rendererRef.current = null;
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [airports, map, selectAirport]);
