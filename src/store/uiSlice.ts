@@ -34,6 +34,7 @@ export interface UISlice {
   modalPayload: unknown;
   newspaperQueue: NewsArticle[];
   themeMode: ThemeMode;
+  showAiOnMap: boolean;
 
   selectAirport: (iata: string | null) => void;
   selectRoute: (routeId: string | null) => void;
@@ -42,6 +43,7 @@ export interface UISlice {
   openModalById: (id: ModalId, payload?: unknown) => void;
   closeModal: () => void;
   setThemeMode: (mode: ThemeMode) => void;
+  setShowAiOnMap: (show: boolean) => void;
   pushNewspaper: (article: NewsArticle) => void;
   popNewspaper: (articleId?: string) => void;
 }
@@ -54,6 +56,7 @@ export const createUISlice: StateCreator<GameStore, [['zustand/immer', never]], 
   modalPayload: null,
   newspaperQueue: [],
   themeMode: 'dark',
+  showAiOnMap: true,
 
   selectAirport: (iata) => set((state) => { state.selectedAirportIata = iata; }),
   selectRoute: (routeId) => set((state) => { state.selectedRouteId = routeId; }),
@@ -62,6 +65,7 @@ export const createUISlice: StateCreator<GameStore, [['zustand/immer', never]], 
   openModalById: (id, payload) => set((state) => { state.openModal = id; state.modalPayload = payload ?? null; }),
   closeModal: () => set((state) => { state.openModal = null; state.modalPayload = null; }),
   setThemeMode: (mode) => set((state) => { state.themeMode = mode; }),
+  setShowAiOnMap: (show) => set((state) => { state.showAiOnMap = show; }),
   pushNewspaper: (article) => set((state) => {
     state.newspaperQueue.push(article);
     if (state.newspaperQueue.length > 8) state.newspaperQueue.shift();

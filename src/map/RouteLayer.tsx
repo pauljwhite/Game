@@ -33,11 +33,13 @@ export const RouteLayer: React.FC<RouteLayerProps> = ({ map, mapVersion }) => {
       parts.push(`P${r.id}:${r.originIata}-${r.destinationIata}:${r.isActive ? 1 : 0}:${color}`);
     }
     for (const r of Object.values(s.aiRoutes)) {
+      if (!s.showAiOnMap) break;
       const ai = s.aiAirlines[r.airlineId];
       const color = ai?.color ?? '';
       const insolvent = ai?.isInsolvent ? 1 : 0;
       parts.push(`A${r.id}:${r.originIata}-${r.destinationIata}:${r.isActive ? 1 : 0}:${insolvent}:${color}`);
     }
+    parts.push(`AI:${s.showAiOnMap ? 1 : 0}`);
     return parts.join('|');
   });
   const selectedRouteId = useGameStore(s => s.selectedRouteId);
@@ -46,7 +48,7 @@ export const RouteLayer: React.FC<RouteLayerProps> = ({ map, mapVersion }) => {
 
   const arcs: RouteArc[] = useMemo(() => {
     // Pull fresh state lazily — referencing the dicts here doesn't cause renders.
-    const { routes, aiRoutes, airports, airlines, aiAirlines } = useGameStore.getState();
+    const { routes, aiRoutes, airports, airlines, aiAirlines, showAiOnMap } = useGameStore.getState();
     const result: RouteArc[] = [];
     const bounds = map.getBounds().pad(0.35);
 
@@ -75,9 +77,11 @@ export const RouteLayer: React.FC<RouteLayerProps> = ({ map, mapVersion }) => {
 
     Object.values(routes).forEach(r => processRoute(r, true));
     let aiArcCount = 0;
-    for (const route of Object.values(aiRoutes)) {
-      if (aiArcCount >= MAX_AI_ROUTE_ARCS) break;
-      if (processRoute(route, false)) aiArcCount += 1;
+    if (showAiOnMap) {
+      for (const route of Object.values(aiRoutes)) {
+        if (aiArcCount >= MAX_AI_ROUTE_ARCS) break;
+        if (processRoute(route, false)) aiArcCount += 1;
+      }
     }
 
     return result;

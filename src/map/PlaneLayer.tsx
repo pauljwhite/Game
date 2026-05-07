@@ -48,7 +48,10 @@ export function PlaneLayer({ map, svgOverlay }: PlaneLayerProps) {
       parts.push(`${prefix}${r.id}:${r.aircraftId}:${ac.typeId}:${airline?.color ?? ''}`);
     };
     for (const r of Object.values(s.routes)) addRoute(r, 'P');
-    for (const r of Object.values(s.aiRoutes)) addRoute(r, 'A');
+    if (s.showAiOnMap) {
+      for (const r of Object.values(s.aiRoutes)) addRoute(r, 'A');
+    }
+    parts.push(`AI:${s.showAiOnMap ? 1 : 0}`);
     return parts.join('|');
   });
 
@@ -69,10 +72,10 @@ export function PlaneLayer({ map, svgOverlay }: PlaneLayerProps) {
     const positions = getPlanePositions();
 
     // Pull fresh state lazily — these dict refs don't drive the effect.
-    const { routes, aiRoutes, aircraft, aiAircraft, airlines, aiAirlines, airports } = useGameStore.getState();
+    const { routes, aiRoutes, aircraft, aiAircraft, airlines, aiAirlines, airports, showAiOnMap } = useGameStore.getState();
 
     const playerRoutes = Object.values(routes);
-    const competitorRoutes = Object.values(aiRoutes);
+    const competitorRoutes = showAiOnMap ? Object.values(aiRoutes) : [];
     const competitorBudget = Math.min(MIN_COMPETITOR_PLANES, competitorRoutes.length);
     const playerBudget = Math.max(0, MAX_RENDERED_PLANES - competitorBudget);
     const allRoutes = [

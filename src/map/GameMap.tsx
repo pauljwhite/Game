@@ -9,6 +9,8 @@ const MAP_CONTAINER_ID = 'leaflet-map';
 
 export const GameMap: React.FC = () => {
   const isDark = useGameStore(s => s.themeMode) !== 'light';
+  const showAiOnMap = useGameStore(s => s.showAiOnMap);
+  const setShowAiOnMap = useGameStore(s => s.setShowAiOnMap);
   const { map, svgOverlay } = useLeafletMap(MAP_CONTAINER_ID, isDark);
   const [mapVersion, setMapVersion] = useState(0);
   const listenerRef = useRef(false);
@@ -43,6 +45,29 @@ export const GameMap: React.FC = () => {
   return (
     <div className="relative w-full h-full">
       <div id={MAP_CONTAINER_ID} className="w-full h-full relative z-0" />
+      <button
+        type="button"
+        onClick={() => setShowAiOnMap(!showAiOnMap)}
+        aria-pressed={showAiOnMap}
+        className={`absolute left-3 top-3 z-[1000] flex items-center gap-2 rounded-md border px-3 py-2 text-xs font-semibold shadow-lg backdrop-blur transition-colors ${
+          isDark
+            ? 'border-white/10 bg-gray-950/85 text-gray-200 hover:bg-gray-900'
+            : 'border-slate-300 bg-white/90 text-slate-700 hover:bg-white'
+        }`}
+      >
+        <span
+          className={`h-3 w-6 rounded-full p-0.5 transition-colors ${
+            showAiOnMap ? 'bg-sky-500' : isDark ? 'bg-gray-700' : 'bg-slate-300'
+          }`}
+        >
+          <span
+            className={`block h-2 w-2 rounded-full bg-white transition-transform ${
+              showAiOnMap ? 'translate-x-3' : 'translate-x-0'
+            }`}
+          />
+        </span>
+        Show AI on map
+      </button>
       {map && (
         <>
           <AirportMarkers map={map} />
