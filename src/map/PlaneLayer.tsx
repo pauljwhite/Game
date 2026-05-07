@@ -14,6 +14,8 @@ interface PlaneLayerProps {
 const MAX_RENDERED_PLANES = 300;
 const MIN_COMPETITOR_PLANES = 100;
 const PLANE_ICON_SIZE = 28;
+const MIN_PLANE_ZOOM_SCALE = 0.68;
+const MAX_PLANE_ZOOM_SCALE = 1.12;
 
 function hashString(value: string): number {
   let hash = 0;
@@ -21,6 +23,14 @@ function hashString(value: string): number {
     hash = ((hash << 5) - hash + value.charCodeAt(i)) | 0;
   }
   return Math.abs(hash);
+}
+
+function planeZoomScale(map: LeafletMap): number {
+  const minZoom = map.getMinZoom();
+  const maxZoom = map.getMaxZoom();
+  const zoomRange = Math.max(1, maxZoom - minZoom);
+  const zoomProgress = Math.min(1, Math.max(0, (map.getZoom() - minZoom) / zoomRange));
+  return MIN_PLANE_ZOOM_SCALE + (MAX_PLANE_ZOOM_SCALE - MIN_PLANE_ZOOM_SCALE) * zoomProgress;
 }
 
 export function PlaneLayer({ map, svgOverlay }: PlaneLayerProps) {
@@ -186,11 +196,12 @@ export function PlaneLayer({ map, svgOverlay }: PlaneLayerProps) {
     const animate = () => {
       rafRef.current = requestAnimationFrame(animate);
       const positions = getPlanePositions();
+      const zoomScale = planeZoomScale(map);
       positions.forEach((state, aircraftId) => {
         const el = planeElementsRef.current.get(aircraftId);
         if (!el) return;
         const pt = latLonToSvgPoint(state.lat, state.lon, map);
-        el.setAttribute('transform', `translate(${pt.x.toFixed(1)},${pt.y.toFixed(1)}) rotate(${state.bearing.toFixed(1)})`);
+        el.setAttribute('transform', `translate(${pt.x.toFixed(1)},${pt.y.toFixed(1)}) rotate(${state.bearing.toFixed(1)}) scale(${zoomScale.toFixed(2)})`);
       });
     };
 
