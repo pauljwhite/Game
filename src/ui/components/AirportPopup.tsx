@@ -34,7 +34,9 @@ export const AirportPopup: React.FC = () => {
   const utilization = dailyPax / capacity;
   const satMod = airportSaturationMod(utilization);
   const demandPct = Math.round(satMod * 100);
-  const barColor = satMod > 0.8 ? 'bg-green-500' : satMod > 0.55 ? 'bg-yellow-500' : 'bg-red-500';
+  const utilizationPct = Math.round(utilization * 100);
+  const demandBarColor = satMod > 0.8 ? 'bg-green-500' : satMod > 0.55 ? 'bg-yellow-500' : 'bg-red-500';
+  const utilizationBarColor = utilization <= 0.5 ? 'bg-green-500' : utilization <= 1 ? 'bg-yellow-500' : 'bg-red-500';
 
   return (
     <div className="absolute inset-x-2 bottom-3 sm:inset-x-auto sm:bottom-12 sm:left-4 z-[800] glass-panel rounded-xl p-3 w-auto sm:w-64 max-h-[48svh] overflow-y-auto">
@@ -78,15 +80,25 @@ export const AirportPopup: React.FC = () => {
         )}
       </div>
 
-      <div className="mt-3">
+      <div className="mt-3 space-y-2">
         <div className="flex justify-between items-center text-xs mb-1">
-          <span className="text-gray-400">Market demand</span>
+          <span className="text-gray-400">Demand strength</span>
           <span className={demandPct > 80 ? 'text-green-400' : demandPct > 55 ? 'text-yellow-400' : 'text-red-400'}>
             {demandPct}%
           </span>
         </div>
         <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
-          <div className={`h-full rounded-full transition-all ${barColor}`} style={{ width: `${demandPct}%` }} />
+          <div className={`h-full rounded-full transition-all ${demandBarColor}`} style={{ width: `${demandPct}%` }} />
+        </div>
+
+        <div className="flex justify-between items-center text-xs mb-1">
+          <span className="text-gray-400">Airport utilisation</span>
+          <span className={utilization <= 0.5 ? 'text-green-400' : utilization <= 1 ? 'text-yellow-400' : 'text-red-400'}>
+            {utilizationPct}%
+          </span>
+        </div>
+        <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
+          <div className={`h-full rounded-full transition-all ${utilizationBarColor}`} style={{ width: `${Math.min(100, utilizationPct)}%` }} />
         </div>
       </div>
 
