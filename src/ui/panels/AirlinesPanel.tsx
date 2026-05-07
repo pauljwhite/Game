@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useGameStore } from '@/store';
 import { formatCurrency } from '@/utils/format';
 import { AIRCRAFT_TYPES } from '@/data/aircraftTypes';
+import { CompetitorSummaryPanel } from './CompetitorSummaryPanel';
 
 const typeMap = Object.fromEntries(AIRCRAFT_TYPES.map(t => [t.id, t]));
 
@@ -21,9 +22,11 @@ export const AirlinesPanel: React.FC = () => {
   const closePanel    = useGameStore(s => s.closePanel);
 
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [summaryId, setSummaryId] = useState<string | null>(null);
   const [insolventOpen, setInsolventOpen] = useState(false);
 
   const playerAirline = airlines['player'];
+  const summaryAirline = summaryId ? aiAirlines[summaryId] : null;
   const getDailyPax = (a: { dailyStats: { passengers: number }[] }) => a.dailyStats.at(-1)?.passengers ?? 0;
   const totalPax = getDailyPax(playerAirline ?? { dailyStats: [] }) +
     Object.values(aiAirlines).reduce((s, a) => s + getDailyPax(a), 0);
@@ -31,6 +34,10 @@ export const AirlinesPanel: React.FC = () => {
   const allAI = Object.values(aiAirlines).map(a => ({ ...a, isPlayer: false }));
   const activeAI   = allAI.filter(a => !a.isInsolvent).sort((a, b) => getDailyPax(b) - getDailyPax(a));
   const insolventAI = allAI.filter(a => a.isInsolvent);
+
+  if (summaryAirline) {
+    return <CompetitorSummaryPanel airlineId={summaryAirline.id} onBack={() => setSummaryId(null)} />;
+  }
 
   return (
     <div className="flex h-full min-h-0 flex-col">
@@ -90,7 +97,7 @@ export const AirlinesPanel: React.FC = () => {
               {/* Main row */}
               <div
                 className="p-3 cursor-pointer hover:bg-gray-800/50 transition-colors"
-                onClick={() => setExpandedId(isExpanded ? null : airline.id)}
+                onClick={() => setSummaryId(airline.id)}
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2 min-w-0">
@@ -104,7 +111,13 @@ export const AirlinesPanel: React.FC = () => {
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
                     <span className="text-gray-300 text-sm">{share.toFixed(1)}%</span>
-                    <span className="text-gray-600 text-xs">{isExpanded ? '▲' : '▼'}</span>
+                    <button
+                      onClick={e => { e.stopPropagation(); setExpandedId(isExpanded ? null : airline.id); }}
+                      className="px-1.5 py-0.5 rounded text-gray-500 hover:text-white hover:bg-white/10 text-xs"
+                      title={isExpanded ? 'Hide fleet and routes' : 'Show fleet and routes'}
+                    >
+                      {isExpanded ? '▲' : '▼'}
+                    </button>
                   </div>
                 </div>
 
@@ -268,7 +281,11 @@ export const AirlinesPanel: React.FC = () => {
           {insolventOpen && (
             <div>
               {insolventAI.map(airline => (
-                <div key={airline.id} className="px-3 py-2 border-b border-gray-800 opacity-50">
+                <div
+                  key={airline.id}
+                  onClick={() => setSummaryId(airline.id)}
+                  className="px-3 py-2 border-b border-gray-800 opacity-50 cursor-pointer hover:bg-gray-800/50 transition-colors"
+                >
                   <div className="flex items-center justify-between text-xs">
                     <div className="flex items-center gap-2 min-w-0">
                       <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: airline.color }} />
@@ -280,7 +297,7 @@ export const AirlinesPanel: React.FC = () => {
                     {airline.fleetIds.length} aircraft · {airline.routeIds.length} routes · Hub: {airline.hubIatas[0]}
                   </div>
                   <button
-                    onClick={() => openModalById('takeover', airline.id)}
+                    onClick={e => { e.stopPropagation(); openModalById('takeover', airline.id); }}
                     className="mt-1.5 w-full py-0.5 bg-indigo-900/60 hover:bg-indigo-800 text-indigo-300 text-xs rounded transition-colors opacity-100"
                   >
                     Buy Out (distressed)
