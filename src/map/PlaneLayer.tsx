@@ -4,6 +4,7 @@ import { getPlanePositions, initPlanePosition, removePlanePosition } from '@/eng
 import { latLonToSvgPoint } from './mapProjection';
 import { useGameStore } from '@/store';
 import { AIRCRAFT_TYPES } from '@/data/aircraftTypes';
+import cessnaPlaneUrl from '@/assets/cessna-map-plane.svg';
 
 interface PlaneLayerProps {
   map: LeafletMap;
@@ -11,13 +12,7 @@ interface PlaneLayerProps {
 }
 
 const MAX_RENDERED_PLANES = 300;
-
-// Top-down propeller aircraft silhouette (nose points up = -Y)
-// Subpath 1: propeller cross  Subpath 2: fuselage + wings + tail fins
-const PLANE_PATH =
-  'M-2.5,-9 L-2.5,-8.2 L-0.5,-8.2 L-0.5,-11 L0.5,-11 L0.5,-8.2 L2.5,-8.2 L2.5,-9 Z ' +
-  'M0,-8 L1,-5 L12,-1 L12.5,1.5 L9.5,4 L1.5,3 L2,6.5 L5,8.5 L4.5,11 L0,10.5 ' +
-  'L-4.5,11 L-5,8.5 L-2,6.5 L-1.5,3 L-9.5,4 L-12.5,1.5 L-12,-1 L-1,-5 Z';
+const PLANE_ICON_SIZE = 18;
 
 function hashString(value: string): number {
   let hash = 0;
@@ -105,21 +100,19 @@ export function PlaneLayer({ map, svgOverlay }: PlaneLayerProps) {
         halo.setAttribute('fill', color);
         halo.setAttribute('opacity', '0.18');
 
-        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-        path.setAttribute('d', PLANE_PATH);
-        path.setAttribute('transform', 'scale(0.5)');
-        path.setAttribute('fill', color);
-        path.setAttribute('stroke', 'rgba(0,0,0,0.35)');
-        path.setAttribute('stroke-width', '1');
-        path.setAttribute('stroke-linejoin', 'round');
-        path.setAttribute('fill-rule', 'evenodd');
+        const image = document.createElementNS('http://www.w3.org/2000/svg', 'image');
+        image.setAttribute('href', cessnaPlaneUrl);
+        image.setAttribute('x', `${-PLANE_ICON_SIZE / 2}`);
+        image.setAttribute('y', `${-PLANE_ICON_SIZE / 2}`);
+        image.setAttribute('width', `${PLANE_ICON_SIZE}`);
+        image.setAttribute('height', `${PLANE_ICON_SIZE}`);
+        image.setAttribute('preserveAspectRatio', 'xMidYMid meet');
         planeG.appendChild(halo);
-        planeG.appendChild(path);
+        planeG.appendChild(image);
         g.appendChild(planeG);
         planeElementsRef.current.set(ac.id, planeG);
       } else {
         planeG.querySelector('circle')?.setAttribute('fill', color);
-        planeG.querySelector('path')?.setAttribute('fill', color);
       }
     });
 
