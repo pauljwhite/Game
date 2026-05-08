@@ -1,4 +1,4 @@
-import { interpolateGreatCircle } from '@/utils/geo';
+import { computeVisualArcBearing, computeVisualArcPoint } from '@/map/greatCircle';
 
 export interface PlaneState {
   lat: number;
@@ -75,19 +75,11 @@ export function updatePlanePositions(
       toLat = route.originLat; toLon = route.originLon;
     }
 
-    const [lat, lon] = interpolateGreatCircle(fromLat, fromLon, toLat, toLon, progress);
-    const ahead = Math.min(progress + 0.01, 0.999);
-    const [aheadLat, aheadLon] = interpolateGreatCircle(fromLat, fromLon, toLat, toLon, ahead);
+    const point = computeVisualArcPoint(fromLat, fromLon, toLat, toLon, progress);
+    const bearing = computeVisualArcBearing(fromLat, fromLon, toLat, toLon, progress);
 
-    const dLon = (aheadLon - lon) * Math.PI / 180;
-    const latR = lat * Math.PI / 180;
-    const aheadLatR = aheadLat * Math.PI / 180;
-    const y = Math.sin(dLon) * Math.cos(aheadLatR);
-    const x = Math.cos(latR) * Math.sin(aheadLatR) - Math.sin(latR) * Math.cos(aheadLatR) * Math.cos(dLon);
-    const bearing = (Math.atan2(y, x) * 180 / Math.PI + 360) % 360;
-
-    state.lat = lat;
-    state.lon = lon;
+    state.lat = point.lat;
+    state.lon = point.lon;
     state.bearing = bearing;
     state.progress = progress;
   });

@@ -23,18 +23,53 @@ export function computeArcSegments(
   numPoints = 80,
 ): ArcSegment[] {
   const lonDelta = shortestLonDelta(originLon, destLon);
-  const distanceFactor = Math.min(1, Math.abs(lonDelta) / 180);
-  const hemisphere = ((originLat + destLat) / 2) >= 0 ? 1 : -1;
-  const latBow = hemisphere * (6 + distanceFactor * 14);
-
   const unwrappedPts: ArcPoint[] = [];
   for (let i = 0; i <= numPoints; i++) {
-    const f = i / numPoints;
-    const lat = originLat + (destLat - originLat) * f + Math.sin(Math.PI * f) * latBow;
-    const lon = originLon + lonDelta * f;
-    unwrappedPts.push({ lat: clampLat(lat), lon });
+    unwrappedPts.push(computeVisualArcPoint(originLat, originLon, destLat, destLon, i / numPoints, false, lonDelta));
   }
 
+  return splitArcAtAntimeridian(unwrappedPts);
+}
+
+export function computeVisualArcPoint(
+  originLat: number,
+  originLon: number,
+  destLat: number,
+  destLon: number,
+  progress: number,
+  normalize = true,
+  precomputedLonDelta?: number,
+): ArcPoint {
+  const f = Math.max(0, Math.min(1, progress));
+  const lonDelta = precomputedLonDelta ?? shortestLonDelta(originLon, destLon);
+  const avgLatRad = ((originLat + destLat) / 2) * Math.PI / 180;
+  const weightedLonDelta = lonDelta * Math.max(0.25, Math.cos(avgLatRad));
+  const planarDistance = Math.hypot(weightedLonDelta, destLat - originLat);
+  const hemisphere = ((originLat + destLat) / 2) >= 0 ? 1 : -1;
+  const latBow = hemisphere * Math.min(10, planarDistance * 0.065 + Math.abs(lonDelta) / 180);
+  const point = {
+    lat: clampLat(originLat + (destLat - originLat) * f + Math.sin(Math.PI * f) * latBow),
+    lon: originLon + lonDelta * f,
+  };
+
+  return normalize ? normalizePoint(point) : point;
+}
+
+export function computeVisualArcBearing(
+  originLat: number,
+  originLon: number,
+  destLat: number,
+  destLon: number,
+  progress: number,
+): number {
+  const point = computeVisualArcPoint(originLat, originLon, destLat, destLon, progress);
+  const ahead = computeVisualArcPoint(originLat, originLon, destLat, destLon, Math.min(progress + 0.01, 1));
+  const lonDelta = shortestLonDelta(point.lon, ahead.lon);
+  const latDelta = ahead.lat - point.lat;
+  return (Math.atan2(lonDelta, latDelta) * 180 / Math.PI + 360) % 360;
+}
+
+function splitArcAtAntimeridian(unwrappedPts: ArcPoint[]): ArcSegment[] {
   const segments: ArcSegment[] = [];
   let current: ArcPoint[] = [normalizePoint(unwrappedPts[0])];
 
