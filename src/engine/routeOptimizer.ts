@@ -164,7 +164,7 @@ function buildPriceCandidates(
   const soloCapacityPrice = dailyCapacity > 0 && unconstrainedDemand > 0
     ? referencePrice * Math.pow(Math.max(unconstrainedDemand / dailyCapacity, 0.0001), 0.5) * context.playerPremium
     : referencePrice;
-  const maxPrice = Math.max(referencePrice * MAX_REASONABLE_FARE_MULTIPLIER, 500);
+  const maxPrice = referencePrice * MAX_REASONABLE_FARE_MULTIPLIER;
   const prices = new Set<number>([0, Math.min(currentPrice, maxPrice), referencePrice, Math.min(soloCapacityPrice, maxPrice)]);
 
   for (let multiplier = 0.05; multiplier <= 3.0001; multiplier += 0.05) prices.add(referencePrice * multiplier);
@@ -177,7 +177,7 @@ function buildPriceCandidates(
   prices.add(maxPrice);
 
   return Array.from(prices)
-    .map(normaliseOptimisedPrice)
+    .map(price => Math.min(maxPrice, normaliseOptimisedPrice(price)))
     .filter(price => price >= 0 && price <= maxPrice)
     .sort((a, b) => a - b);
 }

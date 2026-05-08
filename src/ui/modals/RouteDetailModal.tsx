@@ -74,13 +74,13 @@ export const RouteDetailModal: React.FC = () => {
   const origin      = route ? airports[route.originIata] : null;
   const destination = route ? airports[route.destinationIata] : null;
 
-  // Reference price: cost-per-seat × 1.4, or distance-based fallback
+  // Reference price: cost-per-seat × 1.3, matching optimiser and new-route preview.
   const assignedType = assignedAircraft ? AIRCRAFT_TYPES.find(t => t.id === assignedAircraft.typeId) : null;
   const referencePrice = (() => {
     if (route && assignedAircraft && assignedType && origin && destination) {
       const costs = computeFlightCost(route, assignedAircraft, assignedType, origin, destination, globalFuelPrice, gameDay);
       const totalSeats = assignedType.seatsEconomy + assignedType.seatsBusiness;
-      return totalSeats > 0 ? Math.round(costs.totalCost / totalSeats * 1.4) : Math.round(route.distanceKm * 0.12);
+      return totalSeats > 0 ? Math.round(costs.totalCost / totalSeats * 1.3) : Math.round(route.distanceKm * 0.12);
     }
     return route ? Math.round(route.distanceKm * 0.12) : 0;
   })();

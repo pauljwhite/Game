@@ -106,7 +106,7 @@ export function airportSaturationMod(utilization: number): number {
 
 export function getSuggestedEconomyPrice(totalCostPerFlight: number, totalSeats: number): number {
   if (totalSeats === 0) return 200;
-  return Math.round((totalCostPerFlight / totalSeats) * 1.4);
+  return Math.round((totalCostPerFlight / totalSeats) * 1.3);
 }
 
 /**
