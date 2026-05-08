@@ -23,11 +23,11 @@ html[data-theme='light'] #root {
 }
 
 .leaflet-container {
-  background: #0f172a !important;
+  background: #242424 !important;
 }
 
 html[data-theme='light'] .leaflet-container {
-  background: #dbe7f0 !important;
+  background: #f2efe9 !important;
 }
 
 .route-arc-line--animated {
