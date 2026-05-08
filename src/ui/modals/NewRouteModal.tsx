@@ -158,10 +158,20 @@ export const NewRouteModal: React.FC = () => {
   const gameDay = gameDayFromMs(gameTimeMs);
   const currentYear = msToGameDate(gameTimeMs).getFullYear();
 
-  const prefilledOrigin = typeof modalPayload === 'string' ? modalPayload.toUpperCase() : '';
+  const routePrefill = modalPayload && typeof modalPayload === 'object'
+    ? modalPayload as { originIata?: unknown; destinationIata?: unknown }
+    : null;
+  const prefilledOrigin = typeof modalPayload === 'string'
+    ? modalPayload.toUpperCase()
+    : typeof routePrefill?.originIata === 'string'
+      ? routePrefill.originIata.toUpperCase()
+      : '';
+  const prefilledDestination = typeof routePrefill?.destinationIata === 'string'
+    ? routePrefill.destinationIata.toUpperCase()
+    : '';
 
   const [originIata, setOriginIata] = useState(prefilledOrigin);
-  const [destIata, setDestIata] = useState('');
+  const [destIata, setDestIata] = useState(prefilledDestination);
   const [selectedAircraftId, setSelectedAircraftId] = useState<string | null>(null);
   const [flightsPerWeek, setFlightsPerWeek] = useState(7);
   const [priceEconomy, setPriceEconomy] = useState(200);

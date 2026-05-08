@@ -151,7 +151,13 @@ export const AirportPopup: React.FC = () => {
           >
             <div className="panel-scroll max-h-[48svh] space-y-1 overflow-y-auto overscroll-contain px-2 py-2 sm:grid sm:grid-flow-col sm:grid-rows-8 sm:auto-cols-fr sm:gap-1.5 sm:space-y-0">
               {desiredDestinations.map(item => (
-                <div key={item.dest.iata} className="rounded bg-white/[0.04] px-2 py-1.5">
+                <button
+                  key={item.dest.iata}
+                  type="button"
+                  onClick={() => openModalById('newRoute', { originIata: selectedIata, destinationIata: item.dest.iata })}
+                  className="rounded bg-white/[0.04] px-2 py-1.5 text-left transition-colors hover:bg-white/[0.08] focus:outline-none focus:ring-1 focus:ring-sky-400/70"
+                  title={`Create route to ${item.dest.city}`}
+                >
                   <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-x-2 gap-y-0.5 text-xs">
                     <span className="min-w-0 truncate text-white">
                       {item.dest.iata} · {item.dest.city}
@@ -168,7 +174,7 @@ export const AirportPopup: React.FC = () => {
                       <span className="shrink-0 text-right text-[10px] text-gray-500">{formatCurrency(item.score)}/d potential</span>
                     )}
                   </div>
-                </div>
+                </button>
               ))}
             </div>
           </div>
