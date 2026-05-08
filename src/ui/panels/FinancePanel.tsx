@@ -212,9 +212,16 @@ export const FinancePanel: React.FC = () => {
                 <div className="space-y-2">
                   {activeLoans.map(loan => {
                     const scheduledPayment = loan.dailyPaymentUSD || calculateDailyLoanPayment(loan.principalUSD, loan.annualInterestRate, loan.termYears);
+                    const repayTenth = Math.max(1, Math.round(loan.principalUSD * 0.10));
                     const repayQuarter = Math.max(1, Math.round(loan.principalUSD * 0.25));
                     const repayHalf = Math.max(1, Math.round(loan.principalUSD * 0.50));
+                    const repayFull = loan.principalUSD;
+                    const maxAffordable = Math.min(loan.principalUSD, Math.max(0, Math.floor(playerAirline.cashUSD)));
                     const canRepay = playerAirline.cashUSD > 0;
+                    const canRepayTenth = playerAirline.cashUSD >= repayTenth;
+                    const canRepayQuarter = playerAirline.cashUSD >= repayQuarter;
+                    const canRepayHalf = playerAirline.cashUSD >= repayHalf;
+                    const canRepayFull = playerAirline.cashUSD >= repayFull;
 
                     return (
                       <div key={loan.id} className="rounded border border-gray-700 bg-gray-900/30 p-2">
@@ -228,7 +235,17 @@ export const FinancePanel: React.FC = () => {
                           <div className="flex shrink-0 flex-wrap justify-end gap-1">
                             <button
                               type="button"
-                              disabled={!canRepay}
+                              disabled={!canRepayTenth}
+                              title={canRepayTenth ? `Repay ${formatCurrency(repayTenth)}` : `Need ${formatCurrency(repayTenth)} cash`}
+                              onClick={() => repayLoan(loan.id, repayTenth)}
+                              className="rounded border border-gray-600 px-2 py-1 text-[10px] font-semibold text-gray-200 hover:border-green-400 hover:text-green-300 disabled:cursor-not-allowed disabled:border-gray-800 disabled:text-gray-600"
+                            >
+                              10%
+                            </button>
+                            <button
+                              type="button"
+                              disabled={!canRepayQuarter}
+                              title={canRepayQuarter ? `Repay ${formatCurrency(repayQuarter)}` : `Need ${formatCurrency(repayQuarter)} cash`}
                               onClick={() => repayLoan(loan.id, repayQuarter)}
                               className="rounded border border-gray-600 px-2 py-1 text-[10px] font-semibold text-gray-200 hover:border-green-400 hover:text-green-300 disabled:cursor-not-allowed disabled:border-gray-800 disabled:text-gray-600"
                             >
@@ -236,7 +253,8 @@ export const FinancePanel: React.FC = () => {
                             </button>
                             <button
                               type="button"
-                              disabled={!canRepay}
+                              disabled={!canRepayHalf}
+                              title={canRepayHalf ? `Repay ${formatCurrency(repayHalf)}` : `Need ${formatCurrency(repayHalf)} cash`}
                               onClick={() => repayLoan(loan.id, repayHalf)}
                               className="rounded border border-gray-600 px-2 py-1 text-[10px] font-semibold text-gray-200 hover:border-green-400 hover:text-green-300 disabled:cursor-not-allowed disabled:border-gray-800 disabled:text-gray-600"
                             >
@@ -245,7 +263,17 @@ export const FinancePanel: React.FC = () => {
                             <button
                               type="button"
                               disabled={!canRepay}
-                              onClick={() => repayLoan(loan.id, loan.principalUSD)}
+                              title={canRepay ? `Repay ${formatCurrency(maxAffordable)}` : 'No cash available'}
+                              onClick={() => repayLoan(loan.id, maxAffordable)}
+                              className="rounded border border-sky-600 px-2 py-1 text-[10px] font-semibold text-sky-200 hover:border-sky-400 hover:text-sky-100 disabled:cursor-not-allowed disabled:border-gray-800 disabled:text-gray-600"
+                            >
+                              Max cash
+                            </button>
+                            <button
+                              type="button"
+                              disabled={!canRepayFull}
+                              title={canRepayFull ? `Repay ${formatCurrency(repayFull)}` : `Need ${formatCurrency(repayFull)} cash`}
+                              onClick={() => repayLoan(loan.id, repayFull)}
                               className="rounded bg-green-700 px-2 py-1 text-[10px] font-semibold text-white hover:bg-green-600 disabled:cursor-not-allowed disabled:bg-gray-700 disabled:text-gray-400"
                             >
                               Full
