@@ -152,22 +152,20 @@ export const AirportPopup: React.FC = () => {
             <div className="panel-scroll max-h-[48svh] space-y-1 overflow-y-auto overscroll-contain px-2 py-2 sm:grid sm:grid-flow-col sm:grid-rows-8 sm:auto-cols-fr sm:gap-1.5 sm:space-y-0">
               {desiredDestinations.map(item => (
                 <div key={item.dest.iata} className="rounded bg-white/[0.04] px-2 py-1.5">
-                  <div className="flex items-center justify-between gap-2 text-xs">
+                  <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-x-2 gap-y-0.5 text-xs">
                     <span className="min-w-0 truncate text-white">
                       {item.dest.iata} · {item.dest.city}
                     </span>
-                    <span className={item.bestRoute && item.bestRoute.dailyProfit > 0 ? 'text-green-400' : 'text-sky-300'}>
+                    <span className={`shrink-0 text-right leading-tight ${item.bestRoute && item.bestRoute.dailyProfit > 0 ? 'text-green-400' : 'text-sky-300'}`}>
                       {formatNumber(item.baselinePax)} pax/d
                     </span>
-                  </div>
-                  <div className="mt-0.5 flex items-center justify-between gap-2 text-[10px] text-gray-500">
-                    <span>{formatDistance(item.distanceKm)} · {item.dest.size}</span>
+                    <span className="min-w-0 truncate text-[10px] text-gray-500">{formatDistance(item.distanceKm)} · {item.dest.size}</span>
                     {item.bestRoute ? (
-                      <span className={item.bestRoute.dailyProfit >= 0 ? 'text-green-400' : 'text-red-400'}>
+                      <span className={`shrink-0 text-right text-[10px] ${item.bestRoute.dailyProfit >= 0 ? 'text-green-400' : 'text-red-400'}`}>
                         {formatCurrency(item.bestRoute.dailyProfit)}/d live
                       </span>
                     ) : (
-                      <span>{formatCurrency(item.score)}/d potential</span>
+                      <span className="shrink-0 text-right text-[10px] text-gray-500">{formatCurrency(item.score)}/d potential</span>
                     )}
                   </div>
                 </div>
