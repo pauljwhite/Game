@@ -345,7 +345,7 @@ export const AirlinesPanel: React.FC = () => {
       </div>
       </div>
       {summaryAirline && (
-        <div className={`absolute inset-0 transition-transform duration-300 ease-in-out will-change-transform ${
+        <div className={`absolute inset-0 overflow-hidden transition-transform duration-300 ease-in-out will-change-transform ${
           summaryVisible ? 'translate-x-0' : 'translate-x-full'
         }`}>
           <CompetitorSummaryPanel airlineId={summaryAirline.id} onBack={() => setSummaryId(null)} />

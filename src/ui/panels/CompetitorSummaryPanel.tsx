@@ -285,7 +285,7 @@ export const CompetitorSummaryPanel: React.FC<CompetitorSummaryPanelProps> = ({ 
             <span className="hidden text-gray-600 group-open:inline">▲</span>
           </summary>
 
-          <div className="border-t border-white/10 p-3 pt-2">
+          <div className="panel-scroll max-h-[45svh] overflow-y-auto overscroll-contain border-t border-white/10 p-3 pt-2">
             {fleet.length === 0 ? (
               <div className="text-xs text-gray-600 italic">No aircraft in fleet</div>
             ) : (
