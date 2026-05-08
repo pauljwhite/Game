@@ -23,8 +23,10 @@ const DEFAULT_SETTINGS: GameStore['settings'] = {
   startingYear: 1960,
   objective: 'last_airline_standing',
   targetMarketShare: 60,
+  currency: 'USD',
 };
 const VALID_OBJECTIVES = new Set<GameStore['settings']['objective']>(['last_airline_standing', 'market_share']);
+const VALID_CURRENCIES = new Set<GameStore['settings']['currency']>(['USD', 'GBP', 'EUR', 'RUB', 'JPY', 'CNY', 'CAD', 'AUD', 'CHF']);
 
 function uniqueExistingIds(ids: unknown, exists: (id: string) => boolean): string[] {
   if (!Array.isArray(ids)) return [];
@@ -161,6 +163,9 @@ function sanitizePersistedState(state: Partial<GameStore>): Partial<GameStore> {
   const objective = VALID_OBJECTIVES.has(persistedSettings?.objective as GameStore['settings']['objective'])
     ? persistedSettings!.objective
     : DEFAULT_SETTINGS.objective;
+  const currency = VALID_CURRENCIES.has(persistedSettings?.currency as GameStore['settings']['currency'])
+    ? persistedSettings!.currency
+    : DEFAULT_SETTINGS.currency;
 
   const sanitized: Partial<GameStore> = {
     ...stateWithoutStaticAirports,
@@ -177,6 +182,7 @@ function sanitizePersistedState(state: Partial<GameStore>): Partial<GameStore> {
       ...DEFAULT_SETTINGS,
       ...(persistedSettings ?? {}),
       objective,
+      currency,
       targetMarketShare: Math.min(100, Math.max(60, persistedSettings?.targetMarketShare ?? DEFAULT_SETTINGS.targetMarketShare)),
     },
   };

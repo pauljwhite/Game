@@ -32,6 +32,7 @@ const DEFAULT_SETTINGS: GameSettings = {
   startingYear: 1960,
   objective: 'last_airline_standing',
   targetMarketShare: 60,
+  currency: 'USD',
 };
 
 const DEFAULT_SPEED: GameSpeed = 300;

@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { startGameLoop, stopGameLoop } from '@/engine/gameLoop';
 import { Layout } from '@/ui/Layout';
 import { useGameStore } from '@/store';
+import { setDisplayCurrency } from '@/utils/format';
 
 function App() {
   const isInitialized = useGameStore(s => s.isInitialized);
@@ -19,6 +20,10 @@ function App() {
   const settings     = useGameStore(s => s.settings);
   const setHasWon    = useGameStore(s => s.setHasWon);
   const openModalById = useGameStore(s => s.openModalById);
+
+  useEffect(() => {
+    setDisplayCurrency(settings.currency);
+  }, [settings.currency]);
 
   // Start/stop game loop based on initialization
   useEffect(() => {

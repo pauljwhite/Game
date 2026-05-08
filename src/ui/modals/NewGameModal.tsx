@@ -1,6 +1,6 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useGameStore } from '@/store';
-import type { GameObjective, GameSettings, Airline } from '@/types';
+import type { CurrencyCode, GameObjective, GameSettings, Airline } from '@/types';
 import { AI_AIRLINES_INIT } from '@/data/airlinesInit';
 import { AIRPORTS } from '@/data/airports';
 import { AIRCRAFT_TYPES } from '@/data/aircraftTypes';
@@ -9,11 +9,12 @@ import { findAirportByQuery } from '@/utils/airportSearch';
 import { AirlineLogoPicker } from '@/ui/components/AirlineLogoPicker';
 import { createInitialAIOperations } from '@/engine/aiEngine';
 import { pickUnusedAirlineColor } from '@/data/airlineColors';
+import { CURRENCY_OPTIONS, formatCurrency, setDisplayCurrency } from '@/utils/format';
 
 const DIFFICULTIES = [
-  { id: 'easy',   label: 'Easy',   cash: 50_000_000, desc: '$50M starting cash' },
-  { id: 'normal', label: 'Normal', cash: 30_000_000, desc: '$30M starting cash' },
-  { id: 'hard',   label: 'Hard',   cash: 15_000_000, desc: '$15M starting cash' },
+  { id: 'easy',   label: 'Easy',   cash: 50_000_000 },
+  { id: 'normal', label: 'Normal', cash: 30_000_000 },
+  { id: 'hard',   label: 'Hard',   cash: 15_000_000 },
 ] as const;
 
 const ERAS = [
@@ -37,6 +38,7 @@ export const NewGameModal: React.FC = () => {
   const [airlineLogo, setAirlineLogo] = useState('✈️');
   const [hubQuery, setHubQuery] = useState('JFK');
   const [difficulty, setDifficulty] = useState<'easy' | 'normal' | 'hard'>('normal');
+  const [currency, setCurrency] = useState<CurrencyCode>('USD');
   const [startingYear, setStartingYear] = useState(1960);
   const [objective, setObjective] = useState<GameObjective>('last_airline_standing');
   const [targetMarketShare, setTargetMarketShare] = useState(60);
@@ -62,8 +64,13 @@ export const NewGameModal: React.FC = () => {
   const startingHub   = findAirportByQuery(hubQuery, airportOptions);
   const unlockedCount = AIRCRAFT_TYPES.filter(t => t.yearIntroduced <= startingYear).length;
 
+  useEffect(() => {
+    setDisplayCurrency(currency);
+  }, [currency]);
+
   function handleStart() {
     if (!startingHub) return;
+    setDisplayCurrency(currency);
 
     const startingGameTimeMs = yearToGameTimeMs(startingYear);
     const startingGameDay    = Math.floor(startingGameTimeMs / 86_400_000);
@@ -78,6 +85,7 @@ export const NewGameModal: React.FC = () => {
       startingYear,
       objective,
       targetMarketShare,
+      currency,
     };
 
     initWorld();
@@ -211,7 +219,28 @@ export const NewGameModal: React.FC = () => {
                   }`}
                 >
                   <div className="font-bold">{d.label}</div>
-                  <div className="text-xs mt-0.5 opacity-75">{d.desc}</div>
+                  <div className="text-xs mt-0.5 opacity-75">{formatCurrency(d.cash)} starting cash</div>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <label className="text-gray-300 text-sm block mb-2">Currency</label>
+            <div className="grid grid-cols-2 min-[420px]:grid-cols-3 gap-2">
+              {CURRENCY_OPTIONS.map(option => (
+                <button
+                  key={option.code}
+                  type="button"
+                  onClick={() => setCurrency(option.code)}
+                  className={`rounded border px-3 py-2 text-left transition-colors ${
+                    currency === option.code
+                      ? 'border-emerald-500 bg-emerald-900/35 text-emerald-200'
+                      : 'border-white/10 bg-white/[0.055] text-gray-400 hover:border-white/20'
+                  }`}
+                >
+                  <div className="text-sm font-semibold">{option.symbol} {option.code}</div>
+                  <div className="text-[10px] opacity-75">{option.label}</div>
                 </button>
               ))}
             </div>
