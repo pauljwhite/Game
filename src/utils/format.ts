@@ -33,6 +33,16 @@ export function formatCurrency(n: number): string {
   return `${sign}${symbol}${abs.toFixed(0)}`;
 }
 
+export function convertUSDToDisplayCurrency(n: number): number {
+  const option = CURRENCY_OPTIONS.find(item => item.code === displayCurrency) ?? CURRENCY_OPTIONS[0];
+  return n * option.rateFromUSD;
+}
+
+export function convertDisplayCurrencyToUSD(n: number): number {
+  const option = CURRENCY_OPTIONS.find(item => item.code === displayCurrency) ?? CURRENCY_OPTIONS[0];
+  return n / option.rateFromUSD;
+}
+
 export function formatGameDate(gameTimeMs: number): string {
   const epochMs = new Date(GAME_EPOCH_YEAR, 0, 1).getTime();
   const d = new Date(epochMs + gameTimeMs);

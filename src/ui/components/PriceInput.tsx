@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { convertDisplayCurrencyToUSD, convertUSDToDisplayCurrency } from '@/utils/format';
 
 function step(value: number): number {
   if (value < 200)  return 5;
@@ -16,20 +17,28 @@ interface Props {
 }
 
 export const PriceInput: React.FC<Props> = ({ value, min = 0, max = 999999, disabled = false, onChange }) => {
-  const [draftValue, setDraftValue] = useState(String(value));
-  const s = step(value);
-  const dec = () => onChange(Math.max(min, Math.round((value - s) / s) * s));
-  const inc = () => onChange(Math.min(max, Math.round((value + s) / s) * s));
+  const displayValue = Math.round(convertUSDToDisplayCurrency(value));
+  const displayMin = Math.round(convertUSDToDisplayCurrency(min));
+  const displayMax = Math.round(convertUSDToDisplayCurrency(max));
+  const [draftValue, setDraftValue] = useState(String(displayValue));
+  const s = step(displayValue);
+  const commitDisplayValue = (nextDisplayValue: number) => {
+    const clampedDisplay = Math.min(displayMax, Math.max(displayMin, nextDisplayValue));
+    onChange(convertDisplayCurrencyToUSD(clampedDisplay));
+    setDraftValue(String(clampedDisplay));
+  };
+  const dec = () => commitDisplayValue(Math.round((displayValue - s) / s) * s);
+  const inc = () => commitDisplayValue(Math.round((displayValue + s) / s) * s);
 
   useEffect(() => {
-    setDraftValue(String(value));
-  }, [value]);
+    setDraftValue(String(displayValue));
+  }, [displayValue]);
 
   function commitDraft() {
     if (disabled) return;
     if (draftValue.trim() === '') {
       onChange(min);
-      setDraftValue(String(min));
+      setDraftValue(String(displayMin));
       return;
     }
 
@@ -39,9 +48,7 @@ export const PriceInput: React.FC<Props> = ({ value, min = 0, max = 999999, disa
       return;
     }
 
-    const clamped = Math.min(max, Math.max(min, parsed));
-    onChange(clamped);
-    setDraftValue(String(clamped));
+    commitDisplayValue(parsed);
   }
 
   return (
@@ -56,8 +63,8 @@ export const PriceInput: React.FC<Props> = ({ value, min = 0, max = 999999, disa
       </button>
       <input
         type="number"
-        min={min}
-        max={max}
+        min={displayMin}
+        max={displayMax}
         disabled={disabled}
         value={draftValue}
         onChange={e => {
@@ -68,8 +75,8 @@ export const PriceInput: React.FC<Props> = ({ value, min = 0, max = 999999, disa
 
           const parsed = Number(next);
           if (Number.isFinite(parsed)) {
-            const clamped = Math.min(max, Math.max(min, parsed));
-            onChange(clamped);
+            const clamped = Math.min(displayMax, Math.max(displayMin, parsed));
+            onChange(convertDisplayCurrencyToUSD(clamped));
             if (clamped !== parsed) setDraftValue(String(clamped));
           }
         }}

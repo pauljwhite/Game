@@ -5,6 +5,7 @@ import { AircraftProfile } from '@/assets/profiles/AircraftProfile';
 import { gameDayFromMs } from '@/engine/economicsEngine';
 import { manufacturerFlag } from '@/utils/manufacturerFlags';
 import { formatRunwayLength } from '@/utils/runway';
+import { formatCurrency } from '@/utils/format';
 
 const EPOCH_YEAR = 1960;
 const ALL_MANUFACTURERS = 'All';
@@ -12,12 +13,6 @@ const ALL_MANUFACTURERS = 'All';
 function currentGameYear(gameTimeMs: number): number {
   const msPerYear = 365.25 * 24 * 60 * 60 * 1000;
   return EPOCH_YEAR + Math.floor(gameTimeMs / msPerYear);
-}
-
-function formatUSD(n: number): string {
-  if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(1)}M`;
-  if (n >= 1_000) return `$${(n / 1_000).toFixed(0)}K`;
-  return `$${n.toFixed(0)}`;
 }
 
 function formatCategory(category: string): string {
@@ -73,7 +68,7 @@ export const BuyAircraftModal: React.FC = () => {
           <div>
             <h2 className="text-xl font-bold text-white">Buy Aircraft</h2>
             <p className="text-sm text-gray-400 mt-0.5">
-              Cash available: <span className="text-green-400 font-semibold">{formatUSD(cashUSD)}</span>
+              Cash available: <span className="text-green-400 font-semibold">{formatCurrency(cashUSD)}</span>
               <span className="ml-3 text-gray-500">Year {gameYear}</span>
             </p>
           </div>
@@ -161,7 +156,7 @@ export const BuyAircraftModal: React.FC = () => {
                           </div>
                           <div className="flex-shrink-0 flex flex-col items-end gap-1.5">
                             <span className={`text-sm font-bold whitespace-nowrap ${!unavailable && !canAfford ? 'text-red-400' : 'text-white'}`}>
-                              {formatUSD(type.purchasePrice)}
+                              {formatCurrency(type.purchasePrice)}
                             </span>
                             {!unavailable && (
                               <button
@@ -186,7 +181,7 @@ export const BuyAircraftModal: React.FC = () => {
                           <span>Runway: <span className="text-gray-300">{formatRunwayLength(type.minRunwayM)}</span></span>
                           <span>Speed: <span className="text-gray-300">{type.cruiseSpeedKmh} km/h</span></span>
                           <span>Fuel: <span className="text-gray-300">{type.fuelBurnLPer100Km.toLocaleString()} L/100km</span></span>
-                          <span>Maint: <span className="text-gray-300">{formatUSD(type.maintenanceCostPerHourUSD)}/hr</span></span>
+                          <span>Maint: <span className="text-gray-300">{formatCurrency(type.maintenanceCostPerHourUSD)}/hr</span></span>
                         </div>
                       </div>
                     </div>

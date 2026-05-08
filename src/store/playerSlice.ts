@@ -8,6 +8,7 @@ import { computeMaintenanceCost, getMaintenanceAgeMultiplier, MAINTENANCE_TIERS 
 import { computeAircraftValue, calculateBuyoutPrice, rawCompanyValue, calculateSharePrice } from '@/engine/valuation';
 import { calculateDailyLoanPayment, getLoanOffer } from '@/engine/finance';
 import { canAirportHandleAircraft } from '@/utils/runway';
+import { formatCurrency } from '@/utils/format';
 import type { GameStore } from './index';
 
 export interface RouteConfig {
@@ -215,7 +216,7 @@ export const createPlayerSlice: StateCreator<GameStore, [['zustand/immer', never
       text: `Network optimisation completed for ${
         Object.keys(updates).length
       } routes at a consulting cost of ${
-        new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(cost)
+        formatCurrency(cost)
       }.`,
       playerRelated: true,
     });
@@ -594,7 +595,7 @@ export const createPlayerSlice: StateCreator<GameStore, [['zustand/immer', never
 
     get().pushNewsItem({
       text: `You acquired ${percent}% stake in ${target.name} for ${
-        new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(cost)
+        formatCurrency(cost)
       }.`,
       playerRelated: true,
     });
@@ -624,7 +625,7 @@ export const createPlayerSlice: StateCreator<GameStore, [['zustand/immer', never
 
     get().pushNewsItem({
       text: `You sold ${percent}% stake in ${target.name} for ${
-        new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(proceeds)
+        formatCurrency(proceeds)
       }.`,
       playerRelated: true,
     });
@@ -673,7 +674,7 @@ export const createPlayerSlice: StateCreator<GameStore, [['zustand/immer', never
 
     get().pushNewsItem({
       text: `Loan approved: ${
-        new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(offer.amountUSD)
+        formatCurrency(offer.amountUSD)
       } at ${(offer.annualInterestRate * 100).toFixed(2)}% annual interest.`,
       playerRelated: true,
     });
@@ -700,7 +701,7 @@ export const createPlayerSlice: StateCreator<GameStore, [['zustand/immer', never
     if (amountPaid > 0) {
       get().pushNewsItem({
         text: `Loan repayment made: ${
-          new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(amountPaid)
+          formatCurrency(amountPaid)
         } principal paid down early.`,
         playerRelated: true,
       });

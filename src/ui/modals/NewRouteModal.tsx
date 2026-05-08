@@ -17,12 +17,6 @@ import { optimiseRouteSettings } from '@/engine/routeOptimizer';
 
 const ALL_MANUFACTURERS = 'All';
 
-function formatUSD(n: number): string {
-  if (Math.abs(n) >= 1_000_000) return `$${(n / 1_000_000).toFixed(2)}M`;
-  if (Math.abs(n) >= 1_000) return `$${(n / 1_000).toFixed(1)}K`;
-  return `$${n.toFixed(0)}`;
-}
-
 function routePairKey(origin: string, dest: string): string {
   return origin < dest ? `${origin}:${dest}` : `${dest}:${origin}`;
 }
@@ -660,13 +654,13 @@ export const NewRouteModal: React.FC = () => {
                       onClick={() => { setPriceEconomy(refPrice); setPriceBusiness(hasBusinessSeats ? refPrice * 4 : 0); }}
                       className="text-xs text-blue-400 hover:text-blue-300 transition-colors"
                     >
-                      ↺ Reset to suggested ({formatUSD(refPrice)}{hasBusinessSeats ? ` / ${formatUSD(refPrice * 4)}` : ''})
+                      ↺ Reset to suggested ({formatCurrency(refPrice)}{hasBusinessSeats ? ` / ${formatCurrency(refPrice * 4)}` : ''})
                     </button>
                   )}
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                   <div>
-                    <label className="text-gray-400 text-xs block mb-1">Economy (max {formatUSD(maxEco)})</label>
+                    <label className="text-gray-400 text-xs block mb-1">Economy (max {formatCurrency(maxEco)})</label>
                     <PriceInput
                       value={priceEconomy} min={0} max={maxEco}
                       onChange={v => setPriceEconomy(v)}
@@ -681,14 +675,14 @@ export const NewRouteModal: React.FC = () => {
                       className="mt-2 w-full accent-blue-500"
                     />
                     <div className="flex justify-between text-[10px] text-gray-500 mt-1">
-                      <span>$0</span>
-                      {refPrice && <span>Suggested {formatUSD(refPrice)}</span>}
-                      <span>{formatUSD(maxEco)}</span>
+                      <span>{formatCurrency(0)}</span>
+                      {refPrice && <span>Suggested {formatCurrency(refPrice)}</span>}
+                      <span>{formatCurrency(maxEco)}</span>
                     </div>
                   </div>
                   <div className={!hasBusinessSeats ? 'opacity-60' : ''}>
                     <label className="text-gray-400 text-xs block mb-1">
-                      Business {hasBusinessSeats ? `(max ${formatUSD(maxBiz)})` : '(no business seats)'}
+                      Business {hasBusinessSeats ? `(max ${formatCurrency(maxBiz)})` : '(no business seats)'}
                     </label>
                     <PriceInput
                       value={hasBusinessSeats ? priceBusiness : 0} min={0} max={maxBiz}
@@ -706,9 +700,9 @@ export const NewRouteModal: React.FC = () => {
                       className="mt-2 w-full accent-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
                     />
                     <div className="flex justify-between text-[10px] text-gray-500 mt-1">
-                      <span>$0</span>
-                      {hasBusinessSeats && refPrice && <span>Suggested {formatUSD(refPrice * 4)}</span>}
-                      <span>{formatUSD(maxBiz)}</span>
+                      <span>{formatCurrency(0)}</span>
+                      {hasBusinessSeats && refPrice && <span>Suggested {formatCurrency(refPrice * 4)}</span>}
+                      <span>{formatCurrency(maxBiz)}</span>
                     </div>
                     {!hasBusinessSeats && (
                       <p className="text-[10px] text-gray-500 mt-1">Selected aircraft has no business cabin.</p>
@@ -731,7 +725,7 @@ export const NewRouteModal: React.FC = () => {
               </div>
 
               <p className="text-[10px] text-gray-500">
-                Suggested price: <span className="text-gray-400">{formatUSD(pnlPreview.referencePrice)}</span>
+                Suggested price: <span className="text-gray-400">{formatCurrency(pnlPreview.referencePrice)}</span>
                 {' · '}higher price = lower load factor · lower price = fuller plane
               </p>
               {pnlPreview.condMod < 0.95 && (
@@ -744,16 +738,16 @@ export const NewRouteModal: React.FC = () => {
               <div className="grid grid-cols-1 min-[380px]:grid-cols-3 gap-2 sm:gap-3 text-sm">
                 <div>
                   <p className="text-gray-400 text-xs">Revenue</p>
-                  <p className="text-green-400 font-semibold">{formatUSD(pnlPreview.dailyRevenue)}</p>
+                  <p className="text-green-400 font-semibold">{formatCurrency(pnlPreview.dailyRevenue)}</p>
                 </div>
                 <div>
                   <p className="text-gray-400 text-xs">Cost</p>
-                  <p className="text-red-400 font-semibold">{formatUSD(pnlPreview.dailyCost)}</p>
+                  <p className="text-red-400 font-semibold">{formatCurrency(pnlPreview.dailyCost)}</p>
                 </div>
                 <div>
                   <p className="text-gray-400 text-xs">Profit</p>
                   <p className={`font-semibold ${pnlPreview.dailyProfit >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                    {formatUSD(pnlPreview.dailyProfit)}
+                    {formatCurrency(pnlPreview.dailyProfit)}
                   </p>
                 </div>
               </div>

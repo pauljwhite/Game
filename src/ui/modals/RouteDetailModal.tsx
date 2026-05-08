@@ -405,7 +405,7 @@ export const RouteDetailModal: React.FC = () => {
                   className="mt-2 w-full accent-blue-500"
                 />
                 <div className="flex justify-between text-[10px] text-gray-500 mt-1">
-                  <span>$0</span>
+                  <span>{formatCurrency(0)}</span>
                   <span>Suggested {formatCurrency(referencePrice)}</span>
                   <span>{formatCurrency(maxEco)}</span>
                 </div>
@@ -430,7 +430,7 @@ export const RouteDetailModal: React.FC = () => {
                   className="mt-2 w-full accent-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
                 />
                 <div className="flex justify-between text-[10px] text-gray-500 mt-1">
-                  <span>$0</span>
+                  <span>{formatCurrency(0)}</span>
                   {hasBusinessSeats && <span>Suggested {formatCurrency(referencePrice * 4)}</span>}
                   <span>{formatCurrency(maxBiz)}</span>
                 </div>
