@@ -1,6 +1,8 @@
 import type { Airport, Route, Airline } from '@/types';
 import { PRICE_ELASTICITY, REP_PRICE_FACTOR, AIRPORT_BASE_CAPACITY, AIRPORT_DEMAND_GROWTH_RATE } from '@/utils/constants';
 
+export const MAX_REASONABLE_FARE_MULTIPLIER = 6;
+
 const SIZE_MULTIPLIER: Record<string, number> = {
   small: 0.3, medium: 1.0, large: 2.5, major: 5.0,
 };
@@ -15,6 +17,17 @@ export function getCompetitivenessScore(price: number, avgCompetitorPrice: numbe
   if (avgCompetitorPrice <= 0) return 1;
   if (price <= 0) return 5;
   return Math.pow(price / avgCompetitorPrice, PRICE_ELASTICITY);
+}
+
+export function getSoloPriceDemandShare(price: number, referencePrice: number): number {
+  if (referencePrice <= 0) return 1;
+  if (price <= 0) return 5;
+
+  const priceRatio = Math.max(0.05, price / referencePrice);
+  const elasticDemand = Math.pow(priceRatio, PRICE_ELASTICITY);
+  const gougePenalty = priceRatio > 4 ? Math.pow(4 / priceRatio, 2.4) : 1;
+
+  return Math.max(0, Math.min(5, elasticDemand * gougePenalty));
 }
 
 function repPricePremium(reputationScore: number): number {
@@ -58,8 +71,7 @@ export function getPlayerMarketShare(
 
   if (routesOnPair.length === 0) {
     if (referencePrice && referencePrice > 0) {
-      if (playerEffectivePrice <= 0) return 5;
-      return Math.min(5, Math.pow(playerEffectivePrice / referencePrice, PRICE_ELASTICITY));
+      return getSoloPriceDemandShare(playerEffectivePrice, referencePrice);
     }
     return 1;
   }

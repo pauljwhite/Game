@@ -2,10 +2,10 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useGameStore } from '@/store';
 import { haversineKm } from '@/utils/geo';
 import { computeFlightCost, gameDayFromMs, msToGameDate } from '@/engine/economicsEngine';
-import { getSuggestedEconomyPrice, getBaselineDailyPax, conditionDemandMod, getCompetitivenessScore } from '@/engine/demandModel';
+import { getSuggestedEconomyPrice, getBaselineDailyPax, conditionDemandMod, getCompetitivenessScore, getSoloPriceDemandShare } from '@/engine/demandModel';
 import { AIRCRAFT_TYPES } from '@/data/aircraftTypes';
 import type { Aircraft, AircraftType, Airline, Airport, Route } from '@/types';
-import { HUB_DEMAND_BONUS, PRICE_ELASTICITY, REPUTATION_DEMAND_FACTOR, REP_PRICE_FACTOR } from '@/utils/constants';
+import { HUB_DEMAND_BONUS, REPUTATION_DEMAND_FACTOR, REP_PRICE_FACTOR } from '@/utils/constants';
 import { AirportSearchInput } from '@/ui/components/AirportSearchInput';
 import { findAirportByQuery } from '@/utils/airportSearch';
 import { LoadFactorBar } from '@/ui/components/LoadFactorBar';
@@ -99,8 +99,7 @@ function estimateRouteProfit(input: RouteEstimateInput): RouteEstimate {
     const ownEffectivePrice = price / playerPremium;
 
     if (cabinCompetitors.length === 0) {
-      if (ownEffectivePrice <= 0) return 5;
-      return Math.min(5, Math.pow(ownEffectivePrice / referencePriceForCabin, PRICE_ELASTICITY));
+      return getSoloPriceDemandShare(ownEffectivePrice, referencePriceForCabin);
     }
 
     const competitorEffectivePrices = cabinCompetitors.map(route => {
@@ -108,7 +107,7 @@ function estimateRouteProfit(input: RouteEstimateInput): RouteEstimate {
       const premium = airline ? repPricePremium(airline.reputationScore) : 1;
       return getPrice(route) / premium;
     });
-    const avgPrice = (ownEffectivePrice + competitorEffectivePrices.reduce((sum, p) => sum + p, 0)) / (competitorEffectivePrices.length + 1);
+    const avgPrice = competitorEffectivePrices.reduce((sum, p) => sum + p, 0) / competitorEffectivePrices.length;
     const ownScore = getCompetitivenessScore(ownEffectivePrice, avgPrice);
     const competitorScore = competitorEffectivePrices.reduce((sum, p) => sum + getCompetitivenessScore(p, avgPrice), 0);
     return ownScore / Math.max(ownScore + competitorScore, 0.0001);
@@ -268,6 +267,14 @@ export const NewRouteModal: React.FC = () => {
     flightsPerWeek, priceEconomy, priceBusiness, gameDay, globalFuelPrice,
     airlines, aiAirlines, routes, aiRoutes,
   ]);
+
+  const maxEconomyPrice = pnlPreview ? pnlPreview.referencePrice * 6 : 9999;
+  const maxBusinessPrice = pnlPreview ? pnlPreview.referencePrice * 24 : 39999;
+
+  useEffect(() => {
+    setPriceEconomy(price => Math.min(maxEconomyPrice, Math.max(0, price)));
+    setPriceBusiness(price => effectiveHasBusinessSeats ? Math.min(maxBusinessPrice, Math.max(0, price)) : 0);
+  }, [maxEconomyPrice, maxBusinessPrice, effectiveHasBusinessSeats]);
 
   const optimisable = !!effectiveAc && !!effectiveType && !!originAirport && !!destAirport && !!distanceKm && !sameAirport && !outOfRange && !runwayLimited;
 
@@ -630,8 +637,8 @@ export const NewRouteModal: React.FC = () => {
           {/* Pricing */}
           {(() => {
             const refPrice = pnlPreview?.referencePrice ?? null;
-            const maxEco = refPrice ? refPrice * 6 : 9999;
-            const maxBiz = refPrice ? refPrice * 24 : 39999;
+            const maxEco = maxEconomyPrice;
+            const maxBiz = maxBusinessPrice;
             const hasBusinessSeats = effectiveHasBusinessSeats;
             return (
               <div className="space-y-2">

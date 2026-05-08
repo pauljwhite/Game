@@ -88,6 +88,11 @@ export const RouteDetailModal: React.FC = () => {
   const maxBiz = referencePrice * 24;
   const hasBusinessSeats = (assignedType?.seatsBusiness ?? 0) > 0;
 
+  useEffect(() => {
+    setPriceEconomy(price => Math.min(maxEco, Math.max(0, price)));
+    setPriceBusiness(price => hasBusinessSeats ? Math.min(maxBiz, Math.max(0, price)) : 0);
+  }, [maxEco, maxBiz, hasBusinessSeats]);
+
   const preview = useMemo(() => {
     if (!route || !assignedAircraft || !assignedType || !origin || !destination) return null;
     const allAirlines = [...Object.values(airlines), ...Object.values(aiAirlines)];

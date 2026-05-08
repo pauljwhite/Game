@@ -67,8 +67,10 @@ export const PriceInput: React.FC<Props> = ({ value, min = 0, max = 999999, disa
           if (next.trim() === '') return;
 
           const parsed = Number(next);
-          if (Number.isFinite(parsed) && parsed >= min && parsed <= max) {
-            onChange(parsed);
+          if (Number.isFinite(parsed)) {
+            const clamped = Math.min(max, Math.max(min, parsed));
+            onChange(clamped);
+            if (clamped !== parsed) setDraftValue(String(clamped));
           }
         }}
         onBlur={commitDraft}

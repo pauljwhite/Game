@@ -2,10 +2,10 @@ import type { Route, Aircraft, AircraftType, Airport } from '@/types';
 import {
   HUB_COST_DISCOUNT, HUB_DEMAND_BONUS,
   HUB_ANNUAL_FEE_USD, CREW_COST_PER_FLIGHT_HOUR_USD,
-  REPUTATION_DEMAND_FACTOR, REP_PRICE_FACTOR, PRICE_ELASTICITY, CRASH_DEMAND_PENALTY_PCT, DAY_MS,
+  REPUTATION_DEMAND_FACTOR, REP_PRICE_FACTOR, CRASH_DEMAND_PENALTY_PCT, DAY_MS,
   MAINTENANCE_TIERS, getMaintenanceAgeMultiplier,
 } from '@/utils/constants';
-import { getBaselineDailyPax, getCompetitivenessScore, conditionDemandMod, getAirportCapacity, airportSaturationMod } from './demandModel';
+import { getBaselineDailyPax, getCompetitivenessScore, conditionDemandMod, getAirportCapacity, airportSaturationMod, getSoloPriceDemandShare } from './demandModel';
 import { runRandomEventsTick } from './randomEvents';
 import { AIRCRAFT_TYPES } from '@/data/aircraftTypes';
 import { formatCurrency } from '@/utils/format';
@@ -86,8 +86,7 @@ export function runDailyTick(store: ReturnType<typeof import('@/store/index')['u
 
     if (routesOnPair.length === 0) {
       if (referencePrice && referencePrice > 0) {
-        if (effectivePrice <= 0) return 5;
-        return Math.min(5, Math.pow(effectivePrice / referencePrice, PRICE_ELASTICITY));
+        return getSoloPriceDemandShare(effectivePrice, referencePrice);
       }
       return 1;
     }
