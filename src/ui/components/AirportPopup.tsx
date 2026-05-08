@@ -1,10 +1,12 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useGameStore } from '@/store';
 import { formatCurrency, formatDistance, formatNumber } from '@/utils/format';
 import { airportIcao } from '@/utils/airportSearch';
 import { formatRunwayLength } from '@/utils/runway';
 import { getAirportCapacity, airportSaturationMod, getBaselineDailyPax } from '@/engine/demandModel';
 import { haversineKm } from '@/utils/geo';
+
+const AIRPORT_POPUP_ANIMATION_MS = 240;
 
 export const AirportPopup: React.FC = () => {
   const [destinationsOpen, setDestinationsOpen] = useState(false);
@@ -18,19 +20,49 @@ export const AirportPopup: React.FC = () => {
   const gameDay = useGameStore(s => s.gameDay);
   const routes = useGameStore(s => s.routes);
   const aiRoutes = useGameStore(s => s.aiRoutes);
+  const [displayedIata, setDisplayedIata] = useState(selectedIata);
+  const [isVisible, setIsVisible] = useState(Boolean(selectedIata));
+  const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  if (!selectedIata) return null;
-  const airport = airports[selectedIata];
+  useEffect(() => {
+    if (closeTimerRef.current) {
+      clearTimeout(closeTimerRef.current);
+      closeTimerRef.current = null;
+    }
+
+    if (selectedIata) {
+      setDisplayedIata(selectedIata);
+      setDestinationsOpen(false);
+      requestAnimationFrame(() => setIsVisible(true));
+      return;
+    }
+
+    setIsVisible(false);
+    closeTimerRef.current = setTimeout(() => {
+      setDisplayedIata(null);
+      closeTimerRef.current = null;
+    }, AIRPORT_POPUP_ANIMATION_MS);
+
+    return () => {
+      if (closeTimerRef.current) {
+        clearTimeout(closeTimerRef.current);
+        closeTimerRef.current = null;
+      }
+    };
+  }, [selectedIata]);
+
+  if (!displayedIata) return null;
+  const airport = airports[displayedIata];
   if (!airport) return null;
 
   const playerAirline = airlines['player'];
   const isHub = airport.isHub;
-  const playerHasHub = playerAirline?.hubIatas.includes(selectedIata);
+  const playerHasHub = playerAirline?.hubIatas.includes(displayedIata);
   const isClosed = airport.closedUntilGameDay !== undefined && airport.closedUntilGameDay >= gameDay;
 
   const currentYear = 1960 + Math.floor(gameDay / 365);
   const dailyPax = [...Object.values(routes), ...Object.values(aiRoutes)]
-    .filter(r => r.isActive && (r.originIata === selectedIata || r.destinationIata === selectedIata))
+    .filter(r => r.isActive && (r.originIata === displayedIata || r.destinationIata === displayedIata))
     .reduce((sum, r) => sum + (r.dailyPassengers ?? 0), 0);
   const capacity = getAirportCapacity(airport.size, currentYear);
   const utilization = dailyPax / capacity;
@@ -41,14 +73,14 @@ export const AirportPopup: React.FC = () => {
   const utilizationBarColor = utilization <= 0.5 ? 'bg-green-500' : utilization <= 1 ? 'bg-yellow-500' : 'bg-red-500';
   const allRoutes = [...Object.values(routes), ...Object.values(aiRoutes)];
   const desiredDestinations = Object.values(airports)
-    .filter(dest => dest.iata !== selectedIata)
+    .filter(dest => dest.iata !== displayedIata)
     .map(dest => {
       const baselinePax = getBaselineDailyPax(airport, dest);
       const distanceKm = haversineKm(airport.lat, airport.lon, dest.lat, dest.lon);
       const existingRoutes = allRoutes.filter(r =>
         r.isActive &&
-        ((r.originIata === selectedIata && r.destinationIata === dest.iata) ||
-         (r.originIata === dest.iata && r.destinationIata === selectedIata)),
+        ((r.originIata === displayedIata && r.destinationIata === dest.iata) ||
+         (r.originIata === dest.iata && r.destinationIata === displayedIata)),
       );
       const bestRoute = existingRoutes.reduce<typeof existingRoutes[number] | null>(
         (best, route) => !best || route.dailyProfit > best.dailyProfit ? route : best,
@@ -64,8 +96,12 @@ export const AirportPopup: React.FC = () => {
     .slice(0, 15);
 
   return (
-    <div className={`absolute inset-x-2 bottom-2 max-h-[calc(100%-1rem)] sm:inset-x-auto sm:left-4 z-[800] glass-panel rounded-2xl sm:rounded-xl w-auto overflow-hidden flex flex-col transition-[width,max-height] duration-200 ease-in-out ${
+    <div className={`absolute inset-x-2 bottom-2 max-h-[calc(100%-1rem)] sm:inset-x-auto sm:left-4 z-[800] glass-panel rounded-2xl sm:rounded-xl w-auto overflow-hidden flex flex-col transition-[width,max-height,transform,opacity] duration-300 ease-in-out will-change-transform ${
       destinationsOpen ? 'sm:top-2 sm:bottom-12 sm:w-[30rem] sm:max-h-none' : 'sm:top-auto sm:bottom-12 sm:w-64 sm:max-h-[48svh]'
+    } ${
+      isVisible
+        ? 'pointer-events-auto translate-y-0 opacity-100 sm:translate-x-0'
+        : 'pointer-events-none translate-y-6 opacity-0 sm:-translate-x-6 sm:translate-y-0'
     }`}>
       <div className="shrink-0 border-b border-white/10 p-3 pb-2">
         {isClosed && (
@@ -154,7 +190,7 @@ export const AirportPopup: React.FC = () => {
                 <button
                   key={item.dest.iata}
                   type="button"
-                  onClick={() => openModalById('newRoute', { originIata: selectedIata, destinationIata: item.dest.iata })}
+                  onClick={() => openModalById('newRoute', { originIata: displayedIata, destinationIata: item.dest.iata })}
                   className="rounded bg-white/[0.04] px-2 py-1.5 text-left transition-colors hover:bg-white/[0.08] focus:outline-none focus:ring-1 focus:ring-sky-400/70"
                   title={`Create route to ${item.dest.city}`}
                 >
@@ -183,21 +219,21 @@ export const AirportPopup: React.FC = () => {
 
       <div className="shrink-0 border-t border-white/10 p-3 pt-2 flex flex-col min-[380px]:flex-row gap-2">
         <button
-          onClick={() => openModalById('newRoute', selectedIata)}
+          onClick={() => openModalById('newRoute', displayedIata)}
           className="apple-button-primary flex-1 py-1"
         >
           + New Route
         </button>
         {!playerHasHub ? (
           <button
-            onClick={() => { designateHub(selectedIata); }}
+            onClick={() => { designateHub(displayedIata); }}
             className="apple-button flex-1 py-1 border-yellow-300/20 bg-yellow-500/20 text-yellow-100"
           >
             Set Hub
           </button>
         ) : (
           <button
-            onClick={() => { removeHub(selectedIata); }}
+            onClick={() => { removeHub(displayedIata); }}
             className="apple-button flex-1 py-1"
           >
             Remove Hub
