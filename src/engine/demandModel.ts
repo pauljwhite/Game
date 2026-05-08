@@ -8,6 +8,10 @@ const SIZE_MULTIPLIER: Record<string, number> = {
   small: 0.3, medium: 1.0, large: 2.5, major: 5.0,
 };
 
+const INTERNATIONAL_REACH: Record<string, number> = {
+  small: 0.14, medium: 0.28, large: 0.68, major: 1.0,
+};
+
 const MAJOR_MARKET_COUNTRIES = new Set([
   'US', 'CN', 'GB', 'DE', 'FR', 'ES', 'IT', 'JP', 'IN', 'BR', 'CA', 'AU', 'RU',
   'MX', 'TR', 'AE', 'SG', 'KR', 'NL', 'TH', 'ID', 'SA', 'ZA',
@@ -38,33 +42,61 @@ function isLargeCountry(country: string): boolean {
   return ['US', 'CN', 'RU', 'CA', 'AU', 'BR', 'IN'].includes(country);
 }
 
+function hash01(value: string): number {
+  let hash = 2166136261;
+  for (let i = 0; i < value.length; i += 1) {
+    hash ^= value.charCodeAt(i);
+    hash = Math.imul(hash, 16777619);
+  }
+  return ((hash >>> 0) % 10_000) / 10_000;
+}
+
+function pairAffinity(origin: Airport, dest: Airport): number {
+  const pair = hash01(`${origin.iata}:${dest.iata}`);
+  const originPreference = hash01(`${origin.iata}:${dest.country}:${dest.region}`);
+  return 0.78 + pair * 0.3 + originPreference * 0.22;
+}
+
 function destinationAffinity(origin: Airport, dest: Airport, distanceKm: number): number {
   let affinity = 1;
+  const isDomestic = origin.country === dest.country;
+  const originReach = INTERNATIONAL_REACH[origin.size] ?? 0.3;
+  const destReach = INTERNATIONAL_REACH[dest.size] ?? 0.3;
 
-  if (origin.country === dest.country) {
-    affinity *= isLargeCountry(origin.country) ? 2.25 : 1.75;
+  if (isDomestic) {
+    affinity *= isLargeCountry(origin.country) ? 2.6 : 1.85;
     if (distanceKm < 350) affinity *= 0.75;
     else if (distanceKm < 1_500) affinity *= 1.25;
+    else if (distanceKm < 4_000 && isLargeCountry(origin.country)) affinity *= 1.35;
+
+    if (origin.size !== 'major' && (dest.size === 'large' || dest.size === 'major')) {
+      affinity *= 1.35;
+    }
   } else {
+    const longHaul = distanceKm > 3_000;
+    affinity *= longHaul
+      ? Math.max(0.08, originReach * (0.35 + destReach))
+      : 0.48 + originReach * 0.55;
+
     if (origin.region === dest.region) affinity *= 1.35;
     if (COUNTRY_AFFINITY[origin.country]?.includes(dest.country) || COUNTRY_AFFINITY[dest.country]?.includes(origin.country)) {
-      affinity *= 1.35;
+      affinity *= 1.15 + originReach * 0.25;
     }
   }
 
   if (distanceKm < 750) affinity *= 1.25;
   else if (distanceKm < 2_500) affinity *= 1.12;
-  else if (distanceKm > 6_000) affinity *= origin.size === 'major' || dest.size === 'major' ? 0.95 : 0.62;
+  else if (distanceKm > 6_000) affinity *= origin.size === 'major' ? 0.9 : 0.42;
 
-  if (MAJOR_MARKET_COUNTRIES.has(origin.country) && MAJOR_MARKET_COUNTRIES.has(dest.country)) {
+  if (!isDomestic && originReach >= 0.65 && MAJOR_MARKET_COUNTRIES.has(origin.country) && MAJOR_MARKET_COUNTRIES.has(dest.country)) {
     affinity *= 1.12;
   }
 
-  if ((origin.size === 'major' || dest.size === 'major') && origin.country !== dest.country) {
+  if (!isDomestic && (origin.size === 'major' || (origin.size === 'large' && dest.size === 'major'))) {
     affinity *= 1.18;
   }
 
-  return Math.max(0.28, Math.min(3.6, affinity));
+  return Math.max(0.08, Math.min(4.2, affinity * pairAffinity(origin, dest)));
 }
 
 export function getBaselineDailyPax(origin: Airport, dest: Airport): number {
