@@ -1,5 +1,6 @@
 import type { Airport, Route, Airline } from '@/types';
 import { PRICE_ELASTICITY, REP_PRICE_FACTOR, AIRPORT_BASE_CAPACITY, AIRPORT_DEMAND_GROWTH_RATE } from '@/utils/constants';
+import { haversineKm } from '@/utils/geo';
 
 export const MAX_REASONABLE_FARE_MULTIPLIER = 3;
 
@@ -7,10 +8,70 @@ const SIZE_MULTIPLIER: Record<string, number> = {
   small: 0.3, medium: 1.0, large: 2.5, major: 5.0,
 };
 
+const MAJOR_MARKET_COUNTRIES = new Set([
+  'US', 'CN', 'GB', 'DE', 'FR', 'ES', 'IT', 'JP', 'IN', 'BR', 'CA', 'AU', 'RU',
+  'MX', 'TR', 'AE', 'SG', 'KR', 'NL', 'TH', 'ID', 'SA', 'ZA',
+]);
+
+const COUNTRY_AFFINITY: Record<string, string[]> = {
+  GB: ['IE', 'US', 'CA', 'AU', 'IN', 'ES', 'FR', 'DE', 'NL', 'AE'],
+  IE: ['GB', 'US', 'CA', 'ES', 'FR'],
+  RU: ['KZ', 'UZ', 'AM', 'GE', 'AZ', 'CN', 'TR', 'AE', 'DE'],
+  US: ['CA', 'MX', 'GB', 'JP', 'DE', 'FR', 'CN', 'BR'],
+  CA: ['US', 'GB', 'FR', 'MX'],
+  AU: ['NZ', 'GB', 'US', 'SG', 'ID', 'CN', 'JP'],
+  NZ: ['AU', 'US', 'GB'],
+  CN: ['HK', 'MO', 'TW', 'JP', 'KR', 'TH', 'SG', 'US', 'RU'],
+  JP: ['KR', 'CN', 'TW', 'US', 'TH'],
+  KR: ['JP', 'CN', 'US', 'VN'],
+  IN: ['GB', 'AE', 'SG', 'TH', 'US', 'CA', 'MY'],
+  AE: ['IN', 'GB', 'SA', 'PK', 'EG', 'US', 'RU'],
+  FR: ['GB', 'DE', 'ES', 'IT', 'BE', 'CH', 'US', 'DZ', 'MA'],
+  DE: ['GB', 'FR', 'IT', 'ES', 'AT', 'CH', 'TR', 'US'],
+  ES: ['GB', 'FR', 'DE', 'IT', 'PT', 'MA'],
+  IT: ['FR', 'DE', 'ES', 'GB', 'CH'],
+  TR: ['DE', 'RU', 'GB', 'NL', 'AE'],
+  BR: ['AR', 'US', 'PT', 'CL', 'UY'],
+};
+
+function isLargeCountry(country: string): boolean {
+  return ['US', 'CN', 'RU', 'CA', 'AU', 'BR', 'IN'].includes(country);
+}
+
+function destinationAffinity(origin: Airport, dest: Airport, distanceKm: number): number {
+  let affinity = 1;
+
+  if (origin.country === dest.country) {
+    affinity *= isLargeCountry(origin.country) ? 2.25 : 1.75;
+    if (distanceKm < 350) affinity *= 0.75;
+    else if (distanceKm < 1_500) affinity *= 1.25;
+  } else {
+    if (origin.region === dest.region) affinity *= 1.35;
+    if (COUNTRY_AFFINITY[origin.country]?.includes(dest.country) || COUNTRY_AFFINITY[dest.country]?.includes(origin.country)) {
+      affinity *= 1.35;
+    }
+  }
+
+  if (distanceKm < 750) affinity *= 1.25;
+  else if (distanceKm < 2_500) affinity *= 1.12;
+  else if (distanceKm > 6_000) affinity *= origin.size === 'major' || dest.size === 'major' ? 0.95 : 0.62;
+
+  if (MAJOR_MARKET_COUNTRIES.has(origin.country) && MAJOR_MARKET_COUNTRIES.has(dest.country)) {
+    affinity *= 1.12;
+  }
+
+  if ((origin.size === 'major' || dest.size === 'major') && origin.country !== dest.country) {
+    affinity *= 1.18;
+  }
+
+  return Math.max(0.28, Math.min(3.6, affinity));
+}
+
 export function getBaselineDailyPax(origin: Airport, dest: Airport): number {
-  const distFactor = 1 / (1 + Math.sqrt((origin.lat - dest.lat) ** 2 + (origin.lon - dest.lon) ** 2) / 40);
+  const distanceKm = haversineKm(origin.lat, origin.lon, dest.lat, dest.lon);
+  const distFactor = 1 / (1 + distanceKm / 4_500);
   const hubBonus = (origin.isHub ? 1.1 : 1) * (dest.isHub ? 1.1 : 1);
-  return 50 * SIZE_MULTIPLIER[origin.size] * SIZE_MULTIPLIER[dest.size] * distFactor * hubBonus;
+  return 50 * SIZE_MULTIPLIER[origin.size] * SIZE_MULTIPLIER[dest.size] * distFactor * destinationAffinity(origin, dest, distanceKm) * hubBonus;
 }
 
 export function getCompetitivenessScore(price: number, avgCompetitorPrice: number): number {
