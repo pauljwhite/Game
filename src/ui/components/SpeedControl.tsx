@@ -34,7 +34,14 @@ export const SpeedControl: React.FC = () => {
         }`}
         title={isPaused ? 'Resume' : 'Pause'}
       >
-        {isPaused ? '▶' : '⏸'}
+        {isPaused ? (
+          <span aria-hidden="true" className="block text-[13px] leading-none">▶</span>
+        ) : (
+          <span aria-hidden="true" className="flex h-4 items-center justify-center gap-0.5">
+            <span className="h-3 w-1 rounded-sm bg-current" />
+            <span className="h-3 w-1 rounded-sm bg-current" />
+          </span>
+        )}
       </button>
 
       {/* Mobile: single cycle button showing current speed */}
