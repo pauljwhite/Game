@@ -78,10 +78,10 @@ export const SharePurchaseModal: React.FC = () => {
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center z-[9999]">
       <div className="glass-panel rounded-t-2xl sm:rounded-xl px-4 sm:px-6 py-4 w-full max-w-md relative max-h-[92svh] overflow-y-auto overscroll-contain">
-        <button onClick={closeModal} className="absolute top-4 right-4 text-gray-400 hover:text-white text-xl leading-none">×</button>
+        <button onClick={closeModal} aria-label="Close" className="absolute top-3 right-3 w-10 h-10 sm:w-7 sm:h-7 flex items-center justify-center text-gray-400 hover:text-white hover:bg-gray-700 rounded transition-colors text-lg leading-none">×</button>
 
         {/* Header */}
-        <div className="flex items-center gap-3 mb-4 pr-8">
+        <div className="flex items-center gap-3 mb-4 pr-12">
           <AirlineLogo logo={target.logoEmoji} className="text-3xl" imageClassName="h-12 w-12 rounded-full object-cover border border-white/10 bg-white/10" />
           <div>
             <h2 className="text-xl font-bold text-white">{target.name}</h2>

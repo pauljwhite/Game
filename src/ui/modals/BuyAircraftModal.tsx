@@ -79,10 +79,10 @@ export const BuyAircraftModal: React.FC = () => {
           </div>
           <button
             onClick={closeModal}
-            className="text-gray-400 hover:text-white text-2xl leading-none transition-colors"
+            className="w-10 h-10 sm:w-7 sm:h-7 flex items-center justify-center text-gray-400 hover:text-white hover:bg-gray-700 rounded transition-colors text-lg leading-none"
             aria-label="Close"
           >
-            x
+            ×
           </button>
         </div>
 

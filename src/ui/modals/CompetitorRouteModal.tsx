@@ -33,14 +33,15 @@ export const CompetitorRouteModal: React.FC = () => {
       <div className="glass-panel rounded-t-2xl sm:rounded-xl px-4 sm:px-6 py-4 w-full max-w-lg relative max-h-[92svh] overflow-y-auto overscroll-contain">
         <button
           onClick={closeModal}
-          className="absolute top-4 right-4 text-gray-400 hover:text-white transition-colors text-xl leading-none"
+          aria-label="Close"
+          className="absolute top-3 right-3 w-10 h-10 sm:w-7 sm:h-7 flex items-center justify-center text-gray-400 hover:text-white hover:bg-gray-700 rounded transition-colors text-lg leading-none"
         >
           ×
         </button>
 
         {/* Airline header */}
         {airline && (
-          <div className="flex items-center gap-2 mb-3">
+          <div className="flex items-center gap-2 mb-3 pr-12">
             <div className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: airline.color }} />
             <span className="text-gray-300 text-sm font-medium">{airline.name}</span>
             {airline.personality && (

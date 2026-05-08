@@ -217,14 +217,15 @@ export const RouteDetailModal: React.FC = () => {
         <div className="shrink-0 px-4 sm:px-6 pt-4 pb-3 border-b border-white/10 bg-slate-950/45 backdrop-blur-xl">
         <button
           onClick={handleClose}
-          className="absolute top-4 right-4 text-gray-400 hover:text-white transition-colors text-xl leading-none"
+          aria-label="Close"
+          className="absolute top-3 right-3 w-10 h-10 sm:w-7 sm:h-7 flex items-center justify-center text-gray-400 hover:text-white hover:bg-gray-700 rounded transition-colors text-lg leading-none"
         >
           ×
         </button>
 
-        <h2 className="text-xl font-bold text-white mb-1 pr-8">Route Detail</h2>
+        <h2 className="text-xl font-bold text-white mb-1 pr-12">Route Detail</h2>
 
-        <div className="flex items-center gap-2 pr-8">
+        <div className="flex items-center gap-2 pr-12">
           <span className="text-blue-400 font-mono font-bold text-lg">{route.originIata}</span>
           <span className="text-gray-400">→</span>
           <span className="text-blue-400 font-mono font-bold text-lg">{route.destinationIata}</span>

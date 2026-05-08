@@ -93,10 +93,11 @@ export const RebrandModal: React.FC = () => {
       <div className="glass-panel rounded-t-2xl sm:rounded-xl px-4 sm:px-6 py-4 shadow-2xl w-full max-w-md relative max-h-[92svh] overflow-y-auto overscroll-contain">
         <button
           onClick={closeModal}
-          className="absolute top-4 right-4 text-gray-400 hover:text-white text-xl leading-none"
+          aria-label="Close"
+          className="absolute top-3 right-3 w-10 h-10 sm:w-7 sm:h-7 flex items-center justify-center text-gray-400 hover:text-white hover:bg-gray-700 rounded transition-colors text-lg leading-none"
         >×</button>
 
-        <h2 className="text-xl font-bold text-white mb-1">Rebrand Airline</h2>
+        <h2 className="text-xl font-bold text-white mb-1 pr-12">Rebrand Airline</h2>
         <p className="text-gray-500 text-xs mb-4">
           Company value: <span className="text-gray-300">{formatCurrency(companyValue)}</span>
         </p>

@@ -33,10 +33,10 @@ export const SettingsModal: React.FC = () => {
           </div>
           <button
             onClick={closeModal}
-            className="w-10 h-10 sm:w-7 sm:h-7 flex items-center justify-center text-gray-400 hover:text-white hover:bg-white/10 rounded transition-colors text-lg leading-none"
+            className="w-10 h-10 sm:w-7 sm:h-7 flex items-center justify-center text-gray-400 hover:text-white hover:bg-gray-700 rounded transition-colors text-lg leading-none"
             aria-label="Close"
           >
-            x
+            ×
           </button>
         </div>
 
