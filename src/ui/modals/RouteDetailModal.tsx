@@ -9,6 +9,10 @@ import { getRouteOptimisationChanges } from '@/engine/routeOptimizer';
 import { MAX_REASONABLE_FARE_MULTIPLIER, getPlayerMarketShare, getBaselineDailyPax, conditionDemandMod } from '@/engine/demandModel';
 import { HUB_DEMAND_BONUS, REPUTATION_DEMAND_FACTOR } from '@/utils/constants';
 import { canAirportHandleAircraft, formatRunwayLength } from '@/utils/runway';
+import { computeAircraftValue } from '@/engine/valuation';
+import { manufacturerFlag } from '@/utils/manufacturerFlags';
+
+const ALL_MANUFACTURERS = 'All';
 
 function LoadFactorPreviewRow({ label, current, predicted }: { label: string; current: number; predicted: number }) {
   const pct  = Math.round(Math.min(1, Math.max(0, predicted)) * 100);
@@ -47,6 +51,8 @@ export const RouteDetailModal: React.FC = () => {
   const updateRoute          = useGameStore(s => s.updateRoute);
   const deleteRoute          = useGameStore(s => s.deleteRoute);
   const assignAircraftToRoute = useGameStore(s => s.assignAircraftToRoute);
+  const buyAircraft          = useGameStore(s => s.buyAircraft);
+  const sellAircraft         = useGameStore(s => s.sellAircraft);
   const airlines    = useGameStore(s => s.airlines);
   const aiAirlines  = useGameStore(s => s.aiAirlines);
   const aiRoutes    = useGameStore(s => s.aiRoutes);
@@ -61,6 +67,10 @@ export const RouteDetailModal: React.FC = () => {
   const [priceBusiness,  setPriceBusiness]  = useState(route?.priceBusiness  ?? 0);
   const [flightsPerWeek, setFlightsPerWeek] = useState(route?.flightsPerWeek ?? 7);
   const [confirmDelete,  setConfirmDelete]  = useState(false);
+  const [showBuyPanel, setShowBuyPanel] = useState(false);
+  const [buyMfr, setBuyMfr] = useState(ALL_MANUFACTURERS);
+  const [aircraftActionError, setAircraftActionError] = useState<string | null>(null);
+  const [confirmSellAircraft, setConfirmSellAircraft] = useState(false);
 
   useEffect(() => {
     if (route) {
@@ -87,6 +97,9 @@ export const RouteDetailModal: React.FC = () => {
   const maxEco = referencePrice * MAX_REASONABLE_FARE_MULTIPLIER;
   const maxBiz = referencePrice * 4 * MAX_REASONABLE_FARE_MULTIPLIER;
   const hasBusinessSeats = (assignedType?.seatsBusiness ?? 0) > 0;
+  const playerAirline = airlines['player'];
+  const playerCash = playerAirline?.cashUSD ?? 0;
+  const currentYear = 1960 + Math.floor(gameDay / 365);
 
   useEffect(() => {
     setPriceEconomy(price => Math.min(maxEco, Math.max(0, price)));
@@ -161,6 +174,17 @@ export const RouteDetailModal: React.FC = () => {
       canAirportHandleAircraft(destination, type);
   });
 
+  const buyMfrs = useMemo(() => {
+    const set = new Set(AIRCRAFT_TYPES.map(t => t.manufacturer));
+    return [ALL_MANUFACTURERS, ...Array.from(set).sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }))];
+  }, []);
+
+  const shopVisible = useMemo(() => (
+    AIRCRAFT_TYPES
+      .filter(t => t.yearIntroduced <= currentYear)
+      .filter(t => buyMfr === ALL_MANUFACTURERS || t.manufacturer === buyMfr)
+  ), [buyMfr, currentYear]);
+
   const conditionColor =
     (assignedAircraft?.condition ?? 100) >= 70 ? 'bg-green-500'
     : (assignedAircraft?.condition ?? 100) >= 40 ? 'bg-yellow-500'
@@ -191,12 +215,52 @@ export const RouteDetailModal: React.FC = () => {
 
   function handleAssign(aircraftId: string) {
     if (!routeId) return;
+    setAircraftActionError(null);
     assignAircraftToRoute(aircraftId, routeId);
   }
 
   function handleUnassign() {
     if (!route?.aircraftId || !routeId) return;
+    setAircraftActionError(null);
     assignAircraftToRoute(route.aircraftId, null);
+  }
+
+  function handleBuyAndAssign(type: typeof AIRCRAFT_TYPES[number]) {
+    if (!routeId || !route || !origin || !destination) return;
+    setAircraftActionError(null);
+    if (playerCash < type.purchasePrice) {
+      setAircraftActionError('Insufficient funds to buy this aircraft.');
+      return;
+    }
+    if (type.rangeKm < route.distanceKm) {
+      setAircraftActionError('That aircraft does not have enough range for this route.');
+      return;
+    }
+    if (!canAirportHandleAircraft(origin, type) || !canAirportHandleAircraft(destination, type)) {
+      setAircraftActionError('That aircraft needs more runway than one of these airports has.');
+      return;
+    }
+
+    const newId = buyAircraft(type.id, type, gameDay);
+    if (!newId) {
+      setAircraftActionError('Aircraft purchase failed.');
+      return;
+    }
+
+    assignAircraftToRoute(newId, routeId);
+    setShowBuyPanel(false);
+    setConfirmSellAircraft(false);
+  }
+
+  function handleSellAssignedAircraft() {
+    if (!assignedAircraft) return;
+    if (!confirmSellAircraft) {
+      setConfirmSellAircraft(true);
+      return;
+    }
+    setAircraftActionError(null);
+    sellAircraft(assignedAircraft.id);
+    setConfirmSellAircraft(false);
   }
 
   function handleDelete() {
@@ -304,18 +368,50 @@ export const RouteDetailModal: React.FC = () => {
 
         {/* Aircraft assignment */}
         <div className="glass-card p-3 mb-4">
-          <div className="text-gray-400 text-xs mb-2">Assigned Aircraft</div>
+          <div className="flex items-center justify-between gap-3 mb-2">
+            <div className="text-gray-400 text-xs">Assigned Aircraft</div>
+            <button
+              type="button"
+              onClick={() => { setShowBuyPanel(v => !v); setAircraftActionError(null); }}
+              className="text-xs text-blue-400 hover:text-blue-300 transition-colors"
+            >
+              {showBuyPanel ? 'Hide shop' : '+ Buy new'}
+            </button>
+          </div>
+          {aircraftActionError && (
+            <div className="mb-2 rounded border border-red-700 bg-red-900/30 px-2 py-1.5 text-xs text-red-300">
+              {aircraftActionError}
+            </div>
+          )}
           {assignedAircraft ? (
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-white text-sm font-medium">{assignedAircraft.name}</span>
-                <button
-                  onClick={handleUnassign}
-                  className="text-xs text-gray-500 hover:text-red-400 transition-colors"
-                >
-                  Unassign
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={handleUnassign}
+                    className="text-xs text-gray-500 hover:text-red-400 transition-colors"
+                  >
+                    Unassign
+                  </button>
+                  <button
+                    onClick={handleSellAssignedAircraft}
+                    onMouseLeave={() => setConfirmSellAircraft(false)}
+                    className={`text-xs transition-colors ${
+                      confirmSellAircraft ? 'text-red-300 hover:text-red-200' : 'text-gray-500 hover:text-red-400'
+                    }`}
+                  >
+                    {confirmSellAircraft ? 'Confirm remove' : 'Remove plane'}
+                  </button>
+                </div>
               </div>
+              {assignedType && (
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] text-gray-500">
+                  <span>{assignedType.model}</span>
+                  <span>{assignedType.seatsEconomy}Y{assignedType.seatsBusiness > 0 ? `/${assignedType.seatsBusiness}J` : ''}</span>
+                  <span>Value {formatCurrency(computeAircraftValue(assignedAircraft, assignedType, gameDay))}</span>
+                </div>
+              )}
               <div className="flex items-center gap-2">
                 <div className="flex-1 h-1.5 bg-gray-700 rounded overflow-hidden">
                   <div
@@ -361,6 +457,71 @@ export const RouteDetailModal: React.FC = () => {
                   })}
                 </select>
               )}
+            </div>
+          )}
+
+          {showBuyPanel && (
+            <div className="mt-3 overflow-hidden rounded-lg border border-white/10 bg-slate-950/25">
+              <div className="flex items-center justify-between gap-2 border-b border-white/10 bg-white/[0.04] px-3 py-2 text-xs text-gray-400">
+                <span>Cash: <span className="font-semibold text-white">{formatCurrency(playerCash)}</span></span>
+                <span>{Math.round(route.distanceKm).toLocaleString()} km route</span>
+              </div>
+              <div className="flex flex-col sm:flex-row h-[22rem] sm:h-56">
+                <div className="w-full sm:w-36 shrink-0 border-b sm:border-b-0 sm:border-r border-white/10 overflow-x-auto sm:overflow-y-auto py-1 bg-white/[0.025] flex sm:block scrollbar-none">
+                  {buyMfrs.map(mfr => (
+                    <button
+                      key={mfr}
+                      type="button"
+                      onClick={() => setBuyMfr(mfr)}
+                      className={`shrink-0 sm:w-full text-left px-3 sm:px-2 py-2 sm:py-1.5 text-xs transition-colors ${
+                        buyMfr === mfr
+                          ? 'bg-white/[0.12] text-white font-semibold'
+                          : 'text-gray-400 hover:text-gray-200 hover:bg-white/[0.07]'
+                      }`}
+                    >
+                      {mfr === ALL_MANUFACTURERS ? 'All' : (
+                        <><span className="mr-1">{manufacturerFlag(mfr)}</span>{mfr}</>
+                      )}
+                    </button>
+                  ))}
+                </div>
+                <div className="flex-1 overflow-y-auto divide-y divide-white/10">
+                  {shopVisible.map(type => {
+                    const fitsRange = type.rangeKm >= route.distanceKm;
+                    const fitsRunway = canAirportHandleAircraft(origin, type) && canAirportHandleAircraft(destination, type);
+                    const fits = fitsRange && fitsRunway;
+                    const canAfford = playerCash >= type.purchasePrice;
+                    return (
+                      <button
+                        key={type.id}
+                        type="button"
+                        disabled={!fits || !canAfford}
+                        onClick={() => handleBuyAndAssign(type)}
+                        className={`w-full flex items-center justify-between gap-3 px-3 py-2 text-left text-sm transition-colors ${
+                          !fits || !canAfford
+                            ? 'cursor-not-allowed opacity-45'
+                            : 'hover:bg-white/[0.07]'
+                        }`}
+                      >
+                        <div className="min-w-0">
+                          <div className="flex flex-wrap items-center gap-1.5">
+                            <span className="font-medium text-white">{type.model}</span>
+                            {!fitsRange && <span className="rounded bg-red-900/40 px-1 text-[10px] text-red-400">out of range</span>}
+                            {fitsRange && !fitsRunway && <span className="rounded bg-red-900/40 px-1 text-[10px] text-red-400">runway too short</span>}
+                            {fits && <span className="rounded bg-green-900/40 px-1 text-[10px] text-green-400">fits</span>}
+                          </div>
+                          <div className="text-xs text-gray-500">
+                            {type.seatsEconomy}Y{type.seatsBusiness > 0 ? `/${type.seatsBusiness}J` : ''} · {type.rangeKm.toLocaleString()} km · {formatRunwayLength(type.minRunwayM)}
+                          </div>
+                        </div>
+                        <div className={`shrink-0 text-right text-xs font-semibold ${canAfford ? 'text-green-400' : 'text-red-400'}`}>
+                          {formatCurrency(type.purchasePrice)}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
             </div>
           )}
         </div>
