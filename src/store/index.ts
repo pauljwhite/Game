@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
-import { persist, createJSONStorage, type StateStorage } from 'zustand/middleware';
+import { persist, type PersistStorage, type StorageValue } from 'zustand/middleware';
 import { useEffect, useState } from 'react';
 import { createGameSlice, type GameSlice } from './gameSlice';
 import { createPlayerSlice, type PlayerSlice } from './playerSlice';
@@ -199,10 +199,10 @@ function migratePersistedState(persistedState: unknown): unknown {
   return sanitizePersistedState(state);
 }
 
-// Debounced localStorage: serializing the full game state on every set() call
-// causes ~30-80ms hangs at high speed. Coalesce writes to once per 1.5s, with a
-// flush on visibility change / pagehide so saves are never lost.
-let pendingWrite: { name: string; value: string } | null = null;
+// Debounced localStorage. Keep JSON.stringify inside the debounced flush; using
+// createJSONStorage would stringify the full save on every store commit even if
+// the actual localStorage write is delayed.
+let pendingWrite: { name: string; value: StorageValue<unknown> } | null = null;
 let writeTimer: ReturnType<typeof setTimeout> | null = null;
 const WRITE_DEBOUNCE_MS = 1500;
 
@@ -212,14 +212,23 @@ function flushPendingWrite(): void {
     writeTimer = null;
   }
   if (pendingWrite) {
-    try { localStorage.setItem(pendingWrite.name, pendingWrite.value); }
+    try { localStorage.setItem(pendingWrite.name, JSON.stringify(pendingWrite.value)); }
     catch (e) { console.warn('localStorage write failed', e); }
     pendingWrite = null;
   }
 }
 
-const debouncedLocalStorage: StateStorage = {
-  getItem: (name) => localStorage.getItem(name),
+const debouncedPersistStorage: PersistStorage<unknown, void> = {
+  getItem: (name) => {
+    const stored = localStorage.getItem(name);
+    if (!stored) return null;
+    try {
+      return JSON.parse(stored) as StorageValue<unknown>;
+    } catch (e) {
+      console.warn('localStorage parse failed', e);
+      return null;
+    }
+  },
   setItem: (name, value) => {
     pendingWrite = { name, value };
     if (writeTimer) return;
@@ -255,7 +264,7 @@ export const useGameStore = create<GameStore>()(
       name: 'airline-empire-save',
       version: SAVE_VERSION,
       migrate: migratePersistedState,
-      storage: createJSONStorage(() => debouncedLocalStorage),
+      storage: debouncedPersistStorage,
       partialize: (state) => {
         // Exclude transient UI state from persistence
         const { selectedAirportIata: _s, selectedRouteId: _r, openPanel: _p, openModal: _m, modalPayload: _mp, airports: _a, newspaperQueue: _nq, ...rest } = state;
