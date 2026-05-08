@@ -63,7 +63,7 @@ export const AirportPopup: React.FC = () => {
     .slice(0, 6);
 
   return (
-    <div className="absolute inset-x-2 bottom-3 sm:inset-x-auto sm:bottom-12 sm:left-4 z-[800] glass-panel rounded-xl w-auto sm:w-64 max-h-[48svh] overflow-hidden flex flex-col">
+    <div className="absolute inset-x-2 top-2 bottom-2 sm:inset-x-auto sm:top-auto sm:bottom-12 sm:left-4 z-[800] glass-panel rounded-2xl sm:rounded-xl w-auto sm:w-64 sm:max-h-[48svh] overflow-hidden flex flex-col">
       <div className="shrink-0 border-b border-white/10 p-3 pb-2">
         {isClosed && (
           <div className="mb-2 px-2 py-1.5 bg-red-900/50 border border-red-500/50 rounded-lg flex items-center gap-1.5">
