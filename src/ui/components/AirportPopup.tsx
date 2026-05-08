@@ -5,6 +5,16 @@ import { airportIcao } from '@/utils/airportSearch';
 import { formatRunwayLength } from '@/utils/runway';
 import { getAirportCapacity, airportSaturationMod, getBaselineDailyPax } from '@/engine/demandModel';
 import { haversineKm } from '@/utils/geo';
+import {
+  MAX_FIRST_CLASS_LOUNGE_LEVEL,
+  MAX_HUB_TERMINAL_LEVEL,
+  getFirstClassLoungeLevel,
+  getFirstClassLoungeUpgradeCost,
+  getHubCapacityMultiplier,
+  getHubDemandMultiplier,
+  getHubTerminalLevel,
+  getHubTerminalUpgradeCost,
+} from '@/engine/hubUpgrades';
 
 const AIRPORT_POPUP_ANIMATION_MS = 240;
 
@@ -17,6 +27,8 @@ export const AirportPopup: React.FC = () => {
   const openModalById = useGameStore(s => s.openModalById);
   const designateHub = useGameStore(s => s.designateHub);
   const removeHub = useGameStore(s => s.removeHub);
+  const upgradeHubTerminal = useGameStore(s => s.upgradeHubTerminal);
+  const upgradeHubLounge = useGameStore(s => s.upgradeHubLounge);
   const gameDay = useGameStore(s => s.gameDay);
   const routes = useGameStore(s => s.routes);
   const aiRoutes = useGameStore(s => s.aiRoutes);
@@ -64,7 +76,7 @@ export const AirportPopup: React.FC = () => {
   const dailyPax = [...Object.values(routes), ...Object.values(aiRoutes)]
     .filter(r => r.isActive && (r.originIata === displayedIata || r.destinationIata === displayedIata))
     .reduce((sum, r) => sum + (r.dailyPassengers ?? 0), 0);
-  const capacity = getAirportCapacity(airport.size, currentYear);
+  const capacity = getAirportCapacity(airport, currentYear);
   const utilization = dailyPax / capacity;
   const satMod = airportSaturationMod(utilization);
   const demandPct = Math.round(satMod * 100);
@@ -94,6 +106,12 @@ export const AirportPopup: React.FC = () => {
     .filter(item => item.baselinePax >= 1)
     .sort((a, b) => b.score - a.score)
     .slice(0, 15);
+  const terminalLevel = getHubTerminalLevel(airport);
+  const loungeLevel = getFirstClassLoungeLevel(airport);
+  const terminalUpgradeCost = getHubTerminalUpgradeCost(airport);
+  const loungeUpgradeCost = getFirstClassLoungeUpgradeCost(airport);
+  const canAffordTerminal = terminalUpgradeCost !== null && (playerAirline?.cashUSD ?? 0) >= terminalUpgradeCost;
+  const canAffordLounge = loungeUpgradeCost !== null && (playerAirline?.cashUSD ?? 0) >= loungeUpgradeCost;
 
   return (
     <div className={`absolute inset-x-2 bottom-2 max-h-[calc(100%-1rem)] sm:inset-x-auto sm:left-4 z-[800] glass-panel rounded-2xl sm:rounded-xl w-auto overflow-hidden flex flex-col transition-[width,max-height,transform,opacity] duration-300 ease-in-out will-change-transform ${
@@ -168,6 +186,42 @@ export const AirportPopup: React.FC = () => {
             <div className={`h-full rounded-full transition-all ${utilizationBarColor}`} style={{ width: `${Math.min(100, utilizationPct)}%` }} />
           </div>
         </div>
+
+        {playerHasHub && (
+          <div className="mt-3 rounded-lg border border-amber-400/20 bg-amber-400/[0.06] p-2">
+            <div className="mb-2 text-xs font-semibold text-amber-200">Hub upgrades</div>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between gap-2 text-xs">
+                <div>
+                  <div className="text-gray-200">Terminal {terminalLevel}/{MAX_HUB_TERMINAL_LEVEL}</div>
+                  <div className="text-[10px] text-gray-500">Capacity x{getHubCapacityMultiplier(airport).toFixed(2)}</div>
+                </div>
+                <button
+                  type="button"
+                  disabled={terminalUpgradeCost === null || !canAffordTerminal}
+                  onClick={() => upgradeHubTerminal(displayedIata)}
+                  className="apple-button disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  {terminalUpgradeCost === null ? 'Max' : formatCurrency(terminalUpgradeCost)}
+                </button>
+              </div>
+              <div className="flex items-center justify-between gap-2 text-xs">
+                <div>
+                  <div className="text-gray-200">First class lounges {loungeLevel}/{MAX_FIRST_CLASS_LOUNGE_LEVEL}</div>
+                  <div className="text-[10px] text-gray-500">Demand x{getHubDemandMultiplier(airport).toFixed(2)}</div>
+                </div>
+                <button
+                  type="button"
+                  disabled={loungeUpgradeCost === null || !canAffordLounge}
+                  onClick={() => upgradeHubLounge(displayedIata)}
+                  className="apple-button disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  {loungeUpgradeCost === null ? 'Max' : formatCurrency(loungeUpgradeCost)}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         <div className="mt-3 rounded-lg border border-white/10 bg-white/[0.03]">
           <button

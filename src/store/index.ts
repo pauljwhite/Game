@@ -75,6 +75,20 @@ function sanitizeLoans(loans: unknown): NonNullable<GameStore['airlines'][string
   });
 }
 
+function sanitizeAirportUpgrades(upgrades: unknown): GameStore['airportUpgrades'] {
+  if (!upgrades || typeof upgrades !== 'object') return {};
+  return Object.fromEntries(
+    Object.entries(upgrades as Record<string, unknown>).flatMap(([iata, value]) => {
+      if (typeof iata !== 'string' || !value || typeof value !== 'object') return [];
+      const raw = value as Record<string, unknown>;
+      const terminalLevel = Math.min(3, Math.max(0, Math.floor(typeof raw.terminalLevel === 'number' ? raw.terminalLevel : 0)));
+      const loungeLevel = Math.min(3, Math.max(0, Math.floor(typeof raw.loungeLevel === 'number' ? raw.loungeLevel : 0)));
+      if (terminalLevel <= 0 && loungeLevel <= 0) return [];
+      return [[iata, { terminalLevel, loungeLevel }]];
+    }),
+  );
+}
+
 function sanitizePersistedState(state: Partial<GameStore>): Partial<GameStore> {
   const { airports: _airports, ...stateWithoutStaticAirports } = state;
   const aiRoutes = state.aiRoutes ?? {};
@@ -166,6 +180,7 @@ function sanitizePersistedState(state: Partial<GameStore>): Partial<GameStore> {
   const currency = VALID_CURRENCIES.has(persistedSettings?.currency as GameStore['settings']['currency'])
     ? persistedSettings!.currency
     : DEFAULT_SETTINGS.currency;
+  const airportUpgrades = sanitizeAirportUpgrades((state as Partial<GameStore>).airportUpgrades);
 
   const sanitized: Partial<GameStore> = {
     ...stateWithoutStaticAirports,
@@ -173,6 +188,7 @@ function sanitizePersistedState(state: Partial<GameStore>): Partial<GameStore> {
     aiAirlines,
     aircraft: normalizedAircraft,
     aiAircraft: normalizedAIAircraft,
+    airportUpgrades,
     airportDailyPax: (state.airportDailyPax && typeof state.airportDailyPax === 'object') ? state.airportDailyPax : {},
     speed: VALID_GAME_SPEEDS.has(state.speed as number) ? state.speed : DEFAULT_GAME_SPEED,
     themeMode: state.themeMode === 'light' ? 'light' : 'dark',
@@ -271,6 +287,26 @@ export const useGameStore = create<GameStore>()(
       version: SAVE_VERSION,
       migrate: migratePersistedState,
       storage: debouncedPersistStorage,
+      merge: (persistedState, currentState) => {
+        const merged = { ...currentState, ...(persistedState as Partial<GameStore>) } as GameStore;
+        const airports = { ...currentState.airports };
+        const playerHubs = new Set(merged.airlines.player?.hubIatas ?? []);
+        Object.values(merged.aiAirlines ?? {}).forEach(airline => {
+          airline.hubIatas.forEach(iata => playerHubs.add(iata));
+        });
+
+        Object.keys(airports).forEach(iata => {
+          const upgrade = merged.airportUpgrades?.[iata];
+          airports[iata] = {
+            ...airports[iata],
+            isHub: playerHubs.has(iata),
+            hubTerminalLevel: upgrade?.terminalLevel,
+            firstClassLoungeLevel: upgrade?.loungeLevel,
+          };
+        });
+        merged.airports = airports;
+        return merged;
+      },
       partialize: (state) => {
         // Exclude transient UI state from persistence
         const { selectedAirportIata: _s, selectedRouteId: _r, openPanel: _p, openModal: _m, modalPayload: _mp, airports: _a, newspaperQueue: _nq, ...rest } = state;

@@ -1,6 +1,7 @@
 import type { Airport, Route, Airline } from '@/types';
 import { PRICE_ELASTICITY, REP_PRICE_FACTOR, AIRPORT_BASE_CAPACITY, AIRPORT_DEMAND_GROWTH_RATE } from '@/utils/constants';
 import { haversineKm } from '@/utils/geo';
+import { getHubCapacityMultiplier, getHubDemandMultiplier } from './hubUpgrades';
 
 export const MAX_REASONABLE_FARE_MULTIPLIER = 3;
 
@@ -103,7 +104,8 @@ export function getBaselineDailyPax(origin: Airport, dest: Airport): number {
   const distanceKm = haversineKm(origin.lat, origin.lon, dest.lat, dest.lon);
   const distFactor = 1 / (1 + distanceKm / 4_500);
   const hubBonus = (origin.isHub ? 1.1 : 1) * (dest.isHub ? 1.1 : 1);
-  return 50 * SIZE_MULTIPLIER[origin.size] * SIZE_MULTIPLIER[dest.size] * distFactor * destinationAffinity(origin, dest, distanceKm) * hubBonus;
+  const loungeBonus = getHubDemandMultiplier(origin) * getHubDemandMultiplier(dest);
+  return 50 * SIZE_MULTIPLIER[origin.size] * SIZE_MULTIPLIER[dest.size] * distFactor * destinationAffinity(origin, dest, distanceKm) * hubBonus * loungeBonus;
 }
 
 export function getCompetitivenessScore(price: number, avgCompetitorPrice: number): number {
@@ -181,9 +183,11 @@ export function getPlayerMarketShare(
 }
 
 /** Total daily passengers the airport can absorb across all airlines, growing 1.5%/year from 1960. */
-export function getAirportCapacity(size: string, gameYear: number): number {
+export function getAirportCapacity(airportOrSize: Airport | string, gameYear: number): number {
+  const size = typeof airportOrSize === 'string' ? airportOrSize : airportOrSize.size;
   const base = AIRPORT_BASE_CAPACITY[size] ?? 1_200;
-  return base * Math.pow(1 + AIRPORT_DEMAND_GROWTH_RATE, gameYear - 1960);
+  const terminalMultiplier = typeof airportOrSize === 'string' ? 1 : getHubCapacityMultiplier(airportOrSize);
+  return base * terminalMultiplier * Math.pow(1 + AIRPORT_DEMAND_GROWTH_RATE, gameYear - 1960);
 }
 
 /**

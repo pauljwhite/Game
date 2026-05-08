@@ -70,8 +70,8 @@ function getMarketContext(input: RouteOptimisationInput): MarketContext {
   );
 
   const gameYear = 1960 + Math.floor((input.gameDay ?? 0) / 365);
-  const originUtil = (input.airportDailyPax?.[origin.iata] ?? 0) / getAirportCapacity(origin.size, gameYear);
-  const destUtil = (input.airportDailyPax?.[destination.iata] ?? 0) / getAirportCapacity(destination.size, gameYear);
+  const originUtil = (input.airportDailyPax?.[origin.iata] ?? 0) / getAirportCapacity(origin, gameYear);
+  const destUtil = (input.airportDailyPax?.[destination.iata] ?? 0) / getAirportCapacity(destination, gameYear);
   const saturationMod = airportSaturationMod(originUtil) * airportSaturationMod(destUtil);
   const baselinePax = getBaselineDailyPax(origin, destination) * (origin.isHub || destination.isHub ? HUB_DEMAND_BONUS : 1) * saturationMod;
   const repMod = playerAirline ? 1 + (playerAirline.reputationScore - 50) * REPUTATION_DEMAND_FACTOR : 1;

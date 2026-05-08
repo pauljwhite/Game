@@ -7,6 +7,13 @@ import { AIRCRAFT_TYPES } from '@/data/aircraftTypes';
 import type { MaintenanceTier } from '@/types/aircraft';
 import { rawCompanyValue } from '@/engine/valuation';
 import type { GameStore } from './index';
+import {
+  type HubUpgradeState,
+  getFirstClassLoungeLevel,
+  getFirstClassLoungeUpgradeCost,
+  getHubTerminalLevel,
+  getHubTerminalUpgradeCost,
+} from '@/engine/hubUpgrades';
 
 export interface WorldSlice {
   airports: Record<string, Airport>;
@@ -16,6 +23,7 @@ export interface WorldSlice {
   globalFuelPrice: number;
   newsTicker: NewsTickerItem[];
   totalMarketPAX: number;
+  airportUpgrades: Record<string, HubUpgradeState>;
 
   initWorld: () => void;
   setAIAirlines: (airlines: Record<string, Airline>, aircraft: Record<string, Aircraft>, routes: Record<string, Route>) => void;
@@ -27,6 +35,8 @@ export interface WorldSlice {
   setGlobalFuelPrice: (price: number) => void;
   updateTotalMarketPAX: (pax: number) => void;
   setAirportHub: (iata: string, isHub: boolean) => void;
+  upgradeHubTerminal: (iata: string) => boolean;
+  upgradeHubLounge: (iata: string) => boolean;
   setAirportClosure: (iata: string, untilGameDay: number, reason: string) => void;
   airportDailyPax: Record<string, number>;
   setAirportDailyPax: (pax: Record<string, number>) => void;
@@ -65,6 +75,7 @@ export const createWorldSlice: StateCreator<GameStore, [['zustand/immer', never]
   globalFuelPrice: 0.82,
   newsTicker: [{ id: 'welcome', text: 'Welcome to Mighty Airline Empire! Build your airline from the ground up.' }],
   totalMarketPAX: 0,
+  airportUpgrades: {},
   airportDailyPax: {},
 
   setAirportDailyPax: (pax) => {
@@ -88,6 +99,7 @@ export const createWorldSlice: StateCreator<GameStore, [['zustand/immer', never]
       state.aiAircraft = {};
       state.aiRoutes = {};
       state.airportDailyPax = {};
+      state.airportUpgrades = {};
       state.totalMarketPAX = 0;
       state.newsTicker = [{ id: 'welcome', text: 'Welcome to Mighty Airline Empire! Build your airline from the ground up.' }];
       state.newspaperQueue = [];
@@ -174,6 +186,48 @@ export const createWorldSlice: StateCreator<GameStore, [['zustand/immer', never]
     set((state) => {
       if (state.airports[iata]) state.airports[iata].isHub = isHub;
     }),
+
+  upgradeHubTerminal: (iata) => {
+    const airport = get().airports[iata];
+    const player = get().airlines.player;
+    if (!airport || !player?.hubIatas.includes(iata)) return false;
+    const cost = getHubTerminalUpgradeCost(airport);
+    if (cost === null || player.cashUSD < cost) return false;
+    set((state) => {
+      const ap = state.airports[iata];
+      const airline = state.airlines.player;
+      if (!ap || !airline) return;
+      const nextLevel = getHubTerminalLevel(ap) + 1;
+      airline.cashUSD -= cost;
+      ap.hubTerminalLevel = nextLevel;
+      state.airportUpgrades[iata] = {
+        terminalLevel: nextLevel,
+        loungeLevel: getFirstClassLoungeLevel(ap),
+      };
+    });
+    return true;
+  },
+
+  upgradeHubLounge: (iata) => {
+    const airport = get().airports[iata];
+    const player = get().airlines.player;
+    if (!airport || !player?.hubIatas.includes(iata)) return false;
+    const cost = getFirstClassLoungeUpgradeCost(airport);
+    if (cost === null || player.cashUSD < cost) return false;
+    set((state) => {
+      const ap = state.airports[iata];
+      const airline = state.airlines.player;
+      if (!ap || !airline) return;
+      const nextLevel = getFirstClassLoungeLevel(ap) + 1;
+      airline.cashUSD -= cost;
+      ap.firstClassLoungeLevel = nextLevel;
+      state.airportUpgrades[iata] = {
+        terminalLevel: getHubTerminalLevel(ap),
+        loungeLevel: nextLevel,
+      };
+    });
+    return true;
+  },
 
   setAirportClosure: (iata, untilGameDay, reason) =>
     set((state) => {

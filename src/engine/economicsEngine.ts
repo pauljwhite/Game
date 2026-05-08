@@ -200,8 +200,8 @@ export function runDailyTick(store: ReturnType<typeof import('@/store/index')['u
       const ecoReferencePrice = totalSeats > 0 ? Math.round(flightCosts.totalCost / totalSeats * 1.3) : 200;
       const bizReferencePrice = ecoReferencePrice * 4;
 
-      const originUtil = (prevAirportPax[route.originIata] ?? 0) / getAirportCapacity(origin.size, currentYear);
-      const destUtil   = (prevAirportPax[route.destinationIata] ?? 0) / getAirportCapacity(dest.size, currentYear);
+      const originUtil = (prevAirportPax[route.originIata] ?? 0) / getAirportCapacity(origin, currentYear);
+      const destUtil   = (prevAirportPax[route.destinationIata] ?? 0) / getAirportCapacity(dest, currentYear);
       const satMod     = airportSaturationMod(originUtil) * airportSaturationMod(destUtil);
       const isPlayerHubRoute = playerAirline.hubIatas.includes(route.originIata) || playerAirline.hubIatas.includes(route.destinationIata);
       const baselinePax = getBaselineDailyPax(origin, dest) * (isPlayerHubRoute ? HUB_DEMAND_BONUS : 1) * satMod;
@@ -325,8 +325,8 @@ export function runDailyTick(store: ReturnType<typeof import('@/store/index')['u
       const ecoReferencePrice = totalSeats > 0 ? Math.round(flightCosts.totalCost / totalSeats * 1.3) : 200;
       const bizReferencePrice = ecoReferencePrice * 4;
 
-      const aiOriginUtil = (prevAirportPax[route.originIata] ?? 0) / getAirportCapacity(origin.size, currentYear);
-      const aiDestUtil   = (prevAirportPax[route.destinationIata] ?? 0) / getAirportCapacity(dest.size, currentYear);
+      const aiOriginUtil = (prevAirportPax[route.originIata] ?? 0) / getAirportCapacity(origin, currentYear);
+      const aiDestUtil   = (prevAirportPax[route.destinationIata] ?? 0) / getAirportCapacity(dest, currentYear);
       const aiSatMod     = airportSaturationMod(aiOriginUtil) * airportSaturationMod(aiDestUtil);
       const isAIHubRoute = aiAirline.hubIatas.includes(route.originIata) || aiAirline.hubIatas.includes(route.destinationIata);
       const baselinePax = getBaselineDailyPax(origin, dest) * (isAIHubRoute ? HUB_DEMAND_BONUS : 1) * aiSatMod;
