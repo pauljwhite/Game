@@ -168,6 +168,80 @@ function aiScheduleOffset(id: string, interval: number): number {
   return Array.from(id).reduce((sum, char) => sum + char.charCodeAt(0), 0) % interval;
 }
 
+const US_MANUFACTURERS = new Set(['boeing', 'douglas', 'mcdonnell douglas', 'lockheed', 'cessna', 'piper']);
+const EUROPEAN_MANUFACTURERS = new Set([
+  'airbus',
+  'atr',
+  'fokker',
+  'bac',
+  'bae',
+  'avro',
+  'sud aviation',
+  'aerospatiale/bac',
+  'saab',
+  'dassault',
+]);
+const RUSSIAN_MANUFACTURERS = new Set(['tupolev', 'ilyushin', 'yakovlev', 'antonov', 'irkut']);
+const CANADIAN_MANUFACTURERS = new Set(['bombardier', 'de havilland canada']);
+const BRAZILIAN_MANUFACTURERS = new Set(['embraer']);
+const CHINESE_MANUFACTURERS = new Set(['comac']);
+const CIS_COUNTRIES = new Set(['RU', 'AM', 'AZ', 'BY', 'GE', 'KZ', 'KG', 'MD', 'TJ', 'TM', 'UA', 'UZ']);
+
+function normalizeManufacturer(manufacturer: string): string {
+  return manufacturer
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase();
+}
+
+function hashString(value: string): number {
+  return Array.from(value).reduce((hash, char) => ((hash << 5) - hash + char.charCodeAt(0)) | 0, 0);
+}
+
+function stableManufacturerTaste(airline: Airline, aircraftType: AircraftType): number {
+  const hash = Math.abs(hashString(`${airline.id}:${aircraftType.manufacturer}`));
+  return 0.94 + (hash % 13) / 100;
+}
+
+function manufacturerPreferenceWeight(airline: Airline, aircraftType: AircraftType, airports: Record<string, Airport>): number {
+  const homeAirport = airports[airline.hubIatas[0]];
+  const homeCountry = homeAirport?.country;
+  const homeRegion = homeAirport?.region;
+  const manufacturer = normalizeManufacturer(aircraftType.manufacturer);
+  let weight = 1;
+
+  if (homeCountry === 'US') {
+    if (US_MANUFACTURERS.has(manufacturer)) weight = 1.32;
+    else if (manufacturer === 'airbus') weight = 0.96;
+  } else if (homeCountry && CIS_COUNTRIES.has(homeCountry)) {
+    if (RUSSIAN_MANUFACTURERS.has(manufacturer)) weight = 1.42;
+    else if (US_MANUFACTURERS.has(manufacturer) || manufacturer === 'airbus') weight = 0.88;
+  } else if (homeCountry === 'CA') {
+    if (CANADIAN_MANUFACTURERS.has(manufacturer)) weight = 1.30;
+    else if (US_MANUFACTURERS.has(manufacturer)) weight = 1.08;
+  } else if (homeCountry === 'BR') {
+    if (BRAZILIAN_MANUFACTURERS.has(manufacturer)) weight = 1.34;
+  } else if (homeCountry === 'CN') {
+    if (CHINESE_MANUFACTURERS.has(manufacturer)) weight = 1.35;
+    else if (manufacturer === 'airbus' || US_MANUFACTURERS.has(manufacturer)) weight = 1.02;
+  } else if (homeRegion === 'europe') {
+    if (EUROPEAN_MANUFACTURERS.has(manufacturer)) weight = 1.30;
+    else if (US_MANUFACTURERS.has(manufacturer)) weight = 0.96;
+  } else if (homeRegion === 'north_america') {
+    if (US_MANUFACTURERS.has(manufacturer)) weight = 1.22;
+    else if (CANADIAN_MANUFACTURERS.has(manufacturer)) weight = 1.16;
+  }
+
+  return weight * stableManufacturerTaste(airline, aircraftType);
+}
+
+function scoreAIPlan(airline: Airline, plan: AIOperationPlan, airports: Record<string, Airport>): number {
+  const preference = manufacturerPreferenceWeight(airline, plan.aircraftType, airports);
+  return plan.expectedDailyProfit >= 0
+    ? plan.expectedDailyProfit * preference
+    : plan.expectedDailyProfit / preference;
+}
+
 function createAIAircraft(
   airline: Airline,
   aircraftType: AircraftType,
@@ -328,7 +402,7 @@ function findBestAIPlan(
 
   return plans
     .filter(plan => plan.expectedLoadFactor >= 0.35)
-    .sort((a, b) => b.expectedDailyProfit - a.expectedDailyProfit)[0] ?? null;
+    .sort((a, b) => scoreAIPlan(airline, b, airports) - scoreAIPlan(airline, a, airports))[0] ?? null;
 }
 
 export function createInitialAIOperations(
@@ -536,7 +610,11 @@ function tryExpand(
       t.purchasePrice <= airline.cashUSD * maxPurchaseShare &&
       airline.cashUSD - t.purchasePrice >= cashReserve
     )
-    .sort((a, b) => b.seatsEconomy - a.seatsEconomy);
+    .sort((a, b) => {
+      const weightedSeatsA = a.seatsEconomy * manufacturerPreferenceWeight(airline, a, airports);
+      const weightedSeatsB = b.seatsEconomy * manufacturerPreferenceWeight(airline, b, airports);
+      return weightedSeatsB - weightedSeatsA;
+    });
 
   if (affordableTypes.length === 0) return;
 
