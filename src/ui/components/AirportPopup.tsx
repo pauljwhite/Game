@@ -78,9 +78,10 @@ export const AirportPopup: React.FC = () => {
           </div>
           <button
             onClick={() => selectAirport(null)}
-            className="text-gray-500 hover:text-white text-xs ml-2"
+            aria-label="Close"
+            className="w-10 h-10 sm:w-7 sm:h-7 flex items-center justify-center text-gray-400 hover:text-white hover:bg-gray-700 rounded transition-colors text-lg leading-none shrink-0 ml-2"
           >
-            x
+            ×
           </button>
         </div>
       </div>
