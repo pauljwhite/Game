@@ -292,6 +292,7 @@ export const createPlayerSlice: StateCreator<GameStore, [['zustand/immer', never
       const profitAfterDebt = netProfit - debtService;
       airline.cashUSD += profitAfterDebt;
       airline.totalPassengersAllTime += passengers;
+      airline.lastDailyProfit = profitAfterDebt;
       airline.dailyStats.push({
         gameDay: state.gameDay,
         revenue: snapshot.revenue,

@@ -90,7 +90,11 @@ export const CompetitorSummaryPanel: React.FC<CompetitorSummaryPanelProps> = ({ 
   const losingRoutes = activeRoutes.filter(route => route.dailyProfit < 0).length;
   const routeProfit = airlineRouteList.reduce((sum, route) => sum + route.dailyProfit, 0);
   const routeRevenue = airlineRouteList.reduce((sum, route) => sum + route.dailyRevenue, 0);
-  const routeCosts = Math.max(0, routeRevenue - routeProfit);
+  const latestSnapshot = airline.dailyStats.at(-1);
+  const dailyProfit = latestSnapshot?.profit ?? airline.lastDailyProfit ?? routeProfit;
+  const dailyRevenue = latestSnapshot?.revenue ?? routeRevenue;
+  const routeCosts = airlineRouteList.reduce((sum, route) => sum + route.dailyCost, 0);
+  const dailyCosts = latestSnapshot?.costs ?? routeCosts;
   const averageLoadFactor = activeRoutes.length > 0
     ? activeRoutes.reduce((sum, route) => sum + route.loadFactorEconomy, 0) / activeRoutes.length
     : 0;
@@ -102,7 +106,7 @@ export const CompetitorSummaryPanel: React.FC<CompetitorSummaryPanelProps> = ({ 
   const thirtyDayProfit = snapshots.reduce((sum, day) => sum + day.profit, 0);
   const thirtyDayRevenue = snapshots.reduce((sum, day) => sum + day.revenue, 0);
   const thirtyDayCosts = snapshots.reduce((sum, day) => sum + day.costs, 0);
-  const margin = routeRevenue > 0 ? (routeProfit / routeRevenue) * 100 : 0;
+  const margin = dailyRevenue > 0 ? (dailyProfit / dailyRevenue) * 100 : 0;
   const companyValue = rawCompanyValue(airline, valuationAircraft, valuationRoutes);
   const pricePerPercent = companyValue / 100;
   const shareholders = isPlayer ? { player: 100 } : airline.shareholders ?? {};
@@ -116,7 +120,7 @@ export const CompetitorSummaryPanel: React.FC<CompetitorSummaryPanelProps> = ({ 
     .sort((a, b) => b.dailyProfit - a.dailyProfit)
     .slice(0, 4);
 
-  const profitTone = (airline.lastDailyProfit ?? routeProfit) >= 0 ? 'good' : 'bad';
+  const profitTone = dailyProfit >= 0 ? 'good' : 'bad';
   const cashTone = airline.cashUSD >= 0 ? 'good' : 'bad';
 
   return (
@@ -146,9 +150,9 @@ export const CompetitorSummaryPanel: React.FC<CompetitorSummaryPanelProps> = ({ 
           <StatCard label="Cash" value={formatCurrency(airline.cashUSD)} tone={cashTone} />
           <StatCard label="Debt" value={formatCurrency(airline.totalDebt)} tone={airline.totalDebt > 0 ? 'bad' : 'muted'} />
           <StatCard label="Reputation" value={`${airline.reputationScore.toFixed(0)}/100`} />
-          <StatCard label="Daily profit/loss" value={formatCurrency(airline.lastDailyProfit ?? routeProfit)} tone={profitTone} />
-          <StatCard label="Daily revenue" value={formatCurrency(routeRevenue)} tone="good" />
-          <StatCard label="Daily costs" value={formatCurrency(routeCosts)} tone={routeCosts > routeRevenue ? 'bad' : 'muted'} />
+          <StatCard label="Daily profit/loss" value={formatCurrency(dailyProfit)} tone={profitTone} />
+          <StatCard label="Daily revenue" value={formatCurrency(dailyRevenue)} tone="good" />
+          <StatCard label="Daily costs" value={formatCurrency(dailyCosts)} tone={dailyCosts > dailyRevenue ? 'bad' : 'muted'} />
           <StatCard label="Profit margin" value={pct(margin)} tone={margin >= 0 ? 'good' : 'bad'} />
         </div>
 
