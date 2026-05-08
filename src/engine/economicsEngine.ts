@@ -23,6 +23,13 @@ function routePairKey(origin: string, dest: string): string {
   return origin < dest ? `${origin}:${dest}` : `${dest}:${origin}`;
 }
 
+function aircraftAirportFeeMultiplier(aircraftType: AircraftType): number {
+  if (aircraftType.category === 'regional') return 0.45;
+  if (aircraftType.category === 'narrowbody') return 0.75;
+  if (aircraftType.category === 'sst') return 1.25;
+  return 1;
+}
+
 export function computeFlightCost(
   route: Route,
   aircraft: Aircraft,
@@ -40,7 +47,7 @@ export function computeFlightCost(
   const maintenanceCost = aircraftType.maintenanceCostPerHourUSD * flightDurationHours * conditionFactor * ageFactor;
   const crewCost = CREW_COST_PER_FLIGHT_HOUR_USD * flightDurationHours;
   const hubDiscount = (origin.isHub || dest.isHub) ? (1 - HUB_COST_DISCOUNT) : 1;
-  const airportFees = (origin.landingFee + dest.landingFee) * hubDiscount;
+  const airportFees = (origin.landingFee + dest.landingFee) * hubDiscount * aircraftAirportFeeMultiplier(aircraftType);
   const totalCost = fuelCost + maintenanceCost + crewCost + airportFees;
   return { fuelCost, maintenanceCost, airportFees, crewCost, totalCost, flightDurationHours };
 }
