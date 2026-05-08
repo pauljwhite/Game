@@ -5,6 +5,9 @@ import { formatCurrency, formatGameClock, formatGameDate, formatNumber } from '@
 import type { PanelId } from '@/store/uiSlice';
 import { AirlineLogo } from './components/AirlineLogo';
 
+const EXPORT_KIND = 'mighty-airline-empire-save';
+const EXPORT_VERSION = 1;
+
 const NAV_ITEMS: { id: PanelId; label: string }[] = [
   { id: 'fleet', label: 'Fleet' },
   { id: 'routes', label: 'Routes' },
@@ -19,6 +22,48 @@ function reputationColor(score: number): string {
   return 'text-red-400';
 }
 
+function gameStateSnapshot() {
+  return Object.fromEntries(
+    Object.entries(useGameStore.getState()).filter(([, value]) => typeof value !== 'function'),
+  );
+}
+
+function fileSafeName(name: string): string {
+  return name.trim().replace(/[^a-z0-9]+/gi, '-').replace(/^-+|-+$/g, '').toLowerCase() || 'airline';
+}
+
+function saveFile(payload: unknown, fileName: string): void {
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = fileName;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
+
+function extractImportedState(parsed: unknown): Record<string, unknown> | null {
+  if (!parsed || typeof parsed !== 'object') return null;
+  const record = parsed as Record<string, unknown>;
+  const candidate = record.kind === EXPORT_KIND && record.state && typeof record.state === 'object'
+    ? record.state
+    : record;
+  if (!candidate || typeof candidate !== 'object') return null;
+
+  const state = candidate as Record<string, unknown>;
+  const hasCoreSaveData =
+    typeof state.gameTimeMs === 'number' &&
+    typeof state.gameDay === 'number' &&
+    state.airlines && typeof state.airlines === 'object' &&
+    state.aircraft && typeof state.aircraft === 'object' &&
+    state.routes && typeof state.routes === 'object' &&
+    state.aiAirlines && typeof state.aiAirlines === 'object';
+
+  return hasCoreSaveData ? state : null;
+}
+
 const AirlineMenu: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   const airlines      = useGameStore(s => s.airlines);
   const aiAirlines    = useGameStore(s => s.aiAirlines);
@@ -29,7 +74,9 @@ const AirlineMenu: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   const resetGame  = useGameStore(s => s.resetGame);
   const initWorld  = useGameStore(s => s.initWorld);
   const [confirming, setConfirming] = useState(false);
+  const [saveMessage, setSaveMessage] = useState<string | null>(null);
   const ref = useRef<HTMLDivElement>(null);
+  const importInputRef = useRef<HTMLInputElement>(null);
 
   const player = airlines['player'];
 
@@ -64,6 +111,47 @@ const AirlineMenu: React.FC<{ onClose: () => void }> = ({ onClose }) => {
     resetGame();
     setConfirming(false);
     onClose();
+  }
+
+  function handleExportProgress() {
+    const snapshot = gameStateSnapshot();
+    const payload = {
+      kind: EXPORT_KIND,
+      exportVersion: EXPORT_VERSION,
+      exportedAt: new Date().toISOString(),
+      game: 'Mighty Airline Empire',
+      state: snapshot,
+    };
+    saveFile(payload, `${fileSafeName(player.name)}-day-${Math.floor(gameTimeMs / 86_400_000)}.json`);
+    setSaveMessage('Progress exported');
+  }
+
+  async function handleImportProgress(file: File | undefined) {
+    if (!file) return;
+    try {
+      const parsed = JSON.parse(await file.text()) as unknown;
+      const importedState = extractImportedState(parsed);
+      if (!importedState) {
+        setSaveMessage('Import failed: invalid save file');
+        return;
+      }
+
+      useGameStore.setState({
+        ...importedState,
+        openModal: null,
+        modalPayload: null,
+        openPanel: null,
+        selectedAirportIata: null,
+        selectedRouteId: null,
+        isPaused: true,
+      });
+      setSaveMessage('Progress imported');
+      onClose();
+    } catch {
+      setSaveMessage('Import failed: could not read JSON');
+    } finally {
+      if (importInputRef.current) importInputRef.current.value = '';
+    }
   }
 
   return (
@@ -159,6 +247,27 @@ const AirlineMenu: React.FC<{ onClose: () => void }> = ({ onClose }) => {
         </button>
         <div className="grid grid-cols-2 gap-2">
           <button
+            onClick={handleExportProgress}
+            className="apple-button w-full py-2 text-xs font-semibold"
+          >
+            Export Progress
+          </button>
+          <button
+            onClick={() => importInputRef.current?.click()}
+            className="apple-button w-full py-2 text-xs font-semibold"
+          >
+            Import Progress
+          </button>
+        </div>
+        <input
+          ref={importInputRef}
+          type="file"
+          accept="application/json,.json"
+          className="hidden"
+          onChange={event => { void handleImportProgress(event.currentTarget.files?.[0]); }}
+        />
+        <div className="grid grid-cols-2 gap-2">
+          <button
             onClick={() => { onClose(); openModalById('settings'); }}
             className="apple-button w-full py-2 text-xs font-semibold"
           >
@@ -176,6 +285,7 @@ const AirlineMenu: React.FC<{ onClose: () => void }> = ({ onClose }) => {
             {confirming ? 'Confirm reset' : 'Start Again'}
           </button>
         </div>
+        {saveMessage && <div className="text-center text-[10px] text-gray-400">{saveMessage}</div>}
       </div>
     </div>
   );
