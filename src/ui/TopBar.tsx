@@ -7,6 +7,7 @@ import { AirlineLogo } from './components/AirlineLogo';
 
 const EXPORT_KIND = 'mighty-airline-empire-save';
 const EXPORT_VERSION = 1;
+const AIRLINE_MENU_FADE_MS = 180;
 
 const NAV_ITEMS: { id: PanelId; label: string }[] = [
   { id: 'fleet', label: 'Fleet' },
@@ -64,7 +65,7 @@ function extractImportedState(parsed: unknown): Record<string, unknown> | null {
   return hasCoreSaveData ? state : null;
 }
 
-const AirlineMenu: React.FC<{ onClose: () => void }> = ({ onClose }) => {
+const AirlineMenu: React.FC<{ onClose: () => void; visible: boolean }> = ({ onClose, visible }) => {
   const airlines      = useGameStore(s => s.airlines);
   const aiAirlines    = useGameStore(s => s.aiAirlines);
   const aircraft      = useGameStore(s => s.aircraft);
@@ -75,18 +76,9 @@ const AirlineMenu: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   const initWorld  = useGameStore(s => s.initWorld);
   const [confirming, setConfirming] = useState(false);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
-  const ref = useRef<HTMLDivElement>(null);
   const importInputRef = useRef<HTMLInputElement>(null);
 
   const player = airlines['player'];
-
-  useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) onClose();
-    };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, [onClose]);
 
   if (!player) return null;
 
@@ -156,8 +148,9 @@ const AirlineMenu: React.FC<{ onClose: () => void }> = ({ onClose }) => {
 
   return (
     <div
-      ref={ref}
-      className="fixed left-2 right-2 top-[3.25rem] sm:absolute sm:top-full sm:left-0 sm:right-auto sm:mt-2 sm:w-72 max-w-[calc(100vw-1rem)] rounded-xl z-[9999] overflow-hidden border border-white/10 bg-gray-950/95 shadow-2xl backdrop-blur-xl"
+      className={`fixed left-2 right-2 top-[3.25rem] sm:absolute sm:top-full sm:left-0 sm:right-auto sm:mt-2 sm:w-72 max-w-[calc(100vw-1rem)] rounded-xl z-[9999] overflow-hidden border border-white/10 bg-gray-950/95 shadow-2xl backdrop-blur-xl transition-all duration-200 ease-in-out will-change-transform ${
+        visible ? 'pointer-events-auto translate-y-0 opacity-100' : 'pointer-events-none -translate-y-1 opacity-0'
+      }`}
     >
       {/* Header */}
       <div className="px-4 py-3 border-b border-white/10 bg-white/[0.035]" style={{ borderLeftColor: player.color, borderLeftWidth: 3 }}>
@@ -298,6 +291,10 @@ export const TopBar: React.FC = () => {
   const openPanelById = useGameStore(s => s.openPanelById);
   const closePanel = useGameStore(s => s.closePanel);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [menuRendered, setMenuRendered] = useState(false);
+  const [menuVisible, setMenuVisible] = useState(false);
+  const menuWrapRef = useRef<HTMLDivElement>(null);
+  const menuTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const playerAirline = airlines['player'];
   const gameDate = formatGameDate(gameTimeMs);
@@ -308,12 +305,50 @@ export const TopBar: React.FC = () => {
     else openPanelById(id);
   };
 
+  useEffect(() => {
+    if (menuTimerRef.current) {
+      clearTimeout(menuTimerRef.current);
+      menuTimerRef.current = null;
+    }
+
+    if (menuOpen) {
+      setMenuRendered(true);
+      requestAnimationFrame(() => setMenuVisible(true));
+      return;
+    }
+
+    setMenuVisible(false);
+    menuTimerRef.current = setTimeout(() => {
+      setMenuRendered(false);
+      menuTimerRef.current = null;
+    }, AIRLINE_MENU_FADE_MS);
+
+    return () => {
+      if (menuTimerRef.current) {
+        clearTimeout(menuTimerRef.current);
+        menuTimerRef.current = null;
+      }
+    };
+  }, [menuOpen]);
+
+  useEffect(() => {
+    if (!menuRendered) return;
+
+    const handler = (event: MouseEvent) => {
+      if (menuWrapRef.current && !menuWrapRef.current.contains(event.target as Node)) {
+        setMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [menuRendered]);
+
   return (
     <header className="glass-nav border-b relative z-10 shrink-0">
       {/* Primary row: branding | date | speed | (nav on lg+) */}
       <div className="min-h-12 flex items-center px-2 sm:px-3 gap-1 sm:gap-2">
         {/* Airline branding — clickable */}
-        <div className="relative shrink-0">
+        <div ref={menuWrapRef} className="relative shrink-0">
           <button
             onClick={() => setMenuOpen(v => !v)}
             className="flex items-center gap-1.5 min-w-0 rounded-full border border-white/10 bg-white/[0.045] px-2 py-1 transition-all hover:bg-white/[0.09]"
@@ -329,7 +364,7 @@ export const TopBar: React.FC = () => {
             </div>
             <span className="text-gray-600 text-xs">▾</span>
           </button>
-          {menuOpen && <AirlineMenu onClose={() => setMenuOpen(false)} />}
+          {menuRendered && <AirlineMenu visible={menuVisible} onClose={() => setMenuOpen(false)} />}
         </div>
 
         {/* Date + time chip — always visible in primary row */}
