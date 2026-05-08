@@ -148,7 +148,7 @@ export const AirportPopup: React.FC = () => {
               destinationsOpen ? 'max-h-[48svh] opacity-100' : 'max-h-0 opacity-0'
             }`}
           >
-            <div className="panel-scroll max-h-[48svh] space-y-1 overflow-y-auto overscroll-contain px-2 py-2 sm:grid sm:grid-cols-2 sm:gap-1.5 sm:space-y-0">
+            <div className="panel-scroll max-h-[48svh] space-y-1 overflow-y-auto overscroll-contain px-2 py-2 sm:grid sm:grid-flow-col sm:grid-rows-8 sm:auto-cols-fr sm:gap-1.5 sm:space-y-0">
               {desiredDestinations.map(item => (
                 <div key={item.dest.iata} className="rounded bg-white/[0.04] px-2 py-1.5">
                   <div className="flex items-center justify-between gap-2 text-xs">
