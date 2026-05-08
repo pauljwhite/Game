@@ -60,10 +60,12 @@ export const AirportPopup: React.FC = () => {
     })
     .filter(item => item.baselinePax >= 1)
     .sort((a, b) => b.score - a.score)
-    .slice(0, 6);
+    .slice(0, 15);
 
   return (
-    <div className="absolute inset-x-2 top-2 bottom-2 sm:inset-x-auto sm:top-auto sm:bottom-12 sm:left-4 z-[800] glass-panel rounded-2xl sm:rounded-xl w-auto sm:w-64 sm:max-h-[48svh] overflow-hidden flex flex-col">
+    <div className={`absolute inset-x-2 top-2 bottom-2 sm:inset-x-auto sm:top-auto sm:bottom-12 sm:left-4 z-[800] glass-panel rounded-2xl sm:rounded-xl w-auto overflow-hidden flex flex-col transition-[width,max-height] duration-200 ease-in-out ${
+      destinationsOpen ? 'sm:w-[30rem] sm:max-h-[calc(100svh-7rem)]' : 'sm:w-64 sm:max-h-[48svh]'
+    }`}>
       <div className="shrink-0 border-b border-white/10 p-3 pb-2">
         {isClosed && (
           <div className="mb-2 px-2 py-1.5 bg-red-900/50 border border-red-500/50 rounded-lg flex items-center gap-1.5">
@@ -141,7 +143,7 @@ export const AirportPopup: React.FC = () => {
             <span className="text-gray-500">{destinationsOpen ? '▲' : '▼'}</span>
           </button>
           {destinationsOpen && (
-            <div className="space-y-1 border-t border-white/10 px-2 py-2">
+            <div className="space-y-1 border-t border-white/10 px-2 py-2 sm:grid sm:grid-cols-2 sm:gap-1.5 sm:space-y-0">
               {desiredDestinations.map(item => (
                 <div key={item.dest.iata} className="rounded bg-white/[0.04] px-2 py-1.5">
                   <div className="flex items-center justify-between gap-2 text-xs">
