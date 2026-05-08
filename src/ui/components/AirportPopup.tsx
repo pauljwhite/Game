@@ -55,7 +55,7 @@ export const AirportPopup: React.FC = () => {
         null,
       );
       const estimatedValue = baselinePax * Math.max(250, distanceKm) * 0.08;
-      const score = Math.max(estimatedValue, bestRoute?.dailyProfit ?? 0);
+      const score = bestRoute?.dailyProfit ?? estimatedValue;
       return { dest, baselinePax, distanceKm, bestRoute, score };
     })
     .filter(item => item.baselinePax >= 1)
