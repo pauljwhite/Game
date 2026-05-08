@@ -449,9 +449,9 @@ export const FinancePanel: React.FC = () => {
         )}
       </div>
 
-      <div>
+      <div className="min-w-0">
         <div className="text-gray-400 text-xs mb-1">30-Day Profit Trend</div>
-        <div className="overflow-hidden">
+        <div className="w-full overflow-hidden">
           <PnLChart snapshots={playerAirline.dailyStats.slice(-30)} width={300} height={80} isDark={isDark} />
         </div>
       </div>

@@ -81,5 +81,5 @@ export const PnLChart: React.FC<PnLChartProps> = ({ snapshots, width = 300, heig
     ctx.fill();
   }, [snapshots, width, height, isDark]);
 
-  return <canvas ref={canvasRef} width={width} height={height} className="rounded" />;
+  return <canvas ref={canvasRef} width={width} height={height} className="block w-full rounded" style={{ height }} />;
 };
