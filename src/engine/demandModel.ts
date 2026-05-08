@@ -1,7 +1,7 @@
 import type { Airport, Route, Airline } from '@/types';
 import { PRICE_ELASTICITY, REP_PRICE_FACTOR, AIRPORT_BASE_CAPACITY, AIRPORT_DEMAND_GROWTH_RATE } from '@/utils/constants';
 
-export const MAX_REASONABLE_FARE_MULTIPLIER = 6;
+export const MAX_REASONABLE_FARE_MULTIPLIER = 3;
 
 const SIZE_MULTIPLIER: Record<string, number> = {
   small: 0.3, medium: 1.0, large: 2.5, major: 5.0,
@@ -25,7 +25,7 @@ export function getSoloPriceDemandShare(price: number, referencePrice: number): 
 
   const priceRatio = Math.max(0.05, price / referencePrice);
   const elasticDemand = Math.pow(priceRatio, PRICE_ELASTICITY);
-  const gougePenalty = priceRatio > 4 ? Math.pow(4 / priceRatio, 2.4) : 1;
+  const gougePenalty = priceRatio > 2 ? Math.pow(2 / priceRatio, 3.5) : 1;
 
   return Math.max(0, Math.min(5, elasticDemand * gougePenalty));
 }

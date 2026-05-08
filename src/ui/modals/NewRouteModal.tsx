@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useGameStore } from '@/store';
 import { haversineKm } from '@/utils/geo';
 import { computeFlightCost, gameDayFromMs, msToGameDate } from '@/engine/economicsEngine';
-import { getSuggestedEconomyPrice, getBaselineDailyPax, conditionDemandMod, getCompetitivenessScore, getSoloPriceDemandShare } from '@/engine/demandModel';
+import { MAX_REASONABLE_FARE_MULTIPLIER, getSuggestedEconomyPrice, getBaselineDailyPax, conditionDemandMod, getCompetitivenessScore, getSoloPriceDemandShare } from '@/engine/demandModel';
 import { AIRCRAFT_TYPES } from '@/data/aircraftTypes';
 import type { Aircraft, AircraftType, Airline, Airport, Route } from '@/types';
 import { HUB_DEMAND_BONUS, REPUTATION_DEMAND_FACTOR, REP_PRICE_FACTOR } from '@/utils/constants';
@@ -217,7 +217,7 @@ export const NewRouteModal: React.FC = () => {
     if (!effectiveType || !distanceKm) return;
     const flightDurationHours = distanceKm / effectiveType.cruiseSpeedKmh;
     const totalCostPerFlight =
-      (distanceKm / 100) * effectiveType.fuelBurnLPer100Km * 0.82 +
+      flightDurationHours * effectiveType.fuelBurnLPer100Km * 0.82 +
       effectiveType.maintenanceCostPerHourUSD * flightDurationHours +
       flightDurationHours * 85 +
       2000;
@@ -268,8 +268,8 @@ export const NewRouteModal: React.FC = () => {
     airlines, aiAirlines, routes, aiRoutes,
   ]);
 
-  const maxEconomyPrice = pnlPreview ? pnlPreview.referencePrice * 6 : 9999;
-  const maxBusinessPrice = pnlPreview ? pnlPreview.referencePrice * 24 : 39999;
+  const maxEconomyPrice = pnlPreview ? pnlPreview.referencePrice * MAX_REASONABLE_FARE_MULTIPLIER : 9999;
+  const maxBusinessPrice = pnlPreview ? pnlPreview.referencePrice * 4 * MAX_REASONABLE_FARE_MULTIPLIER : 39999;
 
   useEffect(() => {
     setPriceEconomy(price => Math.min(maxEconomyPrice, Math.max(0, price)));

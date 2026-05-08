@@ -22,6 +22,7 @@ export interface AircraftType {
   rangeKm: number;
   minRunwayM: number;
   cruiseSpeedKmh: number;
+  /** Historical field name; current aircraft data is calibrated as litres per flight hour. */
   fuelBurnLPer100Km: number;
   purchasePrice: number;
   maintenanceCostPerHourUSD: number;

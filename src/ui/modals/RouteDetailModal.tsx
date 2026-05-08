@@ -6,7 +6,7 @@ import { PriceInput } from '@/ui/components/PriceInput';
 import { AIRCRAFT_TYPES } from '@/data/aircraftTypes';
 import { computeFlightCost } from '@/engine/economicsEngine';
 import { getRouteOptimisationChanges } from '@/engine/routeOptimizer';
-import { getPlayerMarketShare, getBaselineDailyPax, conditionDemandMod } from '@/engine/demandModel';
+import { MAX_REASONABLE_FARE_MULTIPLIER, getPlayerMarketShare, getBaselineDailyPax, conditionDemandMod } from '@/engine/demandModel';
 import { HUB_DEMAND_BONUS, REPUTATION_DEMAND_FACTOR } from '@/utils/constants';
 import { canAirportHandleAircraft, formatRunwayLength } from '@/utils/runway';
 
@@ -84,8 +84,8 @@ export const RouteDetailModal: React.FC = () => {
     }
     return route ? Math.round(route.distanceKm * 0.12) : 0;
   })();
-  const maxEco = referencePrice * 6;
-  const maxBiz = referencePrice * 24;
+  const maxEco = referencePrice * MAX_REASONABLE_FARE_MULTIPLIER;
+  const maxBiz = referencePrice * 4 * MAX_REASONABLE_FARE_MULTIPLIER;
   const hasBusinessSeats = (assignedType?.seatsBusiness ?? 0) > 0;
 
   useEffect(() => {

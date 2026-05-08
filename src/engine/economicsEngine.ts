@@ -33,7 +33,7 @@ export function computeFlightCost(
   currentGameDay?: number,
 ): { fuelCost: number; maintenanceCost: number; airportFees: number; crewCost: number; totalCost: number; flightDurationHours: number } {
   const flightDurationHours = route.distanceKm / aircraftType.cruiseSpeedKmh;
-  const fuelLiters = (route.distanceKm / 100) * aircraftType.fuelBurnLPer100Km;
+  const fuelLiters = flightDurationHours * aircraftType.fuelBurnLPer100Km;
   const fuelCost = fuelLiters * fuelPriceUSDPerLiter;
   const conditionFactor = 1 + (100 - aircraft.condition) / 200;
   const ageFactor = currentGameDay === undefined ? 1 : getMaintenanceAgeMultiplier(aircraft, currentGameDay);
